@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import Base, engine
-from .routers import blogs, health
+from database import Base, engine
+from routers import blogs, auth, users, members
 
 app = FastAPI(title="V4Corner API")
 
@@ -26,5 +26,7 @@ async def startup_event() -> None:
 
 
 # Routers keep related endpoints grouped. Add new modules under routers/.
-app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(blogs.router)
+app.include_router(users.router)
+app.include_router(members.router)

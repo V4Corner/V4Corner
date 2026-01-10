@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "mcp__web-reader__webReader",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(del \"\\\\?\\\\D:\\\\005\\\\V4Corner\\\\backend\\\\routers\\\\nul\")",
+      "Bash(git add:*)"
+    ]
+  }
+}

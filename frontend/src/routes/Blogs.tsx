@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getBlogs } from '../api/client';
+import { getBlogs } from '../api/blogs';
 import BlogCard from '../components/BlogCard';
-import { Blog } from '../types/blog';
+import type { Blog } from '../types/blog';
 
 function Blogs() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -10,23 +10,23 @@ function Blogs() {
 
   useEffect(() => {
     getBlogs()
-      .then((data) => setBlogs(data))
+      .then((data) => setBlogs(data.items))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading blogs...</p>;
+  if (loading) return <p>加载中...</p>;
   if (error) return <p className="small-muted">{error}</p>;
 
   return (
     <section>
-      <h1>Blogs</h1>
-      <p className="small-muted">Posts from classmates. Connect the backend at /api/blogs.</p>
+      <h1>博客</h1>
+      <p className="small-muted">来自同学们的文章</p>
       <div className="card-grid">
         {blogs.map((blog) => (
           <BlogCard key={blog.id} blog={blog} />
         ))}
-        {blogs.length === 0 && <p>No blogs yet. Add one through the API.</p>}
+        {blogs.length === 0 && <p>还没有博客，等待后端API连接...</p>}
       </div>
     </section>
   );

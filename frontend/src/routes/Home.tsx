@@ -1,10 +1,9 @@
 function Home() {
   return (
     <section>
-      <h1>Welcome to V4Corner</h1>
+      <h1>欢迎来到 V4Corner</h1>
       <p>
-        V4Corner is the shared home for Vehicle 4 classmates. Track class updates, showcase
-        projects, and publish reflections so everyone can learn together.
+        V4Corner 是行健-车辆4班的班级在线空间，记录成长，分享知识。
       </p>
     </section>
   );

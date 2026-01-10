@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V4Corner - 行健-车辆4班</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --primary: #0f172a;
+            --secondary: #475569;
+            --bg-start: #f8fafc;
+            --bg-end: #e2e8f0;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+
+        body {
+            font-family: var(--font-family);
+            color: var(--primary);
+            background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-title {
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-decoration: none;
+            color: var(--primary);
+            font-size: 1.25rem;
+            margin-right: 1rem;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            color: var(--primary);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background-color: var(--bg-start);
+        }
+
+        .nav-spacer {
+            flex: 1;
+        }
+
+        .nav-auth {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg-start);
+        }
+
+        /* User dropdown */
+        .user-dropdown {
+            position: relative;
+            display: none;
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+
+        .user-trigger {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .user-trigger:hover {
+            background-color: var(--bg-start);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+
+        .user-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+            min-width: 150px;
+            display: none;
+        }
+
+        .user-menu.show {
+            display: block;
+        }
+
+        .user-menu-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .user-menu-item:hover {
+            background-color: var(--bg-start);
+        }
+
+        .user-menu-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .user-menu-item:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* Main content */
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* Page */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            margin-bottom: 1rem;
+        }
+
+        .card h2, .card h3 {
+            margin-top: 0;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Blog card */
+        .blog-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+
+        .blog-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        }
+
+        .blog-card h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+        }
+
+        .blog-meta {
+            color: var(--secondary);
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .blog-excerpt {
+            color: var(--secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Forms */
+        .form-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .form-title {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-help {
+            font-size: 0.875rem;
+            color: var(--secondary);
+            margin-top: 0.25rem;
+        }
+
+        .form-error {
+            color: var(--error);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .form-error.show {
+            display: block;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-checkbox input {
+            width: auto;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .form-link {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .form-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .form-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Blog detail */
+        .blog-detail {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .breadcrumb {
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .blog-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        .blog-header-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin: 1.5rem 0;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        .blog-author {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .blog-author:hover {
+            color: var(--primary);
+        }
+
+        .blog-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .blog-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--primary);
+        }
+
+        .blog-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        .blog-content h2 {
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+        }
+
+        .blog-content h3 {
+            font-size: 1.25rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .blog-content code {
+            background-color: var(--bg-start);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .blog-content pre {
+            background-color: var(--primary);
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        .blog-content pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* User profile */
+        .profile-header {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .profile-username {
+            color: var(--secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .profile-bio {
+            color: var(--secondary);
+            line-height: 1.6;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background-color: var(--bg-start);
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Member list */
+        .member-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .member-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        }
+
+        .member-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .member-info {
+            flex: 1;
+        }
+
+        .member-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .member-details {
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Filter bar */
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background-color: var(--bg-start);
+        }
+
+        .filter-btn.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .search-box {
+            margin-left: auto;
+        }
+
+        .search-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 250px;
+        }
+
+        /* Hero section */
+        .hero {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            color: var(--secondary);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .view-more {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .view-more a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .view-more a:hover {
+            text-decoration: underline;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+            z-index: 1000;
+            display: none;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .toast-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .toast-error {
+            background-color: var(--error);
+            color: white;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--secondary);
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="#" class="nav-title" onclick="navigate('home')">V4Corner</a>
+        <a href="#" class="nav-link" onclick="navigate('home')">首页</a>
+        <a href="#" class="nav-link" onclick="navigate('blogs')">博客</a>
+        <a href="#" class="nav-link" onclick="navigate('members')">成员</a>
+        <div class="nav-spacer"></div>
+        <div class="nav-auth" id="navAuth">
+            <!-- Will be populated by JS -->
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Home Page -->
+        <div class="page active" id="page-home">
+            <section class="hero">
+                <h1>欢迎来到 V4Corner</h1>
+                <p>行健-车辆4班的班级空间，记录成长，分享知识</p>
+            </section>
+
+            <div class="card">
+                <h2 class="section-title">最新动态</h2>
+                <ul class="activity-list">
+                    <li class="activity-item">· 张三 发布了《机器学习入门》</li>
+                    <li class="activity-item">· 李四 更新了《项目实践总结》</li>
+                    <li class="activity-item">· 王五 加入了 V4Corner</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">最新博客</h2>
+                <div class="card-grid">
+                    <div class="blog-card" onclick="navigate('blog-detail')">
+                        <h3>机器学习入门指南</h3>
+                        <div class="blog-meta">张三 · 2025-01-10</div>
+                        <div class="blog-excerpt">机器学习是人工智能的核心技术之一，本文将介绍机器学习的基本概念、常见算法和实际应用...</div>
+                    </div>
+                    <div class="blog-card" onclick="navigate('blog-detail')">
+                        <h3>数据结构与算法</h3>
+                        <div class="blog-meta">李四 · 2025-01-09</div>
+                        <div class="blog-excerpt">学习数据结构与算法是每个程序员的必修课，本文将总结常用的数据结构和算法技巧...</div>
+                    </div>
+                    <div class="blog-card" onclick="navigate('blog-detail')">
+                        <h3>项目实践总结</h3>
+                        <div class="blog-meta">王五 · 2025-01-08</div>
+                        <div class="blog-excerpt">在完成班级项目的过程中，我们学到了很多实用的开发技巧和团队协作经验...</div>
+                    </div>
+                </div>
+                <div class="view-more">
+                    <a href="#" onclick="navigate('blogs')">查看更多博客 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Page -->
+        <div class="page" id="page-login">
+            <div class="form-container card">
+                <h2 class="form-title">登录到 V4Corner</h2>
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label class="form-label">用户名或邮箱</label>
+                        <input type="text" class="form-input" placeholder="请输入用户名或邮箱" value="zhangsan">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-input" placeholder="请输入密码" value="123456">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="remember">
+                            <span>记住我</span>
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" style="width: 100%">登录</button>
+                    </div>
+                    <div class="form-link">
+                        还没有账号？<a href="#" onclick="navigate('register')">立即注册</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Register Page -->
+        <div class="page" id="page-register">
+            <div class="form-container card">
+                <h2 class="form-title">注册 V4Corner</h2>
+                <form onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label class="form-label">用户名</label>
+                        <input type="text" class="form-input" placeholder="3-20个字符">
+                        <div class="form-help">3-20个字符，字母数字下划线</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">邮箱</label>
+                        <input type="email" class="form-input" placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">密码</label>
+                        <input type="password" class="form-input" placeholder="至少6个字符">
+                        <div class="form-help">至少6个字符</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">确认密码</label>
+                        <input type="password" class="form-input" placeholder="再次输入密码">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">昵称（可选）</label>
+                        <input type="text" class="form-input" placeholder="2-20个字符">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="navigate('login')">取消</button>
+                        <button type="submit" class="btn btn-primary">注册</button>
+                    </div>
+                    <div class="form-link">
+                        已有账号？<a href="#" onclick="navigate('login')">立即登录</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Blogs List Page -->
+        <div class="page" id="page-blogs">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h1>博客</h1>
+                <button class="btn btn-primary" onclick="navigate('blog-create')">写博客</button>
+            </div>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <button class="filter-btn active" onclick="filterBlogs('all')">全部</button>
+                    <button class="filter-btn" onclick="filterBlogs('mine')">我的博客</button>
+                </div>
+            </div>
+            <div class="blog-card" onclick="navigate('blog-detail')">
+                <h3>机器学习入门指南</h3>
+                <div class="blog-meta">张三 · 2025-01-10</div>
+                <div class="blog-excerpt">机器学习是人工智能的核心技术之一，本文将介绍机器学习的基本概念、常见算法和实际应用。首先，我们需要理解什么是机器学习...</div>
+            </div>
+            <div class="blog-card" onclick="navigate('blog-detail')">
+                <h3>数据结构与算法</h3>
+                <div class="blog-meta">李四 · 2025-01-09</div>
+                <div class="blog-excerpt">学习数据结构与算法是每个程序员的必修课，本文将总结常用的数据结构和算法技巧。我们将从基础的数组、链表开始...</div>
+            </div>
+            <div class="blog-card" onclick="navigate('blog-detail')">
+                <h3>项目实践总结</h3>
+                <div class="blog-meta">王五 · 2025-01-08</div>
+                <div class="blog-excerpt">在完成班级项目的过程中，我们学到了很多实用的开发技巧和团队协作经验。本文将分享我们在项目开发中遇到的问题和解决方案...</div>
+            </div>
+            <div class="blog-card" onclick="navigate('blog-detail')">
+                <h3>深度学习框架对比</h3>
+                <div class="blog-meta">张三 · 2025-01-07</div>
+                <div class="blog-excerpt">TensorFlow、PyTorch、Keras...面对众多的深度学习框架，该如何选择？本文将从易用性、性能、社区支持等多个角度进行对比分析...</div>
+            </div>
+        </div>
+
+        <!-- Blog Detail Page -->
+        <div class="page" id="page-blog-detail">
+            <div class="blog-detail">
+                <div class="breadcrumb">
+                    <a href="#" onclick="navigate('blogs')">博客首页</a> > 机器学习入门指南
+                </div>
+                <article class="card">
+                    <h1 class="blog-title">机器学习入门指南</h1>
+                    <div class="blog-header-info">
+                        <div class="blog-author" onclick="navigate('user-profile')">
+                            <span>👤</span> 张三
+                        </div>
+                        <div>📅 2025-01-10 08:30</div>
+                        <div>👁️ 128</div>
+                        <div class="blog-actions">
+                            <button class="btn btn-outline" onclick="navigate('blog-edit')">编辑</button>
+                            <button class="btn btn-outline" onclick="deleteBlog()">删除</button>
+                        </div>
+                    </div>
+                    <div class="blog-content">
+                        <p>机器学习是人工智能的核心技术之一，它让计算机能够从数据中学习规律，并利用这些规律对未知数据进行预测。本文将介绍机器学习的基本概念、常见算法和实际应用。</p>
+
+                        <h2>什么是机器学习</h2>
+                        <p>机器学习（Machine Learning）是人工智能的一个分支，它通过算法让计算机从数据中学习，而不是通过明确的编程指令。简单来说，就是让计算机具备"学习"的能力。</p>
+
+                        <h2>机器学习的分类</h2>
+                        <p>根据学习方式的不同，机器学习可以分为以下几类：</p>
+                        <ul>
+                            <li><strong>监督学习</strong>：使用标记的数据进行训练</li>
+                            <li><strong>无监督学习</strong>：使用未标记的数据发现隐藏的模式</li>
+                            <li><strong>强化学习</strong>：通过奖励和惩罚机制学习最优策略</li>
+                        </ul>
+
+                        <h2>常用算法</h2>
+                        <p>以下是一些常用的机器学习算法：</p>
+                        <h3>1. 线性回归</h3>
+                        <p>线性回归是最简单的算法之一，用于预测连续值。假设特征与目标之间存在线性关系。</p>
+
+                        <h3>2. 决策树</h3>
+                        <p>决策树通过一系列的规则进行分类或回归，易于理解和解释。</p>
+
+                        <h3>3. 神经网络</h3>
+                        <p>神经网络模拟人脑的结构，可以学习复杂的非线性关系。深度学习就是基于多层神经网络的技术。</p>
+
+                        <h2>代码示例</h2>
+                        <p>下面是一个使用 Python 的 scikit-learn 库实现线性回归的简单示例：</p>
+                        <pre><code>from sklearn.linear_model import LinearRegression
+import numpy as np
+
+# 准备数据
+X = np.array([[1], [2], [3], [4], [5]])
+y = np.array([2, 4, 6, 8, 10])
+
+# 创建并训练模型
+model = LinearRegression()
+model.fit(X, y)
+
+# 预测
+print(model.predict([[6]]))  # 输出: [12.]</code></pre>
+
+                        <h2>总结</h2>
+                        <p>机器学习是一个快速发展的领域，掌握基本概念和算法是入门的第一步。建议从简单的算法开始，逐步深入学习和实践。</p>
+
+                        <p>希望本文能够帮助你理解机器学习的基础知识。如果你有任何问题或建议，欢迎在评论区留言！</p>
+                    </div>
+                </article>
+
+                <div class="card">
+                    <h2>评论区</h2>
+                    <p style="color: var(--secondary); padding: 2rem; text-align: center;">评论功能即将上线...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blog Create Page -->
+        <div class="page" id="page-blog-create">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                <a href="#" onclick="navigate('blogs')" style=" font-size: 1.5rem; text-decoration: none;">←</a>
+                <h1 style="margin: 0;">创建新博客</h1>
+            </div>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+            <div class="card">
+                <form onsubmit="handleCreateBlog(event)">
+                    <div class="form-group">
+                        <label class="form-label">标题</label>
+                        <input type="text" class="form-input" placeholder="请输入博客标题" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">内容（支持 Markdown）</label>
+                        <textarea class="form-textarea" placeholder="请输入博客内容，支持 Markdown 格式" style="min-height: 400px;"></textarea>
+                        <div class="form-help">支持：# 标题、**加粗**、`代码`、> 引用、- 列表等</div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="navigate('blogs')">取消</button>
+                        <button type="submit" class="btn btn-primary">发布</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Blog Edit Page -->
+        <div class="page" id="page-blog-edit">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                <a href="#" onclick="navigate('blog-detail')" style=" font-size: 1.5rem; text-decoration: none;">←</a>
+                <h1 style="margin: 0;">编辑博客</h1>
+            </div>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+            <div class="card">
+                <form onsubmit="handleUpdateBlog(event)">
+                    <div class="form-group">
+                        <label class="form-label">标题</label>
+                        <input type="text" class="form-input" value="机器学习入门指南" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">内容（支持 Markdown）</label>
+                        <textarea class="form-textarea" style="min-height: 400px;">机器学习是人工智能的核心技术之一，它让计算机能够从数据中学习规律，并利用这些规律对未知数据进行预测。本文将介绍机器学习的基本概念、常见算法和实际应用。
+
+## 什么是机器学习
+
+机器学习（Machine Learning）是人工智能的一个分支，它通过算法让计算机从数据中学习，而不是通过明确的编程指令。简单来说，就是让计算机具备"学习"的能力。</textarea>
+                        <div class="form-help">支持：# 标题、**加粗**、`代码`、> 引用、- 列表等</div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="navigate('blog-detail')">取消</button>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- User Profile Page -->
+        <div class="page" id="page-user-profile">
+            <div class="card">
+                <div class="profile-header">
+                    <div class="profile-avatar">张</div>
+                    <div class="profile-info">
+                        <div class="profile-name">张三</div>
+                        <div class="profile-username">@zhangsan</div>
+                        <p class="profile-bio">热爱编程，专注于机器学习和深度学习领域。喜欢分享技术文章和学习心得。</p>
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">15</div>
+                                <div class="stat-label">发布博客</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">128</div>
+                                <div class="stat-label">总阅读量</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 2rem;">
+                    <h2 class="section-title">TA 的博客</h2>
+                    <div class="blog-card" onclick="navigate('blog-detail')">
+                        <h3>机器学习入门指南</h3>
+                        <div class="blog-meta">2025-01-10</div>
+                        <div class="blog-excerpt">机器学习是人工智能的核心技术之一，本文将介绍机器学习的基本概念、常见算法和实际应用...</div>
+                    </div>
+                    <div class="blog-card" onclick="navigate('blog-detail')">
+                        <h3>深度学习框架对比</h3>
+                        <div class="blog-meta">2025-01-07</div>
+                        <div class="blog-excerpt">TensorFlow、PyTorch、Keras...面对众多的深度学习框架，该如何选择？本文将从多个角度进行对比...</div>
+                    </div>
+                    <div class="blog-card" onclick="navigate('blog-detail')">
+                        <h3>Python 进阶技巧</h3>
+                        <div class="blog-meta">2025-01-05</div>
+                        <div class="blog-excerpt">Python 是一门简洁而强大的编程语言。本文将分享一些 Python 进阶技巧，帮助你写出更优雅的代码...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Members Page -->
+        <div class="page" id="page-members">
+            <h1>班级成员</h1>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+            <div class="filter-bar">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="搜索成员..." oninput="searchMembers(this.value)">
+                </div>
+            </div>
+            <div class="member-card" onclick="navigate('user-profile')">
+                <div class="member-avatar">张</div>
+                <div class="member-info">
+                    <div class="member-name">张三</div>
+                    <div class="member-details">@zhangsan · 车辆4班 · 15篇博客</div>
+                </div>
+                <div>→</div>
+            </div>
+            <div class="member-card" onclick="navigate('user-profile')">
+                <div class="member-avatar">李</div>
+                <div class="member-info">
+                    <div class="member-name">李四</div>
+                    <div class="member-details">@lisi · 车辆4班 · 8篇博客</div>
+                </div>
+                <div>→</div>
+            </div>
+            <div class="member-card" onclick="navigate('user-profile')">
+                <div class="member-avatar">王</div>
+                <div class="member-info">
+                    <div class="member-name">王五</div>
+                    <div class="member-details">@wangwu · 车辆4班 · 12篇博客</div>
+                </div>
+                <div>→</div>
+            </div>
+            <div class="member-card" onclick="navigate('user-profile')">
+                <div class="member-avatar">赵</div>
+                <div class="member-info">
+                    <div class="member-name">赵六</div>
+                    <div class="member-details">@zhaoliu · 车辆4班 · 6篇博客</div>
+                </div>
+                <div>→</div>
+            </div>
+            <div class="member-card" onclick="navigate('user-profile')">
+                <div class="member-avatar">刘</div>
+                <div class="member-info">
+                    <div class="member-name">刘七</div>
+                    <div class="member-details">@liuqi · 车辆4班 · 10篇博客</div>
+                </div>
+                <div>→</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑资料</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form onsubmit="handleUpdateProfile(event)">
+                <div class="form-group">
+                    <label class="form-label">头像</label>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div class="profile-avatar" style="width: 60px; height: 60px; font-size: 1.5rem;">张</div>
+                        <button type="button" class="btn btn-outline">更换头像</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">昵称</label>
+                    <input type="text" class="form-input" value="张三">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">班级/学校</label>
+                    <input type="text" class="form-input" value="车辆4班 · 清华大学">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">个人简介</label>
+                    <textarea class="form-textarea" style="min-height: 100px;">热爱编程，专注于机器学习和深度学习领域。喜欢分享技术文章和学习心得。</textarea>
+                    <div class="form-help">最多200字</div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // State
+        let isLoggedIn = false;
+        let currentUser = null;
+
+        // Navigation
+        function navigate(page) {
+            event.preventDefault();
+
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+            // Show target page
+            const targetPage = document.getElementById('page-' + page);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+
+            // Update nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+
+            return false;
+        }
+
+        // Render nav based on auth state
+        function renderNav() {
+            const navAuth = document.getElementById('navAuth');
+
+            if (isLoggedIn) {
+                navAuth.innerHTML = `
+                    <div class="user-dropdown">
+                        <div class="user-trigger" onclick="toggleUserMenu()">
+                            <div class="user-avatar">张</div>
+                            <span>zhangsan</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="user-menu" id="userMenu">
+                            <div class="user-menu-item" onclick="navigate('user-profile')">个人中心</div>
+                            <div class="user-menu-item" onclick="openEditModal()">编辑资料</div>
+                            <div class="user-menu-item" onclick="handleLogout()">退出登录</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                navAuth.innerHTML = `
+                    <button class="btn btn-outline" onclick="navigate('login')">登录</button>
+                    <button class="btn btn-primary" onclick="navigate('register')">注册</button>
+                `;
+            }
+        }
+
+        // Toggle user menu
+        function toggleUserMenu() {
+            const menu = document.getElementById('userMenu');
+            menu.classList.toggle('show');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('userMenu');
+            const trigger = document.querySelector('.user-trigger');
+            if (menu && trigger && !trigger.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // Handle login
+        function handleLogin(event) {
+            event.preventDefault();
+            isLoggedIn = true;
+            currentUser = { username: 'zhangsan', name: '张三' };
+            renderNav();
+            showToast('登录成功！', 'success');
+            setTimeout(() => navigate('home'), 1000);
+        }
+
+        // Handle register
+        function handleRegister(event) {
+            event.preventDefault();
+            isLoggedIn = true;
+            currentUser = { username: 'newuser', name: '新用户' };
+            renderNav();
+            showToast('注册成功！', 'success');
+            setTimeout(() => navigate('home'), 1000);
+        }
+
+        // Handle logout
+        function handleLogout() {
+            isLoggedIn = false;
+            currentUser = null;
+            renderNav();
+            showToast('已退出登录', 'success');
+            setTimeout(() => navigate('home'), 500);
+        }
+
+        // Handle create blog
+        function handleCreateBlog(event) {
+            event.preventDefault();
+            showToast('博客发布成功！', 'success');
+            setTimeout(() => navigate('blog-detail'), 1000);
+        }
+
+        // Handle update blog
+        function handleUpdateBlog(event) {
+            event.preventDefault();
+            showToast('博客更新成功！', 'success');
+            setTimeout(() => navigate('blog-detail'), 1000);
+        }
+
+        // Delete blog
+        function deleteBlog() {
+            if (confirm('确定要删除这篇博客吗？此操作不可恢复。')) {
+                showToast('博客已删除', 'success');
+                setTimeout(() => navigate('blogs'), 1000);
+            }
+        }
+
+        // Filter blogs
+        function filterBlogs(filter) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            if (filter === 'mine' && !isLoggedIn) {
+                showToast('请先登录', 'error');
+                setTimeout(() => navigate('login'), 1000);
+            }
+        }
+
+        // Search members
+        function searchMembers(query) {
+            const cards = document.querySelectorAll('.member-card');
+            cards.forEach(card => {
+                const name = card.querySelector('.member-name').textContent.toLowerCase();
+                const username = card.querySelector('.member-details').textContent.toLowerCase();
+                if (name.includes(query.toLowerCase()) || username.includes(query.toLowerCase())) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Modal functions
+        function openEditModal() {
+            document.getElementById('editProfileModal').classList.add('show');
+            document.getElementById('userMenu').classList.remove('show');
+        }
+
+        function closeModal() {
+            document.getElementById('editProfileModal').classList.remove('show');
+        }
+
+        // Handle update profile
+        function handleUpdateProfile(event) {
+            event.preventDefault();
+            closeModal();
+            showToast('资料更新成功！', 'success');
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast toast-' + type + ' show';
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize
+        renderNav();
+    </script>
+</body>
+</html>
