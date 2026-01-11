@@ -111,7 +111,7 @@ function UserProfile() {
           </div>
         </div>
 
-        {blogs && blogs.items.length > 0 && (
+        {blogs?.items && blogs.items.length > 0 && (
           <div style={{ marginTop: '2rem' }}>
             <h2 style={{ marginBottom: '1.5rem', paddingBottom: '0.5rem', borderBottom: '2px solid #e2e8f0' }}>
               TA 的博客
@@ -133,7 +133,7 @@ function UserProfile() {
           </div>
         )}
 
-        {blogs && blogs.items.length === 0 && (
+        {blogs?.items && blogs.items.length === 0 && (
           <p className="small-muted" style={{ marginTop: '2rem' }}>
             还没有发布博客
           </p>

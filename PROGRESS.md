@@ -1,6 +1,6 @@
 # V4Corner 项目开发进度
 
-**最后更新**: 2026-01-11
+**最后更新**: 2026-01-12 (完成博客系统核心功能：详情页、创建/编辑、实时预览)
 
 ## 项目概述
 
@@ -76,6 +76,7 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
   - `BlogUpdate`: 更新博客
   - `BlogListItem`: 博客列表项
   - `BlogRead`: 博客详情 (含 is_owner 字段)
+  - `BlogListResponse`: 博客列表分页响应
   - `generate_excerpt()`: 自动生成摘要 (150字)
 
 ### 2. 前端实现
@@ -128,25 +129,51 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
   - 错误处理
   - 注册成功后自动登录
 
+- ✅ **博客列表** (`frontend/src/routes/Blogs.tsx`)
+  - 博客卡片展示
+  - 作者筛选
+  - 分页加载
+  - 【写博客】按钮（仅登录用户可见，页面右上角）
+
+- ✅ **博客详情页** (`frontend/src/routes/BlogDetail.tsx`)
+  - 显示完整博客内容（Markdown 渲染）
+  - 面包屑导航（博客首页 > 文章标题）
+  - 白色卡片背景布局
+  - 显示作者信息、发布时间、阅读次数
+  - 编辑/删除按钮（仅作者可见，页面头部）
+
+- ✅ **创建博客页面** (`frontend/src/routes/CreateBlog.tsx`)
+  - 标题和内容输入（支持 Markdown）
+  - 实时预览（左右分栏布局，可切换）
+  - 字符计数显示
+  - Markdown 语法提示
+
+- ✅ **编辑博客页面** (`frontend/src/routes/EditBlog.tsx`)
+  - 加载现有博客内容
+  - 标题和内容编辑
+  - 实时预览（左右分栏布局，可切换）
+  - 权限检查（仅作者可编辑）
+
 - ✅ **用户个人中心** (`frontend/src/routes/UserProfile.tsx`)
   - 显示用户信息
   - 显示用户博客列表
-  - 编辑按钮 (仅作者可见)
+  - 编辑按钮（跳转到编辑资料页）
+
+- ✅ **编辑资料页面** (`frontend/src/routes/EditProfile.tsx`)
+  - 编辑昵称、班级、个人简介
+  - 用户名和邮箱只读显示
+  - 表单验证
+  - 保存成功后跳转回个人主页
 
 - ✅ **成员列表** (`frontend/src/routes/Members.tsx`)
   - 成员卡片展示
   - 搜索功能
   - 分页加载
 
-- ✅ **博客列表** (`frontend/src/routes/Blogs.tsx`)
-  - 博客卡片展示
-  - 作者筛选
-  - 分页加载
-
 - ✅ **导航栏** (`frontend/src/components/Navbar.tsx`)
   - 登录状态显示
-  - 用户菜单 (头像、昵称)
-  - 登录/注册按钮 (未登录时)
+  - 用户菜单（个人中心、编辑资料、退出登录）
+  - 登录/注册按钮（未登录时）
 
 #### 路由配置
 - ✅ **App.tsx** (`frontend/src/App.tsx`)
@@ -154,9 +181,12 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
   - `/login` - 登录
   - `/register` - 注册
   - `/blogs` - 博客列表
-  - `/blogs/:id` - 博客详情
-  - `/users/:id` - 用户个人中心
+  - `/blogs/new` - 创建博客（必须在 `/blogs/:blogId` 之前）
+  - `/blogs/:blogId/edit` - 编辑博客（必须在 `/blogs/:blogId` 之前）
+  - `/blogs/:blogId` - 博客详情
   - `/members` - 成员列表
+  - `/users/me` - 编辑资料页面（必须在 `/users/:userId` 之前）
+  - `/users/:userId` - 用户个人中心
 
 ### 3. 测试与文档
 
@@ -231,6 +261,27 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
 **修复**:
 - `frontend/src/api/client.ts`: 处理不同格式的 error.detail
 
+### BlogListResponse 缺失导出
+**问题**: 添加 `BlogListResponse` schema 后未在 `schemas/__init__.py` 中导出，导致后端启动失败
+
+**修复**:
+- `backend/schemas/__init__.py`: 添加 `BlogListResponse` 到导入列表和 `__all__`
+
+### 用户博客列表 API 返回格式不匹配
+**问题**: `/api/users/{id}/blogs` 返回的是 `list[BlogListItem]`，但前端期望分页格式 `BlogListResponse`
+
+**修复**:
+- `backend/schemas/blog.py`: 添加 `BlogListResponse` schema
+- `backend/routers/users.py`: 修改 `get_user_blogs` 返回 `BlogListResponse` (包含 total, page, size, items)
+- `frontend/src/routes/UserProfile.tsx`: 使用可选链 `blogs?.items` 避免空值错误
+
+### 路由顺序问题
+**问题**: `/users/me` 被 `/users/:userId` 路由匹配，`me` 被当作 `userId` 参数，导致 `parseInt('me')` 返回 `NaN`
+
+**修复**:
+- 创建 `frontend/src/routes/EditProfile.tsx` 编辑资料页面
+- `frontend/src/App.tsx`: 将 `/users/me` 路由放在 `/users/:userId` 之前 (更具体的路由优先匹配)
+
 ---
 
 ## 🚧 当前状态
@@ -259,44 +310,25 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
 
 ### 优先级: 高
 
-#### 博客详情页
-- [ ] `frontend/src/routes/BlogDetail.tsx`
-- [ ] 显示完整博客内容 (Markdown 渲染)
-- [ ] 显示作者信息
-- [ ] 编辑/删除按钮 (仅作者可见)
-- [ ] 评论系统 (可选)
-
-#### 创建/编辑博客页面
-- [ ] `frontend/src/routes/CreateBlog.tsx`
-- [ ] Markdown 编辑器
-- [ ] 标题输入
-- [ ] 内容预览
-- [ ] `frontend/src/routes/EditBlog.tsx` (或与 CreateBlog 合并)
+#### 评论系统
+- [ ] 评论模型 (Comment)
+- [ ] 评论 API（创建、获取、删除）
+- [ ] 前端评论组件
 
 ### 优先级: 中
 
-#### 用户个人中心编辑
-- [ ] 编辑昵称
-- [ ] 编辑班级
-- [ ] 编辑个人简介
-- [ ] 上传头像
-
 #### 博客功能增强
-- [ ] Markdown 渲染库集成
-- [ ] 代码高亮
-- [ ] 图片上传
-- [ ] 博客分类/标签
+- [ ] 升级到专业的 Markdown 渲染库 (react-markdown 或 marked)
+- [ ] 代码语法高亮 (react-syntax-highlighter 或 prism.js)
+- [ ] 图片上传功能
+- [ ] 博客分类/标签系统
 
 ### 优先级: 低
 
-#### 评论系统
-- [ ] 评论模型 (Comment)
-- [ ] 评论 API
-- [ ] 前端评论组件
-
 #### 其他功能
-- [ ] 搜索功能
-- [ ] 点赞/收藏
+- [ ] 用户头像上传
+- [ ] 博客搜索功能
+- [ ] 博客点赞/收藏
 - [ ] 通知系统
 - [ ] 密码重置
 
@@ -344,7 +376,11 @@ V4Corner/
 │   │   ├── contexts/                # React Context
 │   │   │   └── AuthContext.tsx      # 认证上下文
 │   │   ├── routes/                  # 页面组件
+│   │   │   ├── BlogDetail.tsx
 │   │   │   ├── Blogs.tsx
+│   │   │   ├── CreateBlog.tsx
+│   │   │   ├── EditBlog.tsx
+│   │   │   ├── EditProfile.tsx
 │   │   │   ├── Login.tsx
 │   │   │   ├── Members.tsx
 │   │   │   ├── Register.tsx
@@ -353,6 +389,8 @@ V4Corner/
 │   │   │   ├── auth.ts
 │   │   │   ├── blog.ts
 │   │   │   └── user.ts
+│   │   └── utils/                   # 工具函数
+│   │       └── markdown.ts          # Markdown 转 HTML
 │   │   ├── App.tsx                  # 主应用组件
 │   │   └── main.tsx                 # 应用入口
 │   └── package.json                 # Node 依赖
@@ -404,10 +442,10 @@ python test_api.py
 
 ## 💡 下次开发建议
 
-1. **优先实现博客详情页** - 这是目前缺失的核心功能
-2. **添加 Markdown 渲染** - 使用 `react-markdown` 或 `marked`
-3. **实现博客编辑器** - 可以使用简单的 textarea 或集成 `react-markdown-editor`
-4. **添加图片上传** - 博客内容中的图片支持
+1. **评论系统** - 为博客添加评论功能，增强互动性
+2. **升级 Markdown 渲染** - 使用 `react-markdown` 或 `marked` 替换当前简单实现
+3. **代码语法高亮** - 使用 `react-syntax-highlighter` 或 `prism.js`
+4. **图片上传** - 支持博客内容中的图片
 5. **完善错误处理** - 统一的错误提示组件
 
 ---
@@ -419,4 +457,7 @@ python test_api.py
 - bcrypt 密码长度限制已处理
 - 前后端数据格式完全匹配
 - 认证流程完整可用
+- **博客系统核心功能已完成**（列表、详情、创建、编辑、删除）
+- **游客可访问博客内容**
+- **实时预览功能已实现**
 - 项目处于可继续开发状态

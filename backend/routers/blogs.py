@@ -9,7 +9,7 @@ import dependencies, models, schemas, auth
 router = APIRouter(prefix="/api/blogs", tags=["博客"])
 
 
-@router.get("", response_model=list[schemas.BlogListItem])
+@router.get("", response_model=schemas.BlogListResponse)
 async def list_blogs(
     db: dependencies.DbSession,
     author: Optional[str] = Query(None, description="按作者筛选"),
@@ -23,15 +23,18 @@ async def list_blogs(
     if author:
         query = query.filter(models.Blog.author_name == author)
 
-    # 按创建时间倒序
+    # 统计总数
+    total = query.count()
+
+    # 按创建时间倒序，分页查询
     blogs = query.order_by(models.Blog.created_at.desc()).offset((page - 1) * size).limit(size).all()
 
     # 构造响应
-    result = []
+    items = []
     for blog in blogs:
         # 生成摘要
         excerpt = schemas.generate_excerpt(blog.content)
-        result.append(schemas.BlogListItem(
+        items.append(schemas.BlogListItem(
             id=blog.id,
             title=blog.title,
             excerpt=excerpt,
@@ -41,7 +44,12 @@ async def list_blogs(
             created_at=blog.created_at
         ))
 
-    return result
+    return schemas.BlogListResponse(
+        total=total,
+        page=page,
+        size=size,
+        items=items
+    )
 
 
 @router.get("/{blog_id}", response_model=schemas.BlogRead)

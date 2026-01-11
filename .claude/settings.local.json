@@ -6,7 +6,8 @@
       "Bash(python:*)",
       "Bash(dir:*)",
       "Bash(del \"\\\\?\\\\D:\\\\005\\\\V4Corner\\\\backend\\\\routers\\\\nul\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

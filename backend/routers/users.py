@@ -105,7 +105,7 @@ async def get_user_public_info(
     )
 
 
-@router.get("/{user_id}/blogs", response_model=list[schemas.BlogListItem])
+@router.get("/{user_id}/blogs", response_model=schemas.BlogListResponse)
 async def get_user_blogs(
     user_id: int,
     db: dependencies.DbSession,
@@ -121,6 +121,9 @@ async def get_user_blogs(
             detail="用户不存在"
         )
 
+    # 统计总数
+    total = db.query(models.Blog).filter(models.Blog.author_id == user_id).count()
+
     # 查询博客
     blogs = db.query(models.Blog).filter(
         models.Blog.author_id == user_id
@@ -129,10 +132,10 @@ async def get_user_blogs(
     ).offset((page - 1) * size).limit(size).all()
 
     # 构造响应
-    result = []
+    items = []
     for blog in blogs:
         excerpt = schemas.generate_excerpt(blog.content)
-        result.append(schemas.BlogListItem(
+        items.append(schemas.BlogListItem(
             id=blog.id,
             title=blog.title,
             excerpt=excerpt,
@@ -142,4 +145,9 @@ async def get_user_blogs(
             created_at=blog.created_at
         ))
 
-    return result
+    return schemas.BlogListResponse(
+        total=total,
+        page=page,
+        size=size,
+        items=items
+    )

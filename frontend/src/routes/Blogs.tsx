@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getBlogs } from '../api/blogs';
 import BlogCard from '../components/BlogCard';
+import { useAuth } from '../contexts/AuthContext';
 import type { Blog } from '../types/blog';
 
 function Blogs() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +26,18 @@ function Blogs() {
 
   return (
     <section>
-      <h1>博客</h1>
-      <p className="small-muted">来自同学们的文章</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>博客</h1>
+          <p className="small-muted" style={{ marginTop: '0.5rem' }}>来自同学们的文章</p>
+        </div>
+        {isAuthenticated && (
+          <Link to="/blogs/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+            写博客
+          </Link>
+        )}
+      </div>
+
       <div className="card-grid">
         {blogs.map((blog) => (
           <BlogCard key={blog.id} blog={blog} />

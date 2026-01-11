@@ -68,3 +68,11 @@ class BlogRead(BaseModel):
             created_at=blog.created_at,
             updated_at=blog.updated_at
         )
+
+
+class BlogListResponse(BaseModel):
+    """博客列表响应（分页）"""
+    total: int
+    page: int
+    size: int
+    items: list[BlogListItem]

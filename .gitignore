@@ -3,18 +3,73 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database
+*.db
+*.sqlite
 *.sqlite3
+backend/v4corner.db
+backend/v4corner.db-journal
+backend/v4corner.db-shm
+backend/v4corner.db-wal
+
+# Environment
 .env
-venv/
 .env.local
+.env.*.local
+venv/
+env/
+ENV/
 
 # Node
 node_modules/
 dist/
 build/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Frontend build
+frontend/dist/
+frontend/build/
+frontend/.vite/
 
 # Editor
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+
+# Testing
+*.test.ts
+coverage/
+.nyc_output/
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+.cache/
