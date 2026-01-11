@@ -14,6 +14,7 @@ from .user import (
     UserUpdate,
     UserRead,
     UserPublic,
+    AvatarUploadResponse,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "UserUpdate",
     "UserRead",
     "UserPublic",
+    "AvatarUploadResponse",
 ]

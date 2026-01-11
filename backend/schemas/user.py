@@ -64,3 +64,8 @@ class UserPublic(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AvatarUploadResponse(BaseModel):
+    """头像上传响应"""
+    avatar_url: str

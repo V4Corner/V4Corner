@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { createBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
 import { formatMarkdown } from '../utils/markdown';
@@ -60,6 +60,15 @@ function CreateBlog() {
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      {/* 面包屑导航 */}
+      <div style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '1rem' }}>
+        <Link to="/blogs" style={{ color: '#0f172a', textDecoration: 'none' }}>
+          博客首页
+        </Link>
+        {' > '}
+        <span>创建博客</span>
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 style={{ margin: 0 }}>创建博客</h1>
         <button

@@ -42,7 +42,7 @@ function Blogs() {
         {blogs.map((blog) => (
           <BlogCard key={blog.id} blog={blog} />
         ))}
-        {blogs.length === 0 && <p>还没有博客，等待后端API连接...</p>}
+        {blogs.length === 0 && <p className="small-muted">还没有博客，快来发布第一篇文章吧！</p>}
       </div>
     </section>
   );

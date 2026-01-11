@@ -32,6 +32,7 @@ class BlogListItem(BaseModel):
     excerpt: str
     author: str
     author_id: int
+    author_avatar_url: str | None = None
     views: int
     created_at: datetime
 
@@ -44,6 +45,7 @@ class BlogRead(BaseModel):
     excerpt: str
     author: str
     author_id: int
+    author_avatar_url: str | None = None
     views: int
     is_owner: bool = False  # 当前用户是否为作者
     created_at: datetime
@@ -63,6 +65,7 @@ class BlogRead(BaseModel):
             excerpt=excerpt,
             author=blog.author_name,
             author_id=blog.author_id,
+            author_avatar_url=blog.author.avatar_url if blog.author else None,
             views=blog.views,
             is_owner=is_owner,
             created_at=blog.created_at,

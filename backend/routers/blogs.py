@@ -1,7 +1,7 @@
 # 博客相关路由
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
 import dependencies, models, schemas, auth
@@ -17,7 +17,7 @@ async def list_blogs(
     size: int = Query(20, ge=1, le=100, description="每页数量")
 ):
     """获取博客列表"""
-    query = db.query(models.Blog)
+    query = db.query(models.Blog).options(joinedload(models.Blog.author))
 
     # 按作者筛选
     if author:
@@ -40,6 +40,7 @@ async def list_blogs(
             excerpt=excerpt,
             author=blog.author_name,
             author_id=blog.author_id,
+            author_avatar_url=blog.author.avatar_url if blog.author else None,
             views=blog.views,
             created_at=blog.created_at
         ))
@@ -59,7 +60,7 @@ async def get_blog(
     db: dependencies.DbSession
 ):
     """获取博客详情"""
-    blog = db.query(models.Blog).filter(models.Blog.id == blog_id).first()
+    blog = db.query(models.Blog).options(joinedload(models.Blog.author)).filter(models.Blog.id == blog_id).first()
 
     if not blog:
         raise HTTPException(

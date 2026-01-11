@@ -115,10 +115,19 @@ function BlogDetail() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '0.9rem',
-                  fontWeight: 600
+                  fontWeight: 600,
+                  overflow: 'hidden'
                 }}
               >
-                {blog.author[0].toUpperCase()}
+                {blog.author_avatar_url ? (
+                  <img
+                    src={`http://localhost:8000${blog.author_avatar_url}`}
+                    alt={`${blog.author}'s avatar`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span>{blog.author[0].toUpperCase()}</span>
+                )}
               </div>
               <span style={{ fontWeight: 500 }}>{blog.author}</span>
             </div>

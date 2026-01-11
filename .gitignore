@@ -21,6 +21,10 @@ backend/v4corner.db-journal
 backend/v4corner.db-shm
 backend/v4corner.db-wal
 
+# Uploads (keep .gitkeep)
+backend/uploads/*/
+!backend/uploads/*/\.gitkeep
+
 # Environment
 .env
 .env.local

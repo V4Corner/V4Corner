@@ -66,10 +66,19 @@ function Navbar() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.9rem'
+                    fontSize: '0.9rem',
+                    overflow: 'hidden'
                   }}
                 >
-                  {user.nickname ? user.nickname[0].toUpperCase() : user.username[0].toUpperCase()}
+                  {user.avatar_url ? (
+                    <img
+                      src={`http://localhost:8000${user.avatar_url}`}
+                      alt={`${user.username}'s avatar`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <span>{user.nickname ? user.nickname[0].toUpperCase() : user.username[0].toUpperCase()}</span>
+                  )}
                 </div>
                 <span>{user.nickname || user.username}</span>
                 <span>▼</span>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getCurrentUser, updateUser } from '../api/users';
+import { getCurrentUser, updateUser, uploadAvatar } from '../api/users';
 import type { UpdateUserRequest } from '../types/user';
 
 function EditProfile() {
@@ -15,14 +15,76 @@ function EditProfile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Avatar states
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+
   // 初始化表单数据
   useEffect(() => {
     if (user) {
       setNickname(user.nickname || '');
       setClassField(user.class || '');
       setBio(user.bio || '');
+      // Set avatar preview from existing avatar
+      if (user.avatar_url) {
+        setAvatarPreview(`http://localhost:8000${user.avatar_url}`);
+      }
     }
   }, [user]);
+
+  // Handle avatar file selection
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setAvatarError('请上传 jpg, png 或 webp 格式的图片');
+      setAvatarFile(null);
+      setAvatarPreview(user?.avatar_url ? `http://localhost:8000${user.avatar_url}` : null);
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError('文件过大，请上传不超过 2MB 的图片');
+      setAvatarFile(null);
+      setAvatarPreview(user?.avatar_url ? `http://localhost:8000${user.avatar_url}` : null);
+      return;
+    }
+
+    setAvatarError('');
+    setAvatarFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle avatar upload
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return;
+
+    try {
+      setUploadingAvatar(true);
+      setAvatarError('');
+      await uploadAvatar(avatarFile);
+      await refreshUser();
+      setAvatarFile(null);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : '上传失败');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +163,84 @@ function EditProfile() {
       )}
 
       <form onSubmit={handleSubmit} className="card" style={{ padding: '2rem' }}>
+        {/* Avatar Upload Section */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #e2e8f0' }}>
+          <label style={{ display: 'block', marginBottom: '1rem', fontWeight: 600, fontSize: '1.1rem' }}>
+            头像
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            {/* Avatar Preview */}
+            <div
+              style={{
+                width: '100px',
+                height: '100px',
+                borderRadius: '50%',
+                backgroundColor: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                border: '2px solid #e2e8f0',
+                flexShrink: 0
+              }}
+            >
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Avatar preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ fontSize: '2rem', color: '#94a3b8', fontWeight: 500 }}>
+                  {user.nickname?.[0] || user.username[0]}
+                </span>
+              )}
+            </div>
+
+            {/* Upload Controls */}
+            <div style={{ flex: 1 }}>
+              <input
+                id="avatar"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleAvatarChange}
+                disabled={uploadingAvatar}
+                style={{ display: 'none' }}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <label
+                  htmlFor="avatar"
+                  className="btn btn-outline"
+                  style={{
+                    cursor: uploadingAvatar ? 'not-allowed' : 'pointer',
+                    opacity: uploadingAvatar ? 0.6 : 1
+                  }}
+                >
+                  {avatarFile ? '更换图片' : '选择图片'}
+                </label>
+                {avatarFile && (
+                  <button
+                    type="button"
+                    onClick={handleAvatarUpload}
+                    className="btn btn-primary"
+                    disabled={uploadingAvatar}
+                  >
+                    {uploadingAvatar ? '上传中...' : '上传头像'}
+                  </button>
+                )}
+              </div>
+              <p className="small-muted" style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
+                支持 jpg, png, webp 格式，最大 2MB
+              </p>
+              {avatarError && (
+                <p style={{ color: '#dc2626', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                  {avatarError}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
             用户名

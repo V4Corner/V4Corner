@@ -1,6 +1,6 @@
 # V4Corner 项目开发进度
 
-**最后更新**: 2026-01-12 (完成博客系统核心功能：详情页、创建/编辑、实时预览)
+**最后更新**: 2026-01-12 (完成用户头像上传功能)
 
 ## 项目概述
 
@@ -56,6 +56,7 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
 - ✅ **用户 API** (`backend/routers/users.py`)
   - `GET /api/users/me` - 获取当前用户信息
   - `PUT /api/users/me` - 更新当前用户信息
+  - `POST /api/users/me/avatar` - 上传用户头像 (需认证)
   - `GET /api/users/{id}` - 获取指定用户公开信息
   - `GET /api/users/{id}/blogs` - 获取指定用户的博客列表
 
@@ -70,12 +71,13 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
   - `UserUpdate`: 更新用户信息
   - `UserRead`: 用户完整信息
   - `UserPublic`: 用户公开信息 (不含邮箱)
+  - `AvatarUploadResponse`: 头像上传响应
 
 - ✅ **Blog Schemas** (`backend/schemas/blog.py`)
   - `BlogCreate`: 创建博客
   - `BlogUpdate`: 更新博客
-  - `BlogListItem`: 博客列表项
-  - `BlogRead`: 博客详情 (含 is_owner 字段)
+  - `BlogListItem`: 博客列表项 (含 author_avatar_url)
+  - `BlogRead`: 博客详情 (含 is_owner, author_avatar_url 字段)
   - `BlogListResponse`: 博客列表分页响应
   - `generate_excerpt()`: 自动生成摘要 (150字)
 
@@ -86,10 +88,10 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
   - `LoginRequest`, `RegisterRequest`, `AuthResponse`
 
 - ✅ **用户类型** (`frontend/src/types/user.ts`)
-  - `User`, `UserPublic`, `UserStats`, `UpdateUserRequest`
+  - `User`, `UserPublic`, `UserStats`, `UpdateUserRequest`, `AvatarUploadResponse`
 
 - ✅ **博客类型** (`frontend/src/types/blog.ts`)
-  - `Blog`, `BlogCreate`, `BlogUpdate`, `BlogListResponse`
+  - `Blog` (含 author_avatar_url), `BlogCreate`, `BlogUpdate`, `BlogListResponse`, `BlogListItem` (含 author_avatar_url)
 
 #### API 客户端
 - ✅ **通用客户端** (`frontend/src/api/client.ts`)
@@ -97,7 +99,8 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
   - 自动添加 Authorization header
   - 统一错误处理 (支持 FastAPI 验证错误格式)
   - 401 自动跳转登录
-  - 支持 GET, POST, PUT, DELETE, 文件上传
+  - 支持 GET, POST, PUT, DELETE
+  - `uploadFile()`: 文件上传函数 (FormData)
 
 - ✅ **认证 API** (`frontend/src/api/auth.ts`)
   - login(), register(), logout(), refreshToken()
@@ -137,6 +140,7 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
 
 - ✅ **博客详情页** (`frontend/src/routes/BlogDetail.tsx`)
   - 显示完整博客内容（Markdown 渲染）
+  - 作者头像显示（36x36）
   - 面包屑导航（博客首页 > 文章标题）
   - 白色卡片背景布局
   - 显示作者信息、发布时间、阅读次数
@@ -155,25 +159,34 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
   - 权限检查（仅作者可编辑）
 
 - ✅ **用户个人中心** (`frontend/src/routes/UserProfile.tsx`)
+  - 显示用户头像（80x80，若无头像则显示首字母）
   - 显示用户信息
   - 显示用户博客列表
   - 编辑按钮（跳转到编辑资料页）
 
 - ✅ **编辑资料页面** (`frontend/src/routes/EditProfile.tsx`)
+  - 头像上传（支持 jpg, png, webp，最大 2MB）
+  - 头像实时预览（100x100 圆形）
   - 编辑昵称、班级、个人简介
   - 用户名和邮箱只读显示
   - 表单验证
   - 保存成功后跳转回个人主页
 
 - ✅ **成员列表** (`frontend/src/routes/Members.tsx`)
+  - 成员头像显示（50x50）
   - 成员卡片展示
   - 搜索功能
   - 分页加载
 
 - ✅ **导航栏** (`frontend/src/components/Navbar.tsx`)
+  - 用户头像显示（32x32）
   - 登录状态显示
   - 用户菜单（个人中心、编辑资料、退出登录）
   - 登录/注册按钮（未登录时）
+
+- ✅ **博客卡片组件** (`frontend/src/components/BlogCard.tsx`)
+  - 作者头像显示（32x32）
+  - 博客标题、摘要、作者、日期、阅读次数
 
 #### 路由配置
 - ✅ **App.tsx** (`frontend/src/App.tsx`)
@@ -282,6 +295,25 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
 - 创建 `frontend/src/routes/EditProfile.tsx` 编辑资料页面
 - `frontend/src/App.tsx`: 将 `/users/me` 路由放在 `/users/:userId` 之前 (更具体的路由优先匹配)
 
+### 头像上传 Schema 导出问题
+**问题**: `AvatarUploadResponse` schema 未在 `schemas/__init__.py` 中导出，导致后端启动失败
+
+**修复**:
+- `backend/schemas/__init__.py`: 添加 `AvatarUploadResponse` 到导入列表和 `__all__`
+
+### 头像上传依赖注入参数顺序问题
+**问题**: `upload_avatar` 函数参数顺序导致 FastAPI 依赖注入错误
+
+**修复**:
+- `backend/routers/users.py`: 调整参数顺序（依赖注入参数在前，文件参数在后）
+
+### uploads 目录不存在问题
+**问题**: `StaticFiles` 挂载时 `uploads` 目录不存在，导致后端启动失败
+
+**修复**:
+- `backend/main.py`: 在启动事件中创建 `uploads/avatars` 目录
+- 添加 `backend/uploads/avatars/.gitkeep` 确保目录结构被 git 跟踪
+
 ---
 
 ## 🚧 当前状态
@@ -320,13 +352,12 @@ V4Corner 是行健-车辆4班打造的班级在线空间，用于展示班级信
 #### 博客功能增强
 - [ ] 升级到专业的 Markdown 渲染库 (react-markdown 或 marked)
 - [ ] 代码语法高亮 (react-syntax-highlighter 或 prism.js)
-- [ ] 图片上传功能
+- [ ] 博客内图片上传功能
 - [ ] 博客分类/标签系统
 
 ### 优先级: 低
 
 #### 其他功能
-- [ ] 用户头像上传
 - [ ] 博客搜索功能
 - [ ] 博客点赞/收藏
 - [ ] 通知系统
@@ -357,6 +388,9 @@ V4Corner/
 │   │   ├── __init__.py
 │   │   ├── user.py
 │   │   └── blog.py
+│   ├── uploads/                     # 用户上传文件
+│   │   └── avatars/                 # 头像文件
+│   │       └── .gitkeep
 │   ├── test_api.py                  # Python 测试脚本
 │   ├── test_api.bat                 # Windows 快速测试
 │   ├── test_api.sh                  # Linux/Mac 快速测试
@@ -372,7 +406,8 @@ V4Corner/
 │   │   │   ├── users.ts             # 用户 API
 │   │   │   └── members.ts           # 成员 API
 │   │   ├── components/              # React 组件
-│   │   │   └── Navbar.tsx
+│   │   │   ├── BlogCard.tsx         # 博客卡片
+│   │   │   └── Navbar.tsx           # 导航栏
 │   │   ├── contexts/                # React Context
 │   │   │   └── AuthContext.tsx      # 认证上下文
 │   │   ├── routes/                  # 页面组件
@@ -460,4 +495,9 @@ python test_api.py
 - **博客系统核心功能已完成**（列表、详情、创建、编辑、删除）
 - **游客可访问博客内容**
 - **实时预览功能已实现**
+- **用户头像上传功能已完成**
+  - 支持格式: JPG, PNG, WebP
+  - 文件大小限制: 最大 2MB
+  - 头像显示在: 导航栏、个人主页、成员列表、博客详情、博客卡片
+  - 静态文件服务: `/static/avatars/`
 - 项目处于可继续开发状态

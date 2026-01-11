@@ -5,6 +5,7 @@ export interface Blog {
   excerpt: string;
   author: string;
   author_id: number;
+  author_avatar_url: string | null;
   views: number;
   is_owner: boolean;
   created_at: string;
@@ -34,6 +35,7 @@ export interface BlogListItem {
   excerpt: string;
   author: string;
   author_id: number;
+  author_avatar_url: string | null;
   views: number;
   created_at: string;
 }

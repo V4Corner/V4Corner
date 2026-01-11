@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBlog, updateBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
 import { formatMarkdown } from '../utils/markdown';
@@ -118,6 +118,19 @@ function EditBlog() {
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      {/* 面包屑导航 */}
+      <div style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '1rem' }}>
+        <Link to="/blogs" style={{ color: '#0f172a', textDecoration: 'none' }}>
+          博客首页
+        </Link>
+        {' > '}
+        <Link to={`/blogs/${blogId}`} style={{ color: '#0f172a', textDecoration: 'none' }}>
+          {title}
+        </Link>
+        {' > '}
+        <span>编辑</span>
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 style={{ margin: 0 }}>编辑博客</h1>
         <button

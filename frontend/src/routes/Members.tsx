@@ -93,10 +93,19 @@ function Members() {
                   justifyContent: 'center',
                   fontSize: '1.25rem',
                   fontWeight: 700,
-                  flexShrink: 0
+                  flexShrink: 0,
+                  overflow: 'hidden'
                 }}
               >
-                {member.nickname ? member.nickname[0].toUpperCase() : member.username[0].toUpperCase()}
+                {member.avatar_url ? (
+                  <img
+                    src={`http://localhost:8000${member.avatar_url}`}
+                    alt={`${member.username}'s avatar`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span>{member.nickname ? member.nickname[0].toUpperCase() : member.username[0].toUpperCase()}</span>
+                )}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>

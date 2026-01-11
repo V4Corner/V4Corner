@@ -51,6 +51,7 @@ function UserProfile() {
     <div className="user-profile">
       <div className="card">
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', marginBottom: '2rem' }}>
+          {/* Avatar Display */}
           <div
             style={{
               width: '80px',
@@ -62,10 +63,20 @@ function UserProfile() {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '2rem',
-              fontWeight: 700
+              fontWeight: 700,
+              overflow: 'hidden',
+              flexShrink: 0
             }}
           >
-            {user.nickname ? user.nickname[0].toUpperCase() : user.username[0].toUpperCase()}
+            {user.avatar_url ? (
+              <img
+                src={`http://localhost:8000${user.avatar_url}`}
+                alt={`${user.username}'s avatar`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <span>{user.nickname ? user.nickname[0].toUpperCase() : user.username[0].toUpperCase()}</span>
+            )}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>

@@ -1,5 +1,8 @@
 # 用户管理相关路由
 
+import os
+import uuid
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -73,6 +76,51 @@ async def update_current_user(
     )
 
 
+@router.post("/me/avatar", response_model=schemas.AvatarUploadResponse)
+async def upload_avatar(
+    current_user: dependencies.CurrentUser,
+    db: dependencies.DbSession,
+    file: UploadFile = File(...)
+):
+    """上传用户头像"""
+    # 验证文件类型
+    allowed_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="不支持的文件类型，请上传 jpg, png 或 webp 格式的图片"
+        )
+
+    # 验证文件大小（最大 2MB）
+    MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="文件过大，请上传不超过 2MB 的图片"
+        )
+
+    # 创建上传目录
+    upload_dir = Path("uploads/avatars")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # 生成唯一文件名
+    file_extension = os.path.splitext(file.filename or "")[1] or ".jpg"
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = upload_dir / unique_filename
+
+    # 保存文件
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    # 更新用户头像 URL
+    avatar_url = f"/static/avatars/{unique_filename}"
+    current_user.avatar_url = avatar_url
+    db.commit()
+
+    return schemas.AvatarUploadResponse(avatar_url=avatar_url)
+
+
 @router.get("/{user_id}", response_model=schemas.UserPublic)
 async def get_user_public_info(
     user_id: int,
@@ -125,7 +173,8 @@ async def get_user_blogs(
     total = db.query(models.Blog).filter(models.Blog.author_id == user_id).count()
 
     # 查询博客
-    blogs = db.query(models.Blog).filter(
+    from sqlalchemy.orm import joinedload
+    blogs = db.query(models.Blog).options(joinedload(models.Blog.author)).filter(
         models.Blog.author_id == user_id
     ).order_by(
         models.Blog.created_at.desc()
@@ -141,6 +190,7 @@ async def get_user_blogs(
             excerpt=excerpt,
             author=blog.author_name,
             author_id=blog.author_id,
+            author_avatar_url=blog.author.avatar_url if blog.author else None,
             views=blog.views,
             created_at=blog.created_at
         ))
