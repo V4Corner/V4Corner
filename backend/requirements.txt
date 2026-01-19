@@ -2,8 +2,41 @@ fastapi==0.115.5
 uvicorn[standard]==0.32.0
 SQLAlchemy==2.0.35
 pydantic==2.9.2
+pydantic-settings==2.5.2
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.9
 email-validator==2.1.0
+
+# ============================================
+# AI 服务 SDK（根据需要选择安装）
+# ============================================
+
+# 核心依赖（必需，支持 OpenAI、DeepSeek、Ollama）
+openai==1.12.0
+
+# 可选依赖（根据使用的 AI 服务商选择安装）
+# pip install anthropic  # Anthropic Claude
+# pip install google-generativeai  # Google Gemini
+# pip install zhipuai  # 智谱 AI
+# pip install dashscope  # 阿里云通义千问
+# pip install qianfan  # 百度文心一言（需要单独安装）
+
+# ============================================
+# 推荐完整安装命令
+# ============================================
+# 基础安装（模拟模式）：
+#   pip install -r requirements.txt
+#
+# 安装所有 AI 服务：
+#   pip install -r requirements.txt
+#   pip install anthropic google-generativeai zhipuai dashscope
+#
+# 单独安装某个 AI 服务：
+#   pip install openai  # OpenAI + DeepSeek + Ollama
+#   pip install anthropic  # Anthropic Claude
+#   pip install google-generativeai  # Google Gemini
+#   pip install zhipuai  # 智谱 AI
+#   pip install dashscope  # 阿里云通义千问
+

@@ -18,7 +18,7 @@ export function clearAccessToken(): void {
 }
 
 // 通用请求函数
-async function apiRequest<T>(
+export async function apiRequest<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -35,6 +35,7 @@ async function apiRequest<T>(
   const response = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers,
+    signal: options.signal,  // 支持 AbortSignal
   });
 
   // 401 时清除 Token 并跳转到登录页
@@ -68,29 +69,31 @@ async function apiRequest<T>(
 }
 
 // GET 请求
-export function get<T>(url: string): Promise<T> {
-  return apiRequest<T>(url, { method: 'GET' });
+export function get<T>(url: string, signal?: AbortSignal): Promise<T> {
+  return apiRequest<T>(url, { method: 'GET', signal });
 }
 
 // POST 请求
-export function post<T>(url: string, data: unknown): Promise<T> {
+export function post<T>(url: string, data: unknown, signal?: AbortSignal): Promise<T> {
   return apiRequest<T>(url, {
     method: 'POST',
     body: JSON.stringify(data),
+    signal,
   });
 }
 
 // PUT 请求
-export function put<T>(url: string, data: unknown): Promise<T> {
+export function put<T>(url: string, data: unknown, signal?: AbortSignal): Promise<T> {
   return apiRequest<T>(url, {
     method: 'PUT',
     body: JSON.stringify(data),
+    signal,
   });
 }
 
 // DELETE 请求
-export function del<T>(url: string): Promise<T> {
-  return apiRequest<T>(url, { method: 'DELETE' });
+export function del<T>(url: string, signal?: AbortSignal): Promise<T> {
+  return apiRequest<T>(url, { method: 'DELETE', signal });
 }
 
 // 上传文件

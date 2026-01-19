@@ -21,27 +21,15 @@
 
 ## 流程 (a) - 原型设计
 
-### 步骤 1：明确功能需求
+### 步骤 1：让AI查看项目结构
 
-与团队讨论，明确要实现的功能：
-
-- 这个功能解决什么问题？
-- 用户如何使用这个功能？
-- 需要哪些页面和交互？
+- 当开启新对话时执行
 
 ### 步骤 2：使用 AI 工具生成原型
 
 **与 AI 交流提示词**：
 ```
-我要为 V4Corner 添加 [功能名称] 功能，请帮我设计界面原型。
-
-功能需求：
-- [描述功能需求]
-
-请参考 docs/PROTOTYPE.md 中的现有风格：
-- 配色：白色卡片 + 浅灰渐变背景
-- 字体：Inter / system-ui
-- 布局：最大宽度 960px 居中
+我要添加...功能，请帮我设计界面原型。
 ```
 
 ### 步骤 3：更新原型文档
@@ -65,219 +53,25 @@ git push -u origin feature/功能名称
 # 在 GitHub 创建 Pull Request
 ```
 
-### 步骤 5：等待审查
-
-- PR 标题格式：`[原型] 功能名称`
-- PR 描述说明设计思路和参考依据
-- **⚠️ 原型审查通过后才能进入下一阶段！**
-
----
-
 ## 流程 (b) - 接口设计
-
-### 步骤 1：基于原型设计 API
 
 **与 AI 交流提示词**：
 ```
-基于 docs/PROTOTYPE.md 中的 [功能名称] 原型，设计完整的 REST API。
-
-要求：
-- 参考 docs/API.md 的格式风格
-- 定义所有必要的端点
-- 说明请求/响应格式
-- 添加错误码说明
-- 提供使用示例
+（基于 docs/PROTOTYPE.md 中的 [功能名称] 原型的某某功能）补充设计完整的 API 接口，并更新 docs/API.md 。
 ```
-
-### 步骤 2：更新 API 文档
-
-在 `docs/API.md` 中添加：
-
-- API 端点定义
-- 请求参数说明
-- 响应格式示例
-- 错误码列表
-- 使用示例代码
-
-### 步骤 3：创建数据模型
-
-**后端** - 创建 Pydantic schemas：
-```bash
-backend/schemas/功能名称.py
-```
-
-**前端** - 创建 TypeScript types：
-```bash
-frontend/src/types/功能名称.ts
-```
-
-**⚠️ 确保前后端类型完全匹配！**
-
-### 步骤 4：提交并审查
-
-```bash
-git add docs/API.md backend/schemas frontend/src/types
-git commit -m "YYYY-M-D[功能名称]接口设计"
-git push origin feature/功能名称
-```
-
-**检查清单**：
-- [ ] API.md 格式正确，符合现有风格
-- [ ] 前后端类型定义完全一致
-- [ ] 所有端点都有完整说明
-- [ ] 包含使用示例
-
----
 
 ## 流程 (c) - 前后端开发
 
-### 步骤 1：后端开发
-
-#### 1.1 创建数据库模型
-
-**与 AI 交流提示词**：
+**提示词**：
 ```
-创建 [功能名称] 的 SQLAlchemy 模型。
-
-参考：
-- backend/models/blog.py 的实现模式
-- docs/API.md 中定义的数据结构
-
-要求：
-- 继承自 Base
-- 定义所有必要字段
-- 添加关系定义
-- 添加索引
+设计开发流程，实现前后端。
 ```
-
-创建文件：`backend/models/功能名称.py`
-
-#### 1.2 创建 API 路由
-
-**与 AI 交流提示词**：
-```
-实现 [功能名称] 的 API 路由。
-
-参考：
-- backend/routers/blogs.py 的实现风格
-- docs/API.md 的接口定义
-- backend/schemas/功能名称.py 的数据模型
-
-要求：
-- 使用依赖注入（db, current_user）
-- 完整的错误处理
-- 必要的权限检查
-```
-
-创建文件：`backend/routers/功能名称.py`
-
-#### 1.3 注册路由
-
-在 `backend/main.py` 中注册新路由：
-```python
-from routers.功能名称 import router as 功能名称_router
-
-app.include_router(功能名称_router, prefix="/api/功能名称", tags=["功能名称"])
-```
-
-### 步骤 2：前端开发
-
-#### 2.1 创建 API 客户端
-
-**与 AI 交流提示词**：
-```
-创建 [功能名称] 的 API 客户端函数。
-
-参考：
-- frontend/src/api/blogs.ts 的实现
-- docs/API.md 的接口定义
-
-要求：
-- 使用 client.ts 的通用函数
-- 正确的类型定义
-- 完整的错误处理
-```
-
-创建文件：`frontend/src/api/功能名称.ts`
-
-#### 2.2 创建页面组件
-
-**与 AI 交流提示词**：
-```
-创建 [功能名称] 的前端页面。
-
-参考：
-- docs/PROTOTYPE.md 的页面设计
-- frontend/src/routes/Blogs.tsx 的实现风格
-
-要求：
-- 使用 TypeScript
-- 响应式设计
-- 友好的错误提示
-- 加载状态显示
-```
-
-创建文件：`frontend/src/routes/功能名称.tsx`
-
-#### 2.3 添加路由
-
-在 `frontend/src/App.tsx` 中添加路由：
-```tsx
-import 功能名称 from './routes/功能名称';
-
-<Route path="/功能名称" element={<功能名称 />} />
-```
-
-### 步骤 3：本地测试
-
-```bash
-# 启动后端
-cd backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# 启动前端（另一个终端）
-cd frontend
-npm run dev
-```
-
-**测试检查清单**：
-- [ ] 后端 API 在 http://localhost:8000/docs 正常显示
-- [ ] 手动测试所有 API 端点
-- [ ] 前端页面正常渲染
-- [ ] 前后端数据交互正常
-- [ ] 类型检查无错误
-- [ ] 没有控制台错误
-
-### 步骤 4：提交代码
-
-```bash
-git add backend frontend
-git commit -m "YYYY-M-D[功能名称]功能实现"
-git push origin feature/功能名称
-```
-
----
 
 ## 流程 (d) - 修缮测试
 
 ### 步骤 1：编写测试用例
 
-在 `backend/test_api.py` 中添加测试：
-```python
-def test_功能名称():
-    # 测试代码
-    pass
-```
-
-运行测试：
-```bash
-cd backend
-python test_api.py
-```
-
 ### 步骤 2：修复 bug
-
-如果发现问题，使用 AI 工具修复：
 
 **与 AI 交流提示词**：
 ```
@@ -293,38 +87,20 @@ python test_api.py
 **与 AI 交流提示词**：
 ```
 请根据之前的对话，更新相关文档：
-
-1. PROGRESS.md - 添加到「已完成功能」部分
-2. README.md - 更新项目介绍（如需要）
-3. API.md - 仅在此情况修改：一开始设计的API接口有问题，BUG修复时修改了API接口定义，并且没有同步修改API.md
-
 ```
 
 更新文件：
 - `PROGRESS.md` - 记录已完成的功能
 - `README.md` - 更新功能介绍（如需要）
-- `API.md` - 更新接口定义
+- `API.md` - 更新接口定义（仅在此情况修改：一开始设计的API接口有问题，BUG修复时修改了API接口定义，并且没有同步修改API.md）
+
 
 ### 步骤 4：最终提交
 
 ```bash
 git add .
-git commit -m "YYYY-M-D[功能名称]完整实现"
+git commit -m "YYYY-MM-DD[功能名称]"
 git push origin feature/功能名称
-```
-
-### 步骤 5：合并到 main
-
-1. 在 GitHub 创建最终的 Pull Request
-2. 填写 PR 描述模板
-3. 等待团队审查
-4. 审查通过后合并到 main
-
-```bash
-# 合并后清理分支
-git checkout main
-git pull origin main
-git branch -d feature/功能名称
 ```
 
 ---

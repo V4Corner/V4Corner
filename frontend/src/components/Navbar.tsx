@@ -38,6 +38,9 @@ function Navbar() {
       <NavLink to="/members" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
         成员
       </NavLink>
+      <NavLink to="/chat" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
+        AI对话 💬
+      </NavLink>
 
       <div style={{ flex: 1 }}></div>
 

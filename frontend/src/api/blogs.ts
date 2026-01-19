@@ -17,8 +17,8 @@ export async function getBlogs(params: {
   return get<BlogListResponse>(`/api/blogs${queryString ? `?${queryString}` : ''}`);
 }
 
-export async function getBlog(blogId: number): Promise<Blog> {
-  return get<Blog>(`/api/blogs/${blogId}`);
+export async function getBlog(blogId: number, signal?: AbortSignal): Promise<Blog> {
+  return get<Blog>(`/api/blogs/${blogId}`, signal);
 }
 
 export async function createBlog(data: BlogCreate): Promise<Blog> {

@@ -9,7 +9,11 @@
       "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(ls:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "mcp__zread__get_repo_structure",
+      "Bash(cat:*)",
+      "Bash(chmod:*)",
+      "Bash(./venv/Scripts/pip:*)"
     ]
   }
 }

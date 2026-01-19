@@ -1,0 +1,16 @@
+# AI API 相关依赖（可选）
+# 根据你使用的 AI 服务，安装相应的依赖
+
+# OpenAI API (推荐)
+# pip install openai>=1.0.0
+
+# Anthropic Claude API
+# pip install anthropic>=0.18.0
+
+# 本地模型（Ollama）
+# pip install httpx>=0.27.0
+
+# 所有 AI 依赖（如果你不确定用哪个）
+openai>=1.0.0
+anthropic>=0.18.0
+httpx>=0.27.0

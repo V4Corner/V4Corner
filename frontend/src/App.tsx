@@ -12,6 +12,8 @@ import Register from './routes/Register';
 import Members from './routes/Members';
 import UserProfile from './routes/UserProfile';
 import EditProfile from './routes/EditProfile';
+import ChatList from './routes/ChatList';
+import ChatDetail from './routes/ChatDetail';
 
 // Main layout wires shared navigation + footer around routed pages.
 // Add new pages by registering a new <Route> entry.
@@ -35,6 +37,8 @@ function App() {
           <Route path="/members" element={<Members />} />
           <Route path="/users/me" element={<EditProfile />} />
           <Route path="/users/:userId" element={<UserProfile />} />
+          <Route path="/chat" element={<ChatList />} />
+          <Route path="/chat/:conversationId" element={<ChatDetail />} />
         </Routes>
       </main>
       <Footer />

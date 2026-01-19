@@ -750,6 +750,346 @@
         .modal-close:hover {
             color: var(--primary);
         }
+
+        /* Chat List Page */
+        .chat-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .chat-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            position: relative;
+        }
+
+        .chat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        }
+
+        .chat-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chat-card-preview {
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-card-time {
+            color: var(--secondary);
+            font-size: 0.85rem;
+        }
+
+        .chat-card-menu {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: none;
+        }
+
+        .chat-card:hover .chat-card-menu {
+            display: block;
+        }
+
+        /* Chat Detail Page (ChatGPT style) */
+        .chat-container {
+            max-width: 768px;
+            margin: 0 auto;
+            padding-bottom: 120px;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .chat-back-btn {
+            font-size: 1.5rem;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .chat-title-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .chat-menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: var(--secondary);
+        }
+
+        .chat-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            animation: messageAppear 0.3s ease;
+        }
+
+        @keyframes messageAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+
+        .message-user {
+            font-weight: 600;
+        }
+
+        .message-bubble {
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        .message-user .message-bubble {
+            background-color: var(--primary);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+            max-width: 70%;
+        }
+
+        .message-assistant .message-bubble {
+            background-color: #f1f5f9;
+            color: var(--primary);
+            max-width: 85%;
+        }
+
+        .message-actions {
+            display: none;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .message-assistant:hover .message-actions {
+            display: flex;
+        }
+
+        .message-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            color: var(--secondary);
+            transition: color 0.2s;
+        }
+
+        .message-action-btn:hover {
+            color: var(--primary);
+        }
+
+        .chat-input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, var(--card-bg) 80%, transparent);
+            padding: 1.5rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .chat-input-wrapper {
+            max-width: 768px;
+            width: 100%;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        }
+
+        .chat-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            max-height: 200px;
+            line-height: 1.6;
+            background: transparent;
+        }
+
+        .chat-send-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .chat-send-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .chat-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .chat-stop-btn {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background-color: var(--card-bg);
+            cursor: pointer;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+
+        .chat-stop-btn:hover {
+            background-color: var(--bg-start);
+        }
+
+        .chat-stop-btn.show {
+            display: flex;
+        }
+
+        /* Chat markdown styling */
+        .message-bubble code {
+            background-color: rgba(0, 0, 0, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .message-assistant .message-bubble code {
+            background-color: rgba(15, 23, 42, 0.1);
+        }
+
+        .message-bubble pre {
+            background-color: var(--primary);
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .message-bubble pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .message-bubble p {
+            margin-bottom: 0.75rem;
+        }
+
+        .message-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-bubble ul, .message-bubble ol {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .message-bubble strong {
+            font-weight: 600;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 0.25rem;
+            padding: 1rem 1.25rem;
+            background-color: #f1f5f9;
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-8px);
+            }
+        }
     </style>
 </head>
 <body>
@@ -759,6 +1099,7 @@
         <a href="#" class="nav-link" onclick="navigate('home')">首页</a>
         <a href="#" class="nav-link" onclick="navigate('blogs')">博客</a>
         <a href="#" class="nav-link" onclick="navigate('members')">成员</a>
+        <a href="#" class="nav-link" onclick="navigate('chat-list')">AI对话</a> 💬
         <div class="nav-spacer"></div>
         <div class="nav-auth" id="navAuth">
             <!-- Will be populated by JS -->
@@ -1132,6 +1473,183 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                 <div>→</div>
             </div>
         </div>
+
+        <!-- Chat List Page -->
+        <div class="page" id="page-chat-list">
+            <div class="chat-list-header">
+                <h1>AI对话</h1>
+                <button class="btn btn-primary" onclick="navigate('chat-detail')">+ 新对话</button>
+            </div>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+            <div class="filter-bar">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="搜索对话..." oninput="searchChats(this.value)">
+                </div>
+            </div>
+            <div class="chat-card" onclick="navigate('chat-detail')">
+                <div class="chat-card-title">
+                    💬 机器学习入门指南
+                </div>
+                <div class="chat-card-preview">最后消息：如何理解梯度下降算法的具体实现...</div>
+                <div class="chat-card-time">2025-01-15 14:30</div>
+            </div>
+            <div class="chat-card" onclick="navigate('chat-detail')">
+                <div class="chat-card-title">
+                    💬 Python代码调试帮助
+                </div>
+                <div class="chat-card-preview">最后消息：感谢你的帮助！问题已经解决了</div>
+                <div class="chat-card-time">2025-01-14 09:15</div>
+            </div>
+            <div class="chat-card" onclick="navigate('chat-detail')">
+                <div class="chat-card-title">
+                    💬 项目架构设计讨论
+                </div>
+                <div class="chat-card-preview">最后消息：我觉得可以采用微服务架构...</div>
+                <div class="chat-card-time">2025-01-12 16:45</div>
+            </div>
+            <div class="chat-card" onclick="navigate('chat-detail')">
+                <div class="chat-card-title">
+                    💬 数据结构学习计划
+                </div>
+                <div class="chat-card-preview">最后消息：链表和树的遍历算法很重要</div>
+                <div class="chat-card-time">2025-01-10 11:20</div>
+            </div>
+            <div class="chat-card" onclick="navigate('chat-detail')">
+                <div class="chat-card-title">
+                    💬 算法优化建议
+                </div>
+                <div class="chat-card-preview">最后消息：可以使用动态规划来优化时间复杂度</div>
+                <div class="chat-card-time">2025-01-08 15:30</div>
+            </div>
+        </div>
+
+        <!-- Chat Detail Page -->
+        <div class="page" id="page-chat-detail">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="chat-header-left">
+                        <span class="chat-back-btn" onclick="navigate('chat-list')">←</span>
+                        <h2 class="chat-title-text">机器学习入门指南</h2>
+                    </div>
+                    <button class="chat-menu-btn">⋮</button>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Welcome Message -->
+                    <div class="message message-assistant">
+                        <div class="message-header">
+                            <span>🤖 AI</span>
+                            <span>·</span>
+                            <span>刚刚</span>
+                        </div>
+                        <div class="message-bubble">
+                            <p>你好！我是V4Corner的AI助手。</p>
+                            <p>我可以帮助你：</p>
+                            <ul>
+                                <li>解答学习问题</li>
+                                <li>代码调试和优化</li>
+                                <li>项目建议和思路讨论</li>
+                                <li>文档和资料查询</li>
+                            </ul>
+                            <p>有什么我可以帮助你的吗？</p>
+                        </div>
+                    </div>
+
+                    <!-- User Message 1 -->
+                    <div class="message message-user">
+                        <div class="message-header">
+                            <span>👤</span>
+                            <span class="message-user">用户</span>
+                            <span>·</span>
+                            <span>刚刚</span>
+                        </div>
+                        <div class="message-bubble">
+                            <p>请帮我解释一下什么是梯度下降算法？</p>
+                        </div>
+                    </div>
+
+                    <!-- AI Response 1 -->
+                    <div class="message message-assistant">
+                        <div class="message-header">
+                            <span>🤖 AI</span>
+                            <span>·</span>
+                            <span>刚刚</span>
+                        </div>
+                        <div class="message-bubble">
+                            <p>梯度下降是一种优化算法，主要用于最小化损失函数。</p>
+                            <p><strong>基本原理：</strong></p>
+                            <ol>
+                                <li>从一个初始点开始</li>
+                                <li>计算该点的梯度（斜率）</li>
+                                <li>沿梯度的反方向移动一小步</li>
+                                <li>重复步骤2-3，直到达到最小值</li>
+                            </ol>
+                            <p><strong>形象比喻：</strong></p>
+                            <p>想象你在山上，想要下山到最低点。梯度下降就像是每次都往脚下的最陡方向迈一步，最终你会到达山谷。</p>
+                        </div>
+                        <div class="message-actions">
+                            <button class="message-action-btn">📋 复制</button>
+                            <button class="message-action-btn">👍 有帮助</button>
+                            <button class="message-action-btn">👎 无帮助</button>
+                        </div>
+                    </div>
+
+                    <!-- User Message 2 -->
+                    <div class="message message-user">
+                        <div class="message-header">
+                            <span>👤</span>
+                            <span class="message-user">用户</span>
+                            <span>·</span>
+                            <span>2分钟前</span>
+                        </div>
+                        <div class="message-bubble">
+                            <p>能用一个简单的代码示例说明吗？</p>
+                        </div>
+                    </div>
+
+                    <!-- AI Response 2 with code -->
+                    <div class="message message-assistant">
+                        <div class="message-header">
+                            <span>🤖 AI</span>
+                            <span>·</span>
+                            <span>2分钟前</span>
+                        </div>
+                        <div class="message-bubble">
+                            <p>当然！这是一个简单的Python示例：</p>
+                            <pre><code>def gradient_descent():
+    x = 10  # 初始位置
+    learning_rate = 0.1  # 学习率
+    for i in range(100):
+        gradient = 2 * x  # 导数
+        x = x - learning_rate * gradient
+    return x
+
+result = gradient_descent()
+print(f"最小值点: {result}")</code></pre>
+                            <p>这个函数会找到函数 f(x) = x² 的最小值点，理论上应该是 x = 0。</p>
+                        </div>
+                        <div class="message-actions">
+                            <button class="message-action-btn">📋 复制</button>
+                            <button class="message-action-btn">👍 有帮助</button>
+                            <button class="message-action-btn">👎 无帮助</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stop Button -->
+                <div style="display: flex; justify-content: center;">
+                    <button class="chat-stop-btn" id="chatStopBtn">○ 停止生成</button>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea class="chat-input" id="chatInput" placeholder="输入消息给AI..." rows="1"></textarea>
+                    <button class="chat-send-btn" id="chatSendBtn">发送 📤</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Edit Profile Modal -->
@@ -1348,6 +1866,182 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
+        }
+
+        // Chat functions
+        // Search chats
+        function searchChats(query) {
+            const cards = document.querySelectorAll('.chat-card');
+            cards.forEach(card => {
+                const title = card.querySelector('.chat-card-title').textContent.toLowerCase();
+                const preview = card.querySelector('.chat-card-preview').textContent.toLowerCase();
+                if (title.includes(query.toLowerCase()) || preview.includes(query.toLowerCase())) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Chat input auto-resize
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            });
+
+            // Handle Enter key
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+
+        // Send message button
+        const chatSendBtn = document.getElementById('chatSendBtn');
+        if (chatSendBtn) {
+            chatSendBtn.addEventListener('click', sendMessage);
+        }
+
+        // Send message function
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message
+            addMessage('user', message);
+
+            // Clear input
+            input.value = '';
+            input.style.height = 'auto';
+
+            // Simulate AI response
+            setTimeout(() => {
+                simulateAIResponse(message);
+            }, 1000);
+        }
+
+        // Add message to chat
+        function addMessage(role, content) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${role}`;
+
+            const timeText = role === 'user' ? '刚刚' : '刚刚';
+
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span>${role === 'user' ? '👤' : '🤖'}</span>
+                    <span class="message-user">${role === 'user' ? '用户' : 'AI'}</span>
+                    <span>·</span>
+                    <span>${timeText}</span>
+                </div>
+                <div class="message-bubble">
+                    <p>${content}</p>
+                </div>
+                ${role === 'assistant' ? `
+                <div class="message-actions">
+                    <button class="message-action-btn" onclick="copyMessage(this)">📋 复制</button>
+                    <button class="message-action-btn" onclick="feedbackMessage(this, 'helpful')">👍 有帮助</button>
+                    <button class="message-action-btn" onclick="feedbackMessage(this, 'not-helpful')">👎 无帮助</button>
+                </div>
+                ` : ''}
+            `;
+
+            messagesContainer.appendChild(messageDiv);
+
+            // Scroll to bottom
+            setTimeout(() => {
+                window.scrollTo(0, document.body.scrollHeight);
+            }, 100);
+        }
+
+        // Simulate AI response
+        function simulateAIResponse(userMessage) {
+            const messagesContainer = document.getElementById('chatMessages');
+
+            // Show typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message message-assistant';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="message-header">
+                    <span>🤖 AI</span>
+                    <span>·</span>
+                    <span>刚刚</span>
+                </div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            window.scrollTo(0, document.body.scrollHeight);
+
+            // Show stop button
+            const stopBtn = document.getElementById('chatStopBtn');
+            stopBtn.classList.add('show');
+
+            // Simulate response after delay
+            setTimeout(() => {
+                // Remove typing indicator
+                typingDiv.remove();
+                stopBtn.classList.remove('show');
+
+                // Add AI response
+                const responses = [
+                    '这是一个很好的问题！让我来帮你分析一下...',
+                    '根据我的理解，我认为可以这样解决...',
+                    '很好的思路！我建议你还可以考虑...',
+                    '这个问题涉及到几个关键点，让我详细说明...'
+                ];
+
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                addMessage('assistant', randomResponse);
+            }, 2000);
+        }
+
+        // Copy message
+        function copyMessage(button) {
+            const messageBubble = button.closest('.message').querySelector('.message-bubble');
+            const text = messageBubble.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制到剪贴板', 'success');
+            }).catch(() => {
+                showToast('复制失败', 'error');
+            });
+        }
+
+        // Feedback message
+        function feedbackMessage(button, type) {
+            const feedbackText = type === 'helpful' ? '感谢您的反馈！' : '感谢您的反馈，我们会继续改进！';
+            showToast(feedbackText, 'success');
+
+            // Disable buttons after feedback
+            const actions = button.closest('.message-actions');
+            actions.querySelectorAll('.message-action-btn').forEach(btn => {
+                btn.disabled = true;
+            });
+        }
+
+        // Stop button
+        const chatStopBtn = document.getElementById('chatStopBtn');
+        if (chatStopBtn) {
+            chatStopBtn.addEventListener('click', function() {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+                this.classList.remove('show');
+                showToast('已停止生成', 'success');
+            });
         }
 
         // Initialize

@@ -15,8 +15,22 @@ function BlogDetail() {
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
+  // 使用 sessionStorage 防止 React StrictMode 导致的重复请求
   useEffect(() => {
     if (!blogId) return;
+
+    // 生成唯一的请求标识
+    const requestKey = `blog-fetch-${blogId}`;
+    const fetchTimestamp = sessionStorage.getItem(requestKey);
+    const now = Date.now();
+
+    // 如果在 1 秒内已经请求过，直接返回（阻止 React StrictMode 的重复请求）
+    if (fetchTimestamp && now - parseInt(fetchTimestamp) < 1000) {
+      return;
+    }
+
+    // 记录请求时间戳
+    sessionStorage.setItem(requestKey, now.toString());
 
     const fetchBlog = async () => {
       try {
@@ -25,6 +39,8 @@ function BlogDetail() {
         setBlog(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载失败');
+        // 请求失败，清除时间戳允许重试
+        sessionStorage.removeItem(requestKey);
       } finally {
         setLoading(false);
       }

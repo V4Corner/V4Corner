@@ -16,6 +16,22 @@ from .user import (
     UserPublic,
     AvatarUploadResponse,
 )
+from .chat import (
+    ConversationCreate,
+    ConversationUpdate,
+    ConversationListItem,
+    ConversationRead,
+    ConversationListResponse,
+    MessageCreate,
+    MessageListItem,
+    MessageRead,
+    MessageListResponse,
+    MessageFeedbackCreate,
+    MessageFeedbackResponse,
+    ConversationExportRequest,
+    ConversationExportResponse,
+    StreamChunk,
+)
 
 __all__ = [
     "BlogCreate",
@@ -32,4 +48,18 @@ __all__ = [
     "UserRead",
     "UserPublic",
     "AvatarUploadResponse",
+    "ConversationCreate",
+    "ConversationUpdate",
+    "ConversationListItem",
+    "ConversationRead",
+    "ConversationListResponse",
+    "MessageCreate",
+    "MessageListItem",
+    "MessageRead",
+    "MessageListResponse",
+    "MessageFeedbackCreate",
+    "MessageFeedbackResponse",
+    "ConversationExportRequest",
+    "ConversationExportResponse",
+    "StreamChunk",
 ]

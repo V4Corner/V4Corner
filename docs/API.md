@@ -1,8 +1,8 @@
 # V4Corner API 接口文档
 
-> 基于网页原型设计 v1.0
+> 基于网页原型设计 v1.2
 >
-> 最后更新：2025-01-11
+> 最后更新：2025-01-19（v1.2.0 - 真实 AI API 集成）
 
 ## 目录
 
@@ -12,6 +12,7 @@
 - [用户管理](#用户管理)
 - [博客管理](#博客管理)
 - [成员管理](#成员管理)
+- [AI对话管理](#ai对话管理)
 - [数据模型](#数据模型)
 - [错误码说明](#错误码说明)
 - [使用示例](#使用示例)
@@ -29,7 +30,12 @@
 
 ### API 版本
 
-当前版本: `v1.0.0`
+当前版本: `v1.2.0`
+
+**版本历史：**
+- v1.2.0 (2025-01-19): 集成真实 AI API（8 种服务商、智能降级）
+- v1.1.0 (2025-01-19): 新增 AI 对话系统
+- v1.0.0 (2025-01-12): 基础功能完成（认证、博客、用户、成员）
 
 ### 认证方式
 
@@ -745,6 +751,476 @@ Authorization: Bearer {access_token}
 
 ---
 
+## AI对话管理
+
+AI对话功能提供与 AI 助手的实时对话能力，支持流式输出、上下文管理、消息反馈等功能。
+
+### GET /api/chat/conversations
+
+获取用户的对话列表（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**查询参数：**
+```
+?q=机器&page=1&size=20
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| q | string | 否 | 搜索关键词（对话标题） |
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认20） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 1,
+      "title": "机器学习入门指南",
+      "last_message": "如何理解梯度下降算法的具体实现...",
+      "message_count": 8,
+      "created_at": "2025-01-15T14:30:00.000000Z",
+      "updated_at": "2025-01-15T14:35:00.000000Z"
+    },
+    {
+      "id": 2,
+      "title": "Python代码调试帮助",
+      "last_message": "感谢你的帮助！问题已经解决了",
+      "message_count": 5,
+      "created_at": "2025-01-14T09:15:00.000000Z",
+      "updated_at": "2025-01-14T09:20:00.000000Z"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| last_message | string | 最后一条消息的预览（最多50字） |
+| message_count | integer | 对话中的消息总数 |
+
+---
+
+### POST /api/chat/conversations
+
+创建新对话（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "title": "机器学习入门指南"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| title | string | 否 | 1-100字符，不提供则自动生成 |
+
+**成功响应（201）：**
+```json
+{
+  "id": 1,
+  "title": "机器学习入门指南",
+  "message_count": 0,
+  "created_at": "2025-01-15T14:30:00.000000Z"
+}
+```
+
+**注意：**
+- 如果不提供 `title`，系统会在用户发送第一条消息后自动生成标题
+- 自动生成规则：提取第一条消息的前30个字符作为标题
+
+---
+
+### GET /api/chat/conversations/:conversation_id
+
+获取对话详情（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+
+**成功响应（200）：**
+```json
+{
+  "id": 1,
+  "title": "机器学习入门指南",
+  "message_count": 8,
+  "created_at": "2025-01-15T14:30:00.000000Z",
+  "updated_at": "2025-01-15T14:35:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限访问此对话"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "对话不存在"
+}
+```
+
+---
+
+### PUT /api/chat/conversations/:conversation_id
+
+重命名对话（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+
+**请求体：**
+```json
+{
+  "title": "机器学习进阶讨论"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| title | string | 是 | 1-100字符 |
+
+**成功响应（200）：**
+```json
+{
+  "id": 1,
+  "title": "机器学习进阶讨论",
+  "updated_at": "2025-01-15T15:00:00.000000Z"
+}
+```
+
+---
+
+### DELETE /api/chat/conversations/:conversation_id
+
+删除对话（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+
+**成功响应（204）：**
+无内容
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限删除此对话"
+}
+```
+
+---
+
+### GET /api/chat/conversations/:conversation_id/messages
+
+获取对话的消息列表（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+
+**查询参数：**
+```
+?page=1&size=50
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认50，最大100） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 8,
+  "page": 1,
+  "size": 50,
+  "items": [
+    {
+      "id": 1,
+      "role": "user",
+      "content": "请帮我解释一下什么是梯度下降算法？",
+      "created_at": "2025-01-15T14:30:00.000000Z"
+    },
+    {
+      "id": 2,
+      "role": "assistant",
+      "content": "梯度下降是一种优化算法，主要用于最小化损失函数...",
+      "created_at": "2025-01-15T14:30:05.000000Z",
+      "tokens_used": 150
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| role | string | `user`（用户）或 `assistant`（AI助手） |
+| tokens_used | integer | AI消息使用的 Token 数量（仅 assistant 消息） |
+
+---
+
+### POST /api/chat/conversations/:conversation_id/messages
+
+发送消息（需要认证，支持流式输出）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+
+**请求体：**
+```json
+{
+  "content": "请帮我解释一下什么是梯度下降算法？"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| content | string | 是 | 1-4000字符 |
+
+**成功响应（201）- 非流式：**
+```json
+{
+  "id": 2,
+  "role": "assistant",
+  "content": "梯度下降是一种优化算法，主要用于最小化损失函数...",
+  "tokens_used": 150,
+  "created_at": "2025-01-15T14:30:05.000000Z"
+}
+```
+
+**成功响应（200）- 流式输出（Server-Sent Events）：**
+```
+data: {"id": 2, "role": "assistant", "content": "梯度", "delta": "梯度"}
+
+data: {"id": 2, "role": "assistant", "content": "梯度下降", "delta": "下降"}
+
+data: {"id": 2, "role": "assistant", "content": "梯度下降是一种", "delta": "是一种"}
+
+...
+
+data: [DONE]
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| content | string | 完整内容（累积） |
+| delta | string | 本次新增的内容片段 |
+
+**查询参数：**
+```
+?stream=true
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| stream | boolean | 否 | 是否使用流式输出（默认 false） |
+
+**注意：**
+- 流式输出使用 Server-Sent Events (SSE) 协议
+- 每次返回一个 JSON 对象，包含 `delta`（新增内容）和 `content`（完整内容）
+- 以 `data: [DONE]` 表示结束
+- 建议前端使用流式输出以提升用户体验
+
+---
+
+### POST /api/chat/conversations/:conversation_id/messages/regenerate
+
+重新生成最后一条 AI 消息（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+
+**请求体：**
+```json
+{}
+```
+
+**成功响应（200）：**
+```json
+{
+  "id": 3,
+  "role": "assistant",
+  "content": "让我用另一个角度来解释...",
+  "tokens_used": 180,
+  "created_at": "2025-01-15T14:32:00.000000Z"
+}
+```
+
+**注意：**
+- 替换对话中最后一条 AI 消息
+- 支持流式输出（参数同发送消息）
+
+---
+
+### POST /api/chat/conversations/:conversation_id/messages/:message_id/feedback
+
+对 AI 消息进行反馈（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+| message_id | integer | 消息 ID |
+
+**请求体：**
+```json
+{
+  "feedback": "helpful"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| feedback | string | 是 | `helpful`（有帮助）或 `not_helpful`（无帮助） |
+
+**成功响应（200）：**
+```json
+{
+  "message": "反馈已记录"
+}
+```
+
+**失败响应（400）：**
+```json
+{
+  "detail": "只能对 AI 消息进行反馈"
+}
+```
+
+---
+
+### POST /api/chat/conversations/:conversation_id/export
+
+导出对话（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| conversation_id | integer | 对话 ID |
+
+**请求体：**
+```json
+{
+  "format": "markdown"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| format | string | 是 | 导出格式，支持 `markdown`、`json`、`txt` |
+
+**成功响应（200）- Markdown 格式：**
+```json
+{
+  "content": "# 机器学习入门指南\n\n**对话时间**：2025-01-15 14:30\n\n---\n\n## 用户\n\n请帮我解释一下什么是梯度下降算法？\n\n## AI\n\n梯度下降是一种优化算法...\n\n---",
+  "filename": "machine-learning-guide.md"
+}
+```
+
+---
+
 ## 数据模型
 
 ### User（用户）
@@ -789,6 +1265,59 @@ Authorization: Bearer {access_token}
 
 **外键：**
 - `author_id` → `users.id` (ON DELETE CASCADE)
+
+### Conversation（对话）
+
+**数据库表名：** `conversations`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 用户ID | FOREIGN KEY → users.id, NOT NULL |
+| title | String(100) | 对话标题 | NOT NULL |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+| updated_at | DateTime | 最后更新时间 | |
+
+**索引：**
+- `idx_user_id`: user_id
+- `idx_updated_at`: updated_at (DESC)
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+
+**说明：**
+- `updated_at` 字段在每次有新消息时自动更新
+- 对话标题可以由用户指定，或系统自动生成（基于第一条消息）
+
+### Message（消息）
+
+**数据库表名：** `messages`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| conversation_id | Integer | 对话ID | FOREIGN KEY → conversations.id, NOT NULL |
+| role | String(20) | 角色 | NOT NULL, values: 'user', 'assistant' |
+| content | Text | 消息内容（支持Markdown） | NOT NULL |
+| tokens_used | Integer | 使用的Token数（AI消息） | DEFAULT NULL |
+| feedback | String(20) | 用户反馈 | values: 'helpful', 'not_helpful', NULL |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_conversation_id`: conversation_id
+- `idx_created_at`: created_at (ASC)
+
+**外键：**
+- `conversation_id` → `conversations.id` (ON DELETE CASCADE)
+
+**说明：**
+- `role` 字段区分用户消息（`user`）和AI助手消息（`assistant`）
+- `tokens_used` 仅对 AI 消息有效，记录使用的 Token 数量
+- `feedback` 用于记录用户对 AI 消息的反馈（有帮助/无帮助）
+
+**关系：**
+- 一个 Conversation 包含多个 Message（一对多）
+- 一个 User 可以创建多个 Conversation（一对多）
 
 ---
 
@@ -1014,6 +1543,121 @@ async function getMembers(search: string = '', page: number = 1) {
 
   if (!response.ok) {
     throw new Error('获取成员列表失败');
+  }
+
+  return response.json();
+}
+
+// AI对话相关接口
+
+// 获取对话列表
+async function getConversations(search: string = '', page: number = 1) {
+  const queryParams = new URLSearchParams();
+  if (search) queryParams.set('q', search);
+  queryParams.set('page', page.toString());
+
+  const response = await apiRequest(`/api/chat/conversations?${queryParams.toString()}`);
+
+  if (!response.ok) {
+    throw new Error('获取对话列表失败');
+  }
+
+  return response.json();
+}
+
+// 创建新对话
+async function createConversation(title?: string) {
+  const payload = title ? { title } : {};
+
+  const response = await apiRequest('/api/chat/conversations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail);
+  }
+
+  return response.json();
+}
+
+// 发送消息（流式）
+async function sendMessageStream(
+  conversationId: number,
+  content: string,
+  onChunk: (delta: string, fullContent: string) => void
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/chat/conversations/${conversationId}/messages?stream=true`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ content }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('发送消息失败');
+  }
+
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+
+  if (!reader) {
+    throw new Error('无法读取响应流');
+  }
+
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+
+        if (data === '[DONE]') {
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(data);
+          onChunk(parsed.delta, parsed.content);
+        } catch (e) {
+          console.error('解析SSE数据失败:', e);
+        }
+      }
+    }
+  }
+}
+
+// 对AI消息进行反馈
+async function submitFeedback(
+  conversationId: number,
+  messageId: number,
+  feedback: 'helpful' | 'not_helpful'
+) {
+  const response = await apiRequest(
+    `/api/chat/conversations/${conversationId}/messages/${messageId}/feedback`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ feedback }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail);
   }
 
   return response.json();
@@ -1262,6 +1906,7 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.1.0 | 2025-01-19 | 新增 AI 对话管理功能（对话、消息、流式输出） |
 | v1.0.0 | 2025-01-11 | 基于网页原型的完整 API 设计 |
 | v0.1.0 | 2025-01-10 | 初始版本，基础博客 CRUD |
 
