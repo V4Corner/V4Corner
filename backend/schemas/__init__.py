@@ -32,6 +32,18 @@ from .chat import (
     ConversationExportResponse,
     StreamChunk,
 )
+from .announcement import (
+    AnnouncementCreate,
+    AnnouncementUpdate,
+    AnnouncementRead,
+    AnnouncementListResponse,
+)
+from .calendar_event import (
+    CalendarEventCreate,
+    CalendarEventUpdate,
+    CalendarEventRead,
+    CalendarEventListResponse,
+)
 
 __all__ = [
     "BlogCreate",
@@ -62,4 +74,12 @@ __all__ = [
     "ConversationExportRequest",
     "ConversationExportResponse",
     "StreamChunk",
+    "AnnouncementCreate",
+    "AnnouncementUpdate",
+    "AnnouncementRead",
+    "AnnouncementListResponse",
+    "CalendarEventCreate",
+    "CalendarEventUpdate",
+    "CalendarEventRead",
+    "CalendarEventListResponse",
 ]

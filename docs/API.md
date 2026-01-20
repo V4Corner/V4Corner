@@ -12,6 +12,7 @@
 - [用户管理](#用户管理)
 - [博客管理](#博客管理)
 - [成员管理](#成员管理)
+- [班级通知与日历](#班级通知与日历)
 - [AI对话管理](#ai对话管理)
 - [数据模型](#数据模型)
 - [错误码说明](#错误码说明)
@@ -751,6 +752,299 @@ Authorization: Bearer {access_token}
 
 ---
 
+## 班级通知与日历
+
+班级通知与日历用于首页展示最新通知和本月活动提醒，支持管理员发布与维护内容。
+
+### GET /api/announcements
+
+获取班级通知列表（公开接口）
+
+**查询参数：**
+```
+?page=1&size=5
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认5，最大50） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 12,
+  "page": 1,
+  "size": 5,
+  "items": [
+    {
+      "id": 1,
+      "title": "期中答辩时间调整",
+      "content": "期中答辩时间调整至本周四下午 2:00。",
+      "published_at": "2025-01-12T09:00:00.000000Z",
+      "is_pinned": true
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| title | string | 通知标题（简短） |
+| content | string | 通知内容（全文或摘要） |
+| published_at | string | 发布时间 |
+| is_pinned | boolean | 是否置顶 |
+
+---
+
+### POST /api/announcements
+
+创建班级通知（需要认证，管理员/班委）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "title": "周五班会地点变更",
+  "content": "周五班会地点变更为主楼 A201。",
+  "is_pinned": false
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| title | string | 是 | 1-100字符 |
+| content | string | 是 | 1-1000字符 |
+| is_pinned | boolean | 否 | 默认 false |
+
+**成功响应（201）：**
+```json
+{
+  "id": 2,
+  "title": "周五班会地点变更",
+  "content": "周五班会地点变更为主楼 A201。",
+  "published_at": "2025-01-11T10:30:00.000000Z",
+  "is_pinned": false
+}
+```
+
+---
+
+### PUT /api/announcements/:announcement_id
+
+更新班级通知（需要认证，管理员/班委）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "title": "周五班会地点变更（更新）",
+  "content": "周五班会地点变更为主楼 A201，时间不变。",
+  "is_pinned": true
+}
+```
+
+**成功响应（200）：**
+```json
+{
+  "id": 2,
+  "title": "周五班会地点变更（更新）",
+  "content": "周五班会地点变更为主楼 A201，时间不变。",
+  "published_at": "2025-01-11T10:30:00.000000Z",
+  "is_pinned": true
+}
+```
+
+---
+
+### DELETE /api/announcements/:announcement_id
+
+删除班级通知（需要认证，管理员/班委）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（204）：**
+无内容
+
+---
+
+### GET /api/calendar/events
+
+获取班级日历活动（公开接口）
+
+**查询参数：**
+```
+?month=2025-01
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| month | string | 否 | 月份（YYYY-MM），不传默认本月 |
+
+**成功响应（200）：**
+```json
+{
+  "month": "2025-01",
+  "items": [
+    {
+      "id": 1,
+      "title": "期中答辩",
+      "date": "2025-01-03",
+      "start_time": "14:00",
+      "end_time": "16:00",
+      "location": "主楼报告厅",
+      "description": "期中答辩，请提前 10 分钟到场。",
+      "is_all_day": false,
+      "importance": "high"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| date | string | 活动日期（YYYY-MM-DD） |
+| start_time | string | 开始时间（HH:mm，可选） |
+| end_time | string | 结束时间（HH:mm，可选） |
+| location | string | 地点（可选） |
+| importance | string | 重要程度（`low`/`normal`/`high`） |
+| is_all_day | boolean | 是否全天 |
+
+---
+
+### POST /api/calendar/events
+
+创建班级日历活动（需要认证，管理员/班委）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "title": "班会",
+  "date": "2025-01-07",
+  "start_time": "19:00",
+  "end_time": "20:00",
+  "location": "A201",
+  "description": "班级例会",
+  "is_all_day": false,
+  "importance": "normal"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| title | string | 是 | 1-100字符 |
+| date | string | 是 | YYYY-MM-DD |
+| start_time | string | 否 | HH:mm |
+| end_time | string | 否 | HH:mm |
+| location | string | 否 | 0-100字符 |
+| description | string | 否 | 0-500字符 |
+| is_all_day | boolean | 否 | 默认 false |
+| importance | string | 否 | low/normal/high |
+| importance | string | 否 | low/normal/high |
+
+**成功响应（201）：**
+```json
+{
+  "id": 2,
+  "title": "班会",
+  "date": "2025-01-07",
+  "start_time": "19:00",
+  "end_time": "20:00",
+  "location": "A201",
+  "description": "班级例会",
+  "is_all_day": false,
+  "importance": "normal"
+}
+```
+
+---
+
+### PUT /api/calendar/events/:event_id
+
+更新班级日历活动（需要认证，管理员/班委）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "title": "班会（改期）",
+  "date": "2025-01-08",
+  "start_time": "19:00",
+  "end_time": "20:00",
+  "location": "A201",
+  "description": "班级例会改至周三",
+  "is_all_day": false,
+  "importance": "normal"
+}
+```
+
+**成功响应（200）：**
+```json
+{
+  "id": 2,
+  "title": "班会（改期）",
+  "date": "2025-01-08",
+  "start_time": "19:00",
+  "end_time": "20:00",
+  "location": "A201",
+  "description": "班级例会改至周三",
+  "is_all_day": false,
+  "importance": "normal"
+}
+```
+
+---
+
+### DELETE /api/calendar/events/:event_id
+
+删除班级日历活动（需要认证，管理员/班委）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（204）：**
+无内容
+
+---
+
 ## AI对话管理
 
 AI对话功能提供与 AI 助手的实时对话能力，支持流式输出、上下文管理、消息反馈等功能。
@@ -1318,6 +1612,49 @@ Content-Type: application/json
 **关系：**
 - 一个 Conversation 包含多个 Message（一对多）
 - 一个 User 可以创建多个 Conversation（一对多）
+
+---
+
+### Announcement（班级通知）
+
+**数据库表名：** `announcements`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| title | String(100) | 标题 | NOT NULL |
+| content | String(1000) | 内容 | NOT NULL |
+| is_pinned | Boolean | 是否置顶 | DEFAULT false |
+| published_at | DateTime | 发布时间 | DEFAULT utcnow() |
+| created_by | Integer | 创建者ID | FOREIGN KEY → users.id |
+
+**索引：**
+- `idx_published_at`: published_at (DESC)
+- `idx_is_pinned`: is_pinned (DESC)
+
+---
+
+### CalendarEvent（班级日历活动）
+
+**数据库表名：** `calendar_events`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| title | String(100) | 活动标题 | NOT NULL |
+| date | Date | 活动日期 | NOT NULL |
+| start_time | Time | 开始时间 | |
+| end_time | Time | 结束时间 | |
+| location | String(100) | 地点 | |
+| description | String(500) | 描述 | |
+| is_all_day | Boolean | 是否全天 | DEFAULT false |
+| importance | String(20) | 重要程度 | DEFAULT low |
+| created_by | Integer | 创建者ID | FOREIGN KEY → users.id |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+| updated_at | DateTime | 更新时间 | |
+
+**索引：**
+- `idx_date`: date
 
 ---
 
