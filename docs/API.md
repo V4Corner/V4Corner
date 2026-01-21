@@ -2,13 +2,14 @@
 
 > 基于网页原型设计 v1.2
 >
-> 最后更新：2025-01-19（v1.2.0 - 真实 AI API 集成）
+> 最后更新：2026-01-21（v1.2.1 - 邮箱验证码功能）
 
 ## 目录
 
 - [基础信息](#基础信息)
 - [通用说明](#通用说明)
 - [用户认证](#用户认证)
+- [验证码管理](#验证码管理)
 - [用户管理](#用户管理)
 - [博客管理](#博客管理)
 - [成员管理](#成员管理)
@@ -31,9 +32,10 @@
 
 ### API 版本
 
-当前版本: `v1.2.0`
+当前版本: `v1.2.1`
 
 **版本历史：**
+- v1.2.1 (2026-01-21): 新增邮箱验证码功能
 - v1.2.0 (2025-01-19): 集成真实 AI API（8 种服务商、智能降级）
 - v1.1.0 (2025-01-19): 新增 AI 对话系统
 - v1.0.0 (2025-01-12): 基础功能完成（认证、博客、用户、成员）
@@ -128,6 +130,7 @@ Content-Type: application/json
   "email": "zhangsan@example.com",
   "password": "password123",
   "password_confirm": "password123",
+  "verification_code": "123456",
   "nickname": "张三"
 }
 ```
@@ -140,7 +143,10 @@ Content-Type: application/json
 | email | string | 是 | 邮箱格式，唯一 |
 | password | string | 是 | 6-20字符 |
 | password_confirm | string | 是 | 与 password 一致 |
+| verification_code | string | 是 | 邮箱验证码（4-6位），需先调用发送验证码接口 |
 | nickname | string | 否 | 2-20字符 |
+
+**注意：注册前需要先调用发送验证码接口 (`POST /api/verification/send`) 获取邮箱验证码。**
 
 **成功响应（201）：**
 ```json
@@ -272,6 +278,103 @@ Authorization: Bearer {access_token}
   "expires_in": 604800
 }
 ```
+
+---
+
+## 验证码管理
+
+### POST /api/verification/send
+
+发送验证码到邮箱
+
+**请求头：**
+```
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "email": "zhangsan@example.com",
+  "type": "register"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 邮箱地址 |
+| type | string | 否 | 验证码类型，默认 `register`（可选值：`register`, `reset_password`） |
+
+**成功响应（200）：**
+```json
+{
+  "success": true,
+  "message": "验证码已发送",
+  "expires_in": 300
+}
+```
+
+**失败响应（200）：**
+```json
+{
+  "success": false,
+  "message": "请 45 秒后再试",
+  "expires_in": 45
+}
+```
+
+**限制：**
+- 同一邮箱发送验证码间隔至少 60 秒
+- 验证码有效期为 5 分钟
+- 验证码长度为 4-6 位随机数字
+
+---
+
+### POST /api/verification/verify
+
+验证验证码（注册时内部使用，无需单独调用）
+
+**请求头：**
+```
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "email": "zhangsan@example.com",
+  "code": "123456"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 邮箱地址 |
+| code | string | 是 | 验证码（4-6位） |
+
+**成功响应（200）：**
+```json
+{
+  "success": true,
+  "message": "验证成功",
+  "expires_in": 0
+}
+```
+
+**失败响应（200）：**
+```json
+{
+  "success": false,
+  "message": "验证码无效或已过期",
+  "expires_in": 0
+}
+```
+
+**注意：此接口通常由注册接口内部调用，注册时会自动验证验证码。**
 
 ---
 

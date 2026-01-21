@@ -1,18 +1,57 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { sendVerificationCode } from '../api/verification';
 
 function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  // 发送验证码
+  const handleSendCode = async () => {
+    // 验证邮箱格式
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('请输入有效的邮箱地址');
+      return;
+    }
+
+    setIsSendingCode(true);
+    setError('');
+
+    try {
+      const response = await sendVerificationCode({ email, type: 'register' });
+      if (response.success) {
+        // 开始倒计时（60秒）
+        setCountdown(60);
+        const timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setError(response.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '发送验证码失败');
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -24,10 +63,15 @@ function Register() {
       return;
     }
 
+    if (!verificationCode) {
+      setError('请输入验证码');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await register(username, email, password, passwordConfirm, nickname || undefined);
+      await register(username, email, password, passwordConfirm, verificationCode, nickname || undefined);
       // 注册成功后自动登录并跳转到首页
       navigate('/', { replace: true });
     } catch (err) {
@@ -67,6 +111,31 @@ function Register() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+          </div>
+          <div className="form-group">
+            <label className="form-label">验证码</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="4-6位数字"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                required
+                minLength={4}
+                maxLength={6}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleSendCode}
+                disabled={isSendingCode || countdown > 0}
+                style={{ minWidth: '120px' }}
+              >
+                {isSendingCode ? '发送中...' : countdown > 0 ? `${countdown}秒` : '发送验证码'}
+              </button>
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">密码</label>

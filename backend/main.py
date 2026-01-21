@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from database import Base, engine
-from routers import blogs, auth, users, members, chat, announcements, calendar
+from routers import blogs, auth, users, members, chat, announcements, calendar, verification
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ app.include_router(members.router)
 app.include_router(chat.router)
 app.include_router(announcements.router)
 app.include_router(calendar.router)
+app.include_router(verification.router)
 
 # Static file serving for uploaded files (avatars)
 app.mount("/static", StaticFiles(directory="uploads"), name="static")

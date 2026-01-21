@@ -36,6 +36,22 @@ async def register(
             detail="两次密码不一致"
         )
 
+    # 验证验证码
+    verification = models.VerificationCode.get_pending_code(
+        db=db,
+        email=user_data.email,
+        code=user_data.verification_code,
+        code_type="register"
+    )
+    if not verification:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="验证码无效或已过期"
+        )
+
+    # 标记验证码为已使用
+    models.VerificationCode.mark_as_used(db, verification.id)
+
     # 创建新用户
     user = models.User(
         username=user_data.username,

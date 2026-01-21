@@ -4,5 +4,6 @@ from .conversation import Conversation
 from .message import Message
 from .announcement import Announcement
 from .calendar_event import CalendarEvent
+from .verification import VerificationCode
 
-__all__ = ["User", "Blog", "Conversation", "Message", "Announcement", "CalendarEvent"]
+__all__ = ["User", "Blog", "Conversation", "Message", "Announcement", "CalendarEvent", "VerificationCode"]

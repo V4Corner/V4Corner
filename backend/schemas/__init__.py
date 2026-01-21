@@ -44,6 +44,11 @@ from .calendar_event import (
     CalendarEventRead,
     CalendarEventListResponse,
 )
+from .verification import (
+    VerificationRequest,
+    VerificationVerify,
+    VerificationResponse,
+)
 
 __all__ = [
     "BlogCreate",
@@ -82,4 +87,7 @@ __all__ = [
     "CalendarEventUpdate",
     "CalendarEventRead",
     "CalendarEventListResponse",
+    "VerificationRequest",
+    "VerificationVerify",
+    "VerificationResponse",
 ]

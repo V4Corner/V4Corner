@@ -13,7 +13,8 @@
       "mcp__zread__get_repo_structure",
       "Bash(cat:*)",
       "Bash(chmod:*)",
-      "Bash(./venv/Scripts/pip:*)"
+      "Bash(./venv/Scripts/pip:*)",
+      "Bash(curl:*)"
     ]
   }
 }
