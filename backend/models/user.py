@@ -22,3 +22,5 @@ class User(Base):
     # 关系
     blogs = relationship("Blog", back_populates="author", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    notices = relationship("Notice", back_populates="author", cascade="all, delete-orphan")
+    checkins = relationship("CheckIn", back_populates="user", cascade="all, delete-orphan")

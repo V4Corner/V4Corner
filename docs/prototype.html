@@ -179,7 +179,7 @@
 
         /* Main content */
         main {
-            max-width: 960px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 2rem 1.5rem 4rem;
         }
@@ -191,6 +191,12 @@
 
         .page.active {
             display: block;
+        }
+
+        /* Constrain non-home pages to center column width */
+        .page:not(#page-home) {
+            max-width: 960px;
+            margin: 0 auto;
         }
 
         /* Cards */
@@ -700,6 +706,428 @@
             font-size: 0.85rem;
         }
 
+        /* Mini Calendar (Left Sidebar) */
+        .mini-calendar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .mini-calendar-header {
+            text-align: center;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mini-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .mini-calendar-weekday {
+            text-align: center;
+            font-size: 0.65rem;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .mini-calendar-day {
+            position: relative;
+            aspect-ratio: 1;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            background-color: var(--bg-start);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mini-calendar-day:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .mini-calendar-day.muted {
+            color: var(--secondary);
+            opacity: 0.5;
+        }
+
+        .mini-calendar-day.event {
+            border-color: var(--primary);
+            background-color: #f1f5f9;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .mini-calendar-day.event::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: var(--primary);
+        }
+
+        .mini-calendar-day.selected {
+            background-color: var(--primary) !important;
+            color: white !important;
+            border-color: var(--primary) !important;
+        }
+
+        /* Calendar Events Display */
+        .calendar-events {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .calendar-events.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .calendar-events-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .calendar-events-header span {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .calendar-events-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            cursor: pointer;
+            color: var(--secondary);
+            padding: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .calendar-events-close:hover {
+            background-color: var(--bg-start);
+            color: var(--primary);
+        }
+
+        .calendar-events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .calendar-event-item {
+            padding: 0.5rem;
+            background-color: var(--bg-start);
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+            font-size: 0.75rem;
+        }
+
+        .calendar-event-item.no-events {
+            border-left-style: dashed;
+            border-left-color: var(--secondary);
+            color: var(--secondary);
+            font-style: italic;
+        }
+
+        .calendar-event-time {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .calendar-event-title {
+            color: var(--primary);
+        }
+
+        /* Stats Card */
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        /* Stats Card Plain */
+        .stats-card-plain {
+            background-color: var(--card-bg);
+        }
+
+        .stats-card-plain .stat-value {
+            color: var(--primary);
+        }
+
+        /* Mini Notice List */
+        .notice-list-mini {
+            list-style: none;
+        }
+
+        .notice-item-mini {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .notice-item-mini:last-child {
+            border-bottom: none;
+        }
+
+        .notice-date-mini {
+            font-size: 0.75rem;
+            color: var(--secondary);
+            white-space: nowrap;
+        }
+
+        .stats-grid {
+            display: flex;
+            justify-content: space-around;
+            gap: 0.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            opacity: 0.9;
+        }
+
+        /* Category List */
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem;
+            background-color: var(--bg-start);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-item:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateX(4px);
+        }
+
+        .category-icon {
+            font-size: 1.1rem;
+        }
+
+        .category-name {
+            flex: 1;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .category-count {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            background-color: var(--border);
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+        }
+
+        .category-item:hover .category-count {
+            background-color: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        /* Important Notice */
+        .important-notice {
+            border-left: 4px solid #ef4444;
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
+        }
+
+        .important-notice-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .important-badge {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* Notice List Cards */
+        #page-notice-list .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+            border-color: var(--primary);
+        }
+
+        /* Blog Cards */
+        .blog-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .blog-card {
+            background-color: var(--bg-start);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .blog-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.1);
+            border-color: var(--primary);
+        }
+
+        .blog-card-category {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .blog-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .blog-card-excerpt {
+            font-size: 0.85rem;
+            color: var(--secondary);
+            line-height: 1.6;
+            margin: 0 0 0.75rem 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .blog-card-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--secondary);
+        }
+
+        /* Activity Feed */
+        .activity-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background-color: var(--bg-start);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .activity-item:hover {
+            background-color: var(--border);
+        }
+
+        .activity-icon {
+            font-size: 1.5rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+            padding-left: 0.5rem;
+        }
+
+        .activity-text {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--secondary);
+        }
+
+        /* Responsive for blog cards */
+        @media (max-width: 768px) {
+            .blog-cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                flex-direction: column;
+            }
+
+            .stat-item {
+                padding: 0.5rem 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .stat-item:last-child {
+                border-bottom: none;
+            }
+        }
+
         .feed-list {
             list-style: none;
         }
@@ -1203,6 +1631,296 @@
                 transform: translateY(-8px);
             }
         }
+
+        /* Home Layout (Three Columns: Left - Center - Right) */
+        .home-layout {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .home-left {
+            width: 320px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .home-main {
+            flex: 1;
+            max-width: 960px;
+            min-width: 0;
+        }
+
+        .home-sidebar {
+            width: 320px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: sticky;
+            top: 5rem;
+            align-self: flex-start;
+        }
+
+        @media (max-width: 1400px) {
+            .home-layout {
+                flex-wrap: wrap;
+            }
+
+            .home-left {
+                display: none;
+            }
+
+            .home-main {
+                max-width: 100%;
+            }
+
+            .home-sidebar {
+                position: static;
+                order: -1;
+                width: 100%;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+        }
+
+        /* Check-in Card */
+        .checkin-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+        }
+
+        /* Check-in Welcome State */
+        .checkin-welcome {
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        .checkin-username {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .checkin-date {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .checkin-month {
+            font-size: 0.9rem;
+            color: var(--secondary);
+        }
+
+        .checkin-day {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--primary);
+        }
+
+        .checkin-weekday {
+            font-size: 0.9rem;
+            color: var(--secondary);
+        }
+
+        .checkin-countdown {
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .countdown-item {
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+
+        .countdown-days {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .checkin-btn {
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            background-color: #ff9500;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+        }
+
+        .checkin-btn:hover {
+            background-color: #ff8000;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 149, 0, 0.4);
+        }
+
+        .checkin-btn:active {
+            transform: translateY(0);
+        }
+
+        .checkin-btn:disabled {
+            background-color: var(--border);
+            color: var(--secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Check-in Result State */
+        .checkin-result-title {
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .checkin-username-result {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .checkin-fortune {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 1.5rem 0;
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .checkin-advice {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .advice-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .advice-label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .advice-label.bad {
+            color: var(--error);
+        }
+
+        .advice-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            background-color: var(--bg-start);
+            border-radius: 6px;
+        }
+
+        .advice-tag {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .advice-tag.bad {
+            color: var(--error);
+        }
+
+        .advice-desc {
+            font-size: 0.75rem;
+            color: var(--secondary);
+        }
+
+        .checkin-streak {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--secondary);
+            margin: 1.5rem 0;
+            padding: 0.75rem;
+            background-color: var(--bg-start);
+            border-radius: 6px;
+        }
+
+        .checkin-streak span {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .checkin-close-btn {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--bg-start);
+            color: var(--primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkin-close-btn:hover {
+            background-color: var(--border);
+        }
+
+        /* Animation for check-in result */
+        @keyframes fortuneAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .checkin-fortune {
+            animation: fortuneAppear 0.6s ease-out;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .checkin-card {
+                position: static;
+            }
+
+            .checkin-day {
+                font-size: 2.5rem;
+            }
+
+            .checkin-fortune {
+                font-size: 2rem;
+            }
+
+            .checkin-advice {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1212,7 +1930,8 @@
         <a href="#" class="nav-link" onclick="navigate('home')">首页</a>
         <a href="#" class="nav-link" onclick="navigate('blogs')">博客</a>
         <a href="#" class="nav-link" onclick="navigate('members')">成员</a>
-        <a href="#" class="nav-link" onclick="navigate('chat-list')">AI对话</a> 💬
+        <a href="#" class="nav-link" onclick="navigate('chat-list')">AI对话</a>
+        <a href="#" class="nav-link" onclick="navigate('notice-list')">班级通知</a>
         <div class="nav-spacer"></div>
         <div class="nav-auth" id="navAuth">
             <!-- Will be populated by JS -->
@@ -1228,89 +1947,234 @@
                 <p>行健-车辆4班的班级空间，记录成长，分享知识</p>
             </section>
 
-            <div class="card">
-                <h2 class="section-title">班级通知</h2>
-                <ul class="notice-list">
-                    <li class="notice-item">
-                        <span>期中答辩时间调整至本周四下午</span>
-                        <span class="notice-date">2025-01-12</span>
-                    </li>
-                    <li class="notice-item">
-                        <span>周五班会地点变更为主楼 A201</span>
-                        <span class="notice-date">2025-01-11</span>
-                    </li>
-                    <li class="notice-item">
-                        <span>实验室值班表已更新，请及时查看</span>
-                        <span class="notice-date">2025-01-10</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="card">
-                <h2 class="section-title">班级日历</h2>
-                <div class="calendar">
-                    <div class="calendar-header">
-                        <span>2025 年 1 月</span>
-                        <span class="calendar-note">活动标记 ●</span>
+            <!-- Three Column Layout -->
+            <div class="home-layout">
+                <!-- Left Column -->
+                <div class="home-left">
+                    <!-- Class Notices -->
+                    <div class="card">
+                        <h3 style="font-size: 1rem; margin-bottom: 0.75rem; cursor: pointer;" onclick="navigate('notice-list')">班级通知</h3>
+                        <ul class="notice-list-mini">
+                            <li class="notice-item-mini" style="cursor: pointer;" onclick="navigate('notice-detail')">
+                                <span>期中答辩时间调整至本周四下午</span>
+                                <span class="notice-date-mini">01-12</span>
+                            </li>
+                            <li class="notice-item-mini" style="cursor: pointer;" onclick="navigate('notice-detail')">
+                                <span>周五班会地点变更为主楼 A201</span>
+                                <span class="notice-date-mini">01-11</span>
+                            </li>
+                            <li class="notice-item-mini" style="cursor: pointer;" onclick="navigate('notice-detail')">
+                                <span>实验室值班表已更新，请及时查看</span>
+                                <span class="notice-date-mini">01-10</span>
+                            </li>
+                        </ul>
                     </div>
-                    <div class="calendar-grid">
-                        <div class="calendar-weekday">一</div>
-                        <div class="calendar-weekday">二</div>
-                        <div class="calendar-weekday">三</div>
-                        <div class="calendar-weekday">四</div>
-                        <div class="calendar-weekday">五</div>
-                        <div class="calendar-weekday">六</div>
-                        <div class="calendar-weekday">日</div>
 
-                        <div class="calendar-day muted">30</div>
-                        <div class="calendar-day muted">31</div>
-                        <div class="calendar-day">1</div>
-                        <div class="calendar-day">2</div>
-                        <div class="calendar-day event">3<span class="event-dot"></span></div>
-                        <div class="calendar-day">4</div>
-                        <div class="calendar-day">5</div>
-
-                        <div class="calendar-day">6</div>
-                        <div class="calendar-day event">7<span class="event-dot"></span></div>
-                        <div class="calendar-day">8</div>
-                        <div class="calendar-day">9</div>
-                        <div class="calendar-day">10</div>
-                        <div class="calendar-day event">11<span class="event-dot"></span></div>
-                        <div class="calendar-day">12</div>
-
-                        <div class="calendar-day">13</div>
-                        <div class="calendar-day">14</div>
-                        <div class="calendar-day event">15<span class="event-dot"></span></div>
-                        <div class="calendar-day">16</div>
-                        <div class="calendar-day">17</div>
-                        <div class="calendar-day">18</div>
-                        <div class="calendar-day">19</div>
+                    <!-- Stats Card -->
+                    <div class="card stats-card-plain">
+                        <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">班级数据</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">28</div>
+                                <div class="stat-label">班级成员</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">156</div>
+                                <div class="stat-label">发布博客</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">7</div>
+                                <div class="stat-label">连续签到</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="calendar-note">活动示例：1/3 期中答辩、1/7 班会、1/11 实验室值班、1/15 项目展示</div>
                 </div>
-            </div>
 
-            <div class="card">
-                <h2 class="section-title">博客推送（按时间）</h2>
-                <ul class="feed-list">
-                    <li class="feed-item" onclick="navigate('blog-detail')">
-                        <span class="feed-time">2025-01-10</span>
-                        <span class="feed-title">机器学习入门指南</span>
-                        <span class="feed-meta">· 张三</span>
-                    </li>
-                    <li class="feed-item" onclick="navigate('blog-detail')">
-                        <span class="feed-time">2025-01-09</span>
-                        <span class="feed-title">数据结构与算法</span>
-                        <span class="feed-meta">· 李四</span>
-                    </li>
-                    <li class="feed-item" onclick="navigate('blog-detail')">
-                        <span class="feed-time">2025-01-08</span>
-                        <span class="feed-title">项目实践总结</span>
-                        <span class="feed-meta">· 王五</span>
-                    </li>
-                </ul>
-                <div class="view-more">
-                    <a href="#" onclick="navigate('blogs')">查看更多博客 →</a>
+                <!-- Center Column: Main Content -->
+                <div class="home-main">
+                    <!-- Blog Cards (Featured) -->
+                    <div class="card">
+                        <h2 class="section-title">精选博客</h2>
+                        <div class="blog-cards-grid">
+                            <div class="blog-card" onclick="navigate('blog-detail')">
+                                <h3 class="blog-card-title">机器学习入门指南：从零到实战</h3>
+                                <p class="blog-card-excerpt">详细介绍机器学习的基础概念、常用算法和实战案例...</p>
+                                <div class="blog-card-meta">
+                                    <span>张三</span>
+                                    <span>2025-01-10</span>
+                                    <span>128</span>
+                                </div>
+                            </div>
+                            <div class="blog-card" onclick="navigate('blog-detail')">
+                                <h3 class="blog-card-title">深度学习在图像识别中的应用实践</h3>
+                                <p class="blog-card-excerpt">分享我们的团队项目，使用CNN进行图像分类的实现过程...</p>
+                                <div class="blog-card-meta">
+                                    <span>李四</span>
+                                    <span>2025-01-09</span>
+                                    <span>95</span>
+                                </div>
+                            </div>
+                            <div class="blog-card" onclick="navigate('blog-detail')">
+                                <h3 class="blog-card-title">数据结构与算法学习心得</h3>
+                                <p class="blog-card-excerpt">总结这学期学习的数据结构，包括树、图、动态规划等...</p>
+                                <div class="blog-card-meta">
+                                    <span>王五</span>
+                                    <span>2025-01-08</span>
+                                    <span>87</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="view-more">
+                            <a href="#" onclick="navigate('blogs')">查看更多博客 →</a>
+                        </div>
+                    </div>
+
+                    <!-- Latest Activity Feed -->
+                    <div class="card">
+                        <h2 class="section-title">最新动态</h2>
+                        <div class="activity-feed">
+                            <div class="activity-item">
+                                <div class="activity-content">
+                                    <div class="activity-text">
+                                        <strong>张三</strong> 发布了新博客
+                                        <a href="#" onclick="navigate('blog-detail')" style="color: var(--primary);">《机器学习入门指南》</a>
+                                    </div>
+                                    <div class="activity-time">5分钟前</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-content">
+                                    <div class="activity-text">
+                                        <strong>李四</strong> 连续签到 <span style="color: #ff9500; font-weight: 600;">7天</span>，获得"坚持不懈"成就！
+                                    </div>
+                                    <div class="activity-time">15分钟前</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-content">
+                                    <div class="activity-text">
+                                        <strong>王五</strong> 评论了 <strong>赵六</strong> 的博客
+                                    </div>
+                                    <div class="activity-time">1小时前</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-content">
+                                    <div class="activity-text">
+                                        <strong>班级</strong> 迎来了第 <strong>28</strong> 位成员
+                                    </div>
+                                    <div class="activity-time">昨天</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Check-in + Calendar -->
+                <div class="home-sidebar">
+                    <div class="card checkin-card">
+                        <!-- Check-in Welcome State -->
+                        <div id="checkinWelcome">
+                            <div class="checkin-welcome">欢迎回来，<span class="checkin-username">SHLAMING</span></div>
+                            <div class="checkin-date">
+                                <span class="checkin-month" id="checkinMonth">一月大</span>
+                                <span class="checkin-day" id="checkinDay">19</span>
+                                <span class="checkin-weekday" id="checkinWeekday">星期一</span>
+                            </div>
+                            <div class="checkin-countdown">
+                                <div class="countdown-item">距期末考试还剩 <span class="countdown-days">15</span> 天</div>
+                            </div>
+                            <button class="checkin-btn" id="checkinBtn" onclick="handleCheckIn()">
+                                点击打卡
+                            </button>
+                        </div>
+
+                        <!-- Check-in Result State (Hidden by default) -->
+                        <div id="checkinResult" style="display: none;">
+                            <div class="checkin-result-title"><span class="checkin-username-result">SHLAMING</span> 的运势</div>
+                            <div class="checkin-fortune" id="fortuneResult">§中吉§</div>
+                            <div class="checkin-advice">
+                                <div class="advice-column">
+                                    <div class="advice-label">宜：</div>
+                                    <div class="advice-item">
+                                        <span class="advice-tag">写代码</span>
+                                        <span class="advice-desc">灵感充沛，效率奇高</span>
+                                    </div>
+                                    <div class="advice-item">
+                                        <span class="advice-tag">复习</span>
+                                        <span class="advice-desc">记忆超群，过目不忘</span>
+                                    </div>
+                                </div>
+                                <div class="advice-column">
+                                    <div class="advice-label bad">忌：</div>
+                                    <div class="advice-item">
+                                        <span class="advice-tag bad">熬夜</span>
+                                        <span class="advice-desc">身体疲惫，效率低下</span>
+                                    </div>
+                                    <div class="advice-item">
+                                        <span class="advice-tag bad">刷手机</span>
+                                        <span class="advice-desc">浪费时间，虚度光阴</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="checkin-streak">你已经在 V4Corner 连续打卡了 <span id="streakDays">1</span> 天</div>
+                            <button class="checkin-close-btn" onclick="closeCheckInResult()">关闭</button>
+                        </div>
+                    </div>
+
+                    <!-- Mini Calendar -->
+                    <div class="card">
+                        <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">班级日历</h3>
+                        <div class="mini-calendar">
+                            <div class="mini-calendar-header">
+                                <span style="font-size: 0.85rem; font-weight: 600;">2025年1月</span>
+                            </div>
+                            <div class="mini-calendar-grid">
+                                <div class="mini-calendar-weekday">一</div>
+                                <div class="mini-calendar-weekday">二</div>
+                                <div class="mini-calendar-weekday">三</div>
+                                <div class="mini-calendar-weekday">四</div>
+                                <div class="mini-calendar-weekday">五</div>
+                                <div class="mini-calendar-weekday">六</div>
+                                <div class="mini-calendar-weekday">日</div>
+
+                                <div class="mini-calendar-day muted" onclick="showCalendarEvents(30)">30</div>
+                                <div class="mini-calendar-day muted" onclick="showCalendarEvents(31)">31</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(1)">1</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(2)">2</div>
+                                <div class="mini-calendar-day event" onclick="showCalendarEvents(3)">3</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(4)">4</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(5)">5</div>
+
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(6)">6</div>
+                                <div class="mini-calendar-day event" onclick="showCalendarEvents(7)">7</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(8)">8</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(9)">9</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(10)">10</div>
+                                <div class="mini-calendar-day event" onclick="showCalendarEvents(11)">11</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(12)">12</div>
+
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(13)">13</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(14)">14</div>
+                                <div class="mini-calendar-day event" onclick="showCalendarEvents(15)">15</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(16)">16</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(17)">17</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(18)">18</div>
+                                <div class="mini-calendar-day" onclick="showCalendarEvents(19)">19</div>
+                            </div>
+                        </div>
+
+                        <!-- Calendar Events Display -->
+                        <div class="calendar-events" id="calendarEvents" style="display: none;">
+                            <div class="calendar-events-header">
+                                <span id="calendarEventsTitle">1月19日</span>
+                                <button class="calendar-events-close" onclick="closeCalendarEvents()">×</button>
+                            </div>
+                            <div class="calendar-events-list" id="calendarEventsList">
+                                <!-- Events will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1382,6 +2246,106 @@
             </div>
         </div>
 
+        <!-- Notice List Page -->
+        <div class="page" id="page-notice-list">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h1>班级通知</h1>
+            </div>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+            <div class="card" onclick="navigate('notice-detail')" style="cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <div>
+                        <span style="background-color: #ef4444; color: white; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-right: 0.5rem;">重要</span>
+                        <h3 style="margin: 0.5rem 0; font-size: 1.1rem; display: inline;">期中答辩时间调整至本周四下午</h3>
+                    </div>
+                    <div style="color: var(--secondary); font-size: 0.85rem; white-space: nowrap;">01-12</div>
+                </div>
+                <p style="color: var(--secondary); font-size: 0.9rem; margin: 0;">请各位同学做好准备，答辩地点：主楼 A301</p>
+            </div>
+            <div class="card" onclick="navigate('notice-detail')" style="cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <div>
+                        <h3 style="margin: 0.5rem 0; font-size: 1.1rem;">周五班会地点变更为主楼 A201</h3>
+                    </div>
+                    <div style="color: var(--secondary); font-size: 0.85rem; white-space: nowrap;">01-11</div>
+                </div>
+                <p style="color: var(--secondary); font-size: 0.9rem; margin: 0;">原定地点因故无法使用，请同学们相互转告</p>
+            </div>
+            <div class="card" onclick="navigate('notice-detail')" style="cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <div>
+                        <h3 style="margin: 0.5rem 0; font-size: 1.1rem;">实验室值班表已更新，请及时查看</h3>
+                    </div>
+                    <div style="color: var(--secondary); font-size: 0.85rem; white-space: nowrap;">01-10</div>
+                </div>
+                <p style="color: var(--secondary); font-size: 0.9rem; margin: 0;">新的值班安排从本周开始执行</p>
+            </div>
+            <div class="card" onclick="navigate('notice-detail')" style="cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <div>
+                        <h3 style="margin: 0.5rem 0; font-size: 1.1rem;">关于期末项目提交的通知</h3>
+                    </div>
+                    <div style="color: var(--secondary); font-size: 0.85rem; white-space: nowrap;">01-08</div>
+                </div>
+                <p style="color: var(--secondary); font-size: 0.9rem; margin: 0;">请各小组在1月20日前提交项目报告</p>
+            </div>
+            <div class="card" onclick="navigate('notice-detail')" style="cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <div>
+                        <h3 style="margin: 0.5rem 0; font-size: 1.1rem;">寒假社会实践活动报名开始</h3>
+                    </div>
+                    <div style="color: var(--secondary); font-size: 0.85rem; white-space: nowrap;">01-05</div>
+                </div>
+                <p style="color: var(--secondary); font-size: 0.9rem; margin: 0;">有意向的同学请联系班长报名</p>
+            </div>
+        </div>
+
+        <!-- Notice Detail Page -->
+        <div class="page" id="page-notice-detail">
+            <div class="blog-detail">
+                <div class="breadcrumb">
+                    <a href="#" onclick="navigate('notice-list')">通知列表</a> > 期中答辩时间调整至本周四下午
+                </div>
+                <article class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div>
+                            <span style="background-color: #ef4444; color: white; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-right: 0.5rem;">重要</span>
+                            <h1 class="blog-title" style="display: inline;">期中答辩时间调整至本周四下午</h1>
+                        </div>
+                    </div>
+                    <div class="blog-header-info">
+                        <div>发布者：辅导员</div>
+                        <div>2025-01-12 10:30</div>
+                        <div>156</div>
+                    </div>
+                    <div class="blog-content">
+                        <p>各位同学：</p>
+                        <p>由于教室安排冲突，原定于本周五进行的期中答辩时间调整至本周四下午进行。</p>
+                        <h2>答辩安排</h2>
+                        <p><strong>时间：</strong>1月16日（周四）14:00-17:00</p>
+                        <p><strong>地点：</strong>主楼 A301</p>
+                        <p><strong>注意事项：</strong></p>
+                        <ul>
+                            <li>请提前10分钟到场签到</li>
+                            <li>准备5分钟的PPT演示</li>
+                            <li>携带纸质版项目报告</li>
+                            <li>穿着正式服装</li>
+                        </ul>
+                        <h2>答辩顺序</h2>
+                        <ol>
+                            <li>14:00-14:30 第一组（3人）</li>
+                            <li>14:30-15:00 第二组（3人）</li>
+                            <li>15:00-15:30 第三组（3人）</li>
+                            <li>15:30-16:00 第四组（3人）</li>
+                            <li>16:00-16:30 第五组（3人）</li>
+                            <li>16:30-17:00 第六组（3人）</li>
+                        </ol>
+                        <p>请各位同学认真准备，预祝答辩顺利！</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+
         <!-- Blogs List Page -->
         <div class="page" id="page-blogs">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -1427,10 +2391,10 @@
                     <h1 class="blog-title">机器学习入门指南</h1>
                     <div class="blog-header-info">
                         <div class="blog-author" onclick="navigate('user-profile')">
-                            <span>👤</span> 张三
+                            张三
                         </div>
-                        <div>📅 2025-01-10 08:30</div>
-                        <div>👁️ 128</div>
+                        <div>2025-01-10 08:30</div>
+                        <div>128</div>
                         <div class="blog-actions">
                             <button class="btn btn-outline" onclick="navigate('blog-edit')">编辑</button>
                             <button class="btn btn-outline" onclick="deleteBlog()">删除</button>
@@ -1654,35 +2618,35 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
             </div>
             <div class="chat-card" onclick="navigate('chat-detail')">
                 <div class="chat-card-title">
-                    💬 机器学习入门指南
+                    机器学习入门指南
                 </div>
                 <div class="chat-card-preview">最后消息：如何理解梯度下降算法的具体实现...</div>
                 <div class="chat-card-time">2025-01-15 14:30</div>
             </div>
             <div class="chat-card" onclick="navigate('chat-detail')">
                 <div class="chat-card-title">
-                    💬 Python代码调试帮助
+                    Python代码调试帮助
                 </div>
                 <div class="chat-card-preview">最后消息：感谢你的帮助！问题已经解决了</div>
                 <div class="chat-card-time">2025-01-14 09:15</div>
             </div>
             <div class="chat-card" onclick="navigate('chat-detail')">
                 <div class="chat-card-title">
-                    💬 项目架构设计讨论
+                    项目架构设计讨论
                 </div>
                 <div class="chat-card-preview">最后消息：我觉得可以采用微服务架构...</div>
                 <div class="chat-card-time">2025-01-12 16:45</div>
             </div>
             <div class="chat-card" onclick="navigate('chat-detail')">
                 <div class="chat-card-title">
-                    💬 数据结构学习计划
+                    数据结构学习计划
                 </div>
                 <div class="chat-card-preview">最后消息：链表和树的遍历算法很重要</div>
                 <div class="chat-card-time">2025-01-10 11:20</div>
             </div>
             <div class="chat-card" onclick="navigate('chat-detail')">
                 <div class="chat-card-title">
-                    💬 算法优化建议
+                    算法优化建议
                 </div>
                 <div class="chat-card-preview">最后消息：可以使用动态规划来优化时间复杂度</div>
                 <div class="chat-card-time">2025-01-08 15:30</div>
@@ -1704,7 +2668,7 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                     <!-- Welcome Message -->
                     <div class="message message-assistant">
                         <div class="message-header">
-                            <span>🤖 AI</span>
+                            <span>AI</span>
                             <span>·</span>
                             <span>刚刚</span>
                         </div>
@@ -1724,8 +2688,7 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                     <!-- User Message 1 -->
                     <div class="message message-user">
                         <div class="message-header">
-                            <span>👤</span>
-                            <span class="message-user">用户</span>
+                            <span>用户</span>
                             <span>·</span>
                             <span>刚刚</span>
                         </div>
@@ -1737,7 +2700,7 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                     <!-- AI Response 1 -->
                     <div class="message message-assistant">
                         <div class="message-header">
-                            <span>🤖 AI</span>
+                            <span>AI</span>
                             <span>·</span>
                             <span>刚刚</span>
                         </div>
@@ -1754,17 +2717,16 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                             <p>想象你在山上，想要下山到最低点。梯度下降就像是每次都往脚下的最陡方向迈一步，最终你会到达山谷。</p>
                         </div>
                         <div class="message-actions">
-                            <button class="message-action-btn">📋 复制</button>
-                            <button class="message-action-btn">👍 有帮助</button>
-                            <button class="message-action-btn">👎 无帮助</button>
+                            <button class="message-action-btn">复制</button>
+                            <button class="message-action-btn">有帮助</button>
+                            <button class="message-action-btn">无帮助</button>
                         </div>
                     </div>
 
                     <!-- User Message 2 -->
                     <div class="message message-user">
                         <div class="message-header">
-                            <span>👤</span>
-                            <span class="message-user">用户</span>
+                            <span>用户</span>
                             <span>·</span>
                             <span>2分钟前</span>
                         </div>
@@ -1776,7 +2738,7 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                     <!-- AI Response 2 with code -->
                     <div class="message message-assistant">
                         <div class="message-header">
-                            <span>🤖 AI</span>
+                            <span>AI</span>
                             <span>·</span>
                             <span>2分钟前</span>
                         </div>
@@ -1795,9 +2757,9 @@ print(f"最小值点: {result}")</code></pre>
                             <p>这个函数会找到函数 f(x) = x² 的最小值点，理论上应该是 x = 0。</p>
                         </div>
                         <div class="message-actions">
-                            <button class="message-action-btn">📋 复制</button>
-                            <button class="message-action-btn">👍 有帮助</button>
-                            <button class="message-action-btn">👎 无帮助</button>
+                            <button class="message-action-btn">复制</button>
+                            <button class="message-action-btn">有帮助</button>
+                            <button class="message-action-btn">无帮助</button>
                         </div>
                     </div>
                 </div>
@@ -1812,7 +2774,7 @@ print(f"最小值点: {result}")</code></pre>
             <div class="chat-input-container">
                 <div class="chat-input-wrapper">
                     <textarea class="chat-input" id="chatInput" placeholder="输入消息给AI..." rows="1"></textarea>
-                    <button class="chat-send-btn" id="chatSendBtn">发送 📤</button>
+                    <button class="chat-send-btn" id="chatSendBtn">发送</button>
                 </div>
             </div>
         </div>
@@ -1861,6 +2823,156 @@ print(f"最小值点: {result}")</code></pre>
         // State
         let isLoggedIn = false;
         let currentUser = null;
+        let checkinStreak = 1;
+        let hasCheckedInToday = false;
+
+        // Check-in Fortune Data
+        const fortunes = [
+            { level: '大吉', color: '#ff4757', advice: [
+                { tag: '写代码', desc: '灵感充沛，效率奇高', type: 'good' },
+                { tag: '学习', desc: '理解力强，事半功倍', type: 'good' },
+                { tag: '熬夜', desc: '身体疲惫，容易生病', type: 'bad' },
+                { tag: '拖延', desc: '今日事明日毕，效率低下', type: 'bad' }
+            ]},
+            { level: '中吉', color: '#ff6b6b', advice: [
+                { tag: '写代码', desc: '灵感充沛，效率奇高', type: 'good' },
+                { tag: '复习', desc: '记忆超群，过目不忘', type: 'good' },
+                { tag: '熬夜', desc: '身体疲惫，效率低下', type: 'bad' },
+                { tag: '刷手机', desc: '浪费时间，虚度光阴', type: 'bad' }
+            ]},
+            { level: '小吉', color: '#ffa502', advice: [
+                { tag: '阅读', desc: '心静神宁，收获满满', type: 'good' },
+                { tag: '运动', desc: '身体舒畅，精力充沛', type: 'good' },
+                { tag: '暴食', desc: '肠胃不适，影响状态', type: 'bad' },
+                { tag: '赖床', desc: '虚度时光，错过良机', type: 'bad' }
+            ]},
+            { level: '末吉', color: '#ff7f50', advice: [
+                { tag: '整理', desc: '条理清晰，心情愉悦', type: 'good' },
+                { tag: '思考', desc: '思路清晰，洞察力强', type: 'good' },
+                { tag: '冲动', desc: '决策失误，后悔莫及', type: 'bad' },
+                { tag: '贪多', desc: '贪多嚼不烂，适得其反', type: 'bad' }
+            ]},
+            { level: '凶', color: '#a55eea', advice: [
+                { tag: '休息', desc: '养精蓄锐，恢复状态', type: 'good' },
+                { tag: '反思', desc: '总结经验，吸取教训', type: 'good' },
+                { tag: '冒险', desc: '风险极大，得不偿失', type: 'bad' },
+                { tag: '争论', desc: '容易起冲突，得不偿失', type: 'bad' }
+            ]}
+        ];
+
+        // Initialize Check-in Date
+        function initCheckinDate() {
+            const now = new Date();
+            const months = ['一月大', '二月平', '三月大', '四月小', '五月大', '六月小',
+                           '七月大', '八月大', '九月小', '十月大', '十一月小', '十二月大'];
+            const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+            document.getElementById('checkinMonth').textContent = months[now.getMonth()];
+            document.getElementById('checkinDay').textContent = now.getDate();
+            document.getElementById('checkinWeekday').textContent = weekdays[now.getDay()];
+        }
+
+        // Handle Check-in
+        function handleCheckIn() {
+            const btn = document.getElementById('checkinBtn');
+
+            if (!isLoggedIn) {
+                showToast('请先登录后再签到', 'error');
+                setTimeout(() => navigate('login'), 1000);
+                return;
+            }
+
+            if (hasCheckedInToday) {
+                showToast('今天已经签到过了哦', 'error');
+                return;
+            }
+
+            // Disable button during check-in
+            btn.disabled = true;
+            btn.textContent = '签到中...';
+
+            // Simulate API call
+            setTimeout(() => {
+                // Random fortune
+                const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+
+                // Update result view
+                const resultView = document.getElementById('checkinResult');
+                const welcomeView = document.getElementById('checkinWelcome');
+                const fortuneResult = document.getElementById('fortuneResult');
+                const streakDays = document.getElementById('streakDays');
+
+                // Update fortune result
+                fortuneResult.textContent = `§${fortune.level}§`;
+                fortuneResult.style.color = fortune.color;
+
+                // Update advice
+                const adviceContainer = resultView.querySelector('.checkin-advice');
+                const goodColumn = adviceContainer.querySelector('.advice-column:first-child');
+                const badColumn = adviceContainer.querySelector('.advice-column:last-child');
+
+                // Clear existing items
+                goodColumn.innerHTML = '<div class="advice-label">宜：</div>';
+                badColumn.innerHTML = '<div class="advice-label bad">忌：</div>';
+
+                // Add new items
+                fortune.advice.forEach(item => {
+                    const adviceItem = document.createElement('div');
+                    adviceItem.className = 'advice-item';
+                    adviceItem.innerHTML = `
+                        <span class="advice-tag ${item.type === 'bad' ? 'bad' : ''}">${item.tag}</span>
+                        <span class="advice-desc">${item.desc}</span>
+                    `;
+
+                    if (item.type === 'good') {
+                        goodColumn.appendChild(adviceItem);
+                    } else {
+                        badColumn.appendChild(adviceItem);
+                    }
+                });
+
+                // Update streak
+                streakDays.textContent = checkinStreak;
+
+                // Show result
+                welcomeView.style.display = 'none';
+                resultView.style.display = 'block';
+
+                // Reset button
+                btn.disabled = false;
+                btn.textContent = '点击打卡';
+
+                // Mark as checked in
+                hasCheckedInToday = true;
+                checkinStreak++;
+
+                showToast('签到成功！', 'success');
+            }, 800);
+        }
+
+        // Close Check-in Result
+        function closeCheckInResult() {
+            const resultView = document.getElementById('checkinResult');
+            const welcomeView = document.getElementById('checkinWelcome');
+
+            resultView.style.display = 'none';
+            welcomeView.style.display = 'block';
+
+            // Update button text if already checked in
+            if (hasCheckedInToday) {
+                const btn = document.getElementById('checkinBtn');
+                btn.textContent = '已签到';
+                btn.disabled = true;
+            }
+        }
+
+        // Update username in check-in card when user logs in
+        function updateCheckinUsername(username) {
+            const usernameElements = document.querySelectorAll('.checkin-username, .checkin-username-result');
+            usernameElements.forEach(el => {
+                el.textContent = username;
+            });
+        }
 
         // Navigation
         function navigate(page) {
@@ -1934,6 +3046,7 @@ print(f"最小值点: {result}")</code></pre>
             isLoggedIn = true;
             currentUser = { username: 'zhangsan', name: '张三' };
             renderNav();
+            updateCheckinUsername(currentUser.name);
             showToast('登录成功！', 'success');
             setTimeout(() => navigate('home'), 1000);
         }
@@ -1944,6 +3057,7 @@ print(f"最小值点: {result}")</code></pre>
             isLoggedIn = true;
             currentUser = { username: 'newuser', name: '新用户' };
             renderNav();
+            updateCheckinUsername(currentUser.name);
             showToast('注册成功！', 'success');
             setTimeout(() => navigate('home'), 1000);
         }
@@ -2102,8 +3216,7 @@ print(f"最小值点: {result}")</code></pre>
 
             messageDiv.innerHTML = `
                 <div class="message-header">
-                    <span>${role === 'user' ? '👤' : '🤖'}</span>
-                    <span class="message-user">${role === 'user' ? '用户' : 'AI'}</span>
+                    <span>${role === 'user' ? '用户' : 'AI'}</span>
                     <span>·</span>
                     <span>${timeText}</span>
                 </div>
@@ -2112,9 +3225,9 @@ print(f"最小值点: {result}")</code></pre>
                 </div>
                 ${role === 'assistant' ? `
                 <div class="message-actions">
-                    <button class="message-action-btn" onclick="copyMessage(this)">📋 复制</button>
-                    <button class="message-action-btn" onclick="feedbackMessage(this, 'helpful')">👍 有帮助</button>
-                    <button class="message-action-btn" onclick="feedbackMessage(this, 'not-helpful')">👎 无帮助</button>
+                    <button class="message-action-btn" onclick="copyMessage(this)">复制</button>
+                    <button class="message-action-btn" onclick="feedbackMessage(this, 'helpful')">有帮助</button>
+                    <button class="message-action-btn" onclick="feedbackMessage(this, 'not-helpful')">无帮助</button>
                 </div>
                 ` : ''}
             `;
@@ -2137,7 +3250,7 @@ print(f"最小值点: {result}")</code></pre>
             typingDiv.id = 'typingIndicator';
             typingDiv.innerHTML = `
                 <div class="message-header">
-                    <span>🤖 AI</span>
+                    <span>AI</span>
                     <span>·</span>
                     <span>刚刚</span>
                 </div>
@@ -2210,8 +3323,86 @@ print(f"最小值点: {result}")</code></pre>
             });
         }
 
+        // Calendar Events Data
+        const calendarEventsData = {
+            3: [
+                { time: '14:00', title: '期中答辩' },
+                { time: '16:00', title: '班级会议' }
+            ],
+            7: [
+                { time: '19:00', title: '班会' },
+                { time: '20:30', title: '小组讨论' }
+            ],
+            11: [
+                { time: '10:00', title: '实验室值班' },
+                { time: '15:00', title: '项目讨论' }
+            ],
+            15: [
+                { time: '09:00', title: '项目展示' },
+                { time: '13:00', title: '导师面谈' }
+            ]
+        };
+
+        // Show Calendar Events
+        function showCalendarEvents(day) {
+            // Remove previous selection
+            document.querySelectorAll('.mini-calendar-day').forEach(d => {
+                d.classList.remove('selected');
+            });
+
+            // Add selection to clicked day
+            event.target.classList.add('selected');
+
+            // Get events for this day
+            const events = calendarEventsData[day] || [];
+
+            // Update title
+            const title = document.getElementById('calendarEventsTitle');
+            title.textContent = `1月${day}日`;
+
+            // Update events list
+            const eventsList = document.getElementById('calendarEventsList');
+
+            if (events.length === 0) {
+                eventsList.innerHTML = '<div class="calendar-event-item no-events">暂无日程安排</div>';
+            } else {
+                eventsList.innerHTML = events.map(event => `
+                    <div class="calendar-event-item">
+                        <div class="calendar-event-time">${event.time}</div>
+                        <div class="calendar-event-title">${event.title}</div>
+                    </div>
+                `).join('');
+            }
+
+            // Show events section with animation
+            const eventsSection = document.getElementById('calendarEvents');
+            eventsSection.style.display = 'block';
+
+            // Trigger reflow to enable transition
+            requestAnimationFrame(() => {
+                eventsSection.classList.add('show');
+            });
+        }
+
+        // Close Calendar Events
+        function closeCalendarEvents() {
+            const eventsSection = document.getElementById('calendarEvents');
+            eventsSection.classList.remove('show');
+
+            // Wait for animation to complete before hiding
+            setTimeout(() => {
+                eventsSection.style.display = 'none';
+            }, 300);
+
+            // Remove selection
+            document.querySelectorAll('.mini-calendar-day').forEach(d => {
+                d.classList.remove('selected');
+            });
+        }
+
         // Initialize
         renderNav();
+        initCheckinDate();
     </script>
 </body>
 </html>

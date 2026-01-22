@@ -53,6 +53,30 @@ from .verification import (
     VerificationVerify,
     VerificationResponse,
 )
+from .notice import (
+    NoticeCreate,
+    NoticeUpdate,
+    NoticeListItem,
+    NoticeDetail,
+    NoticeMini,
+    NoticeListResponse,
+    NoticeLatestResponse,
+)
+from .checkin import (
+    CheckInCreate,
+    CheckInResponse,
+    CheckInStatus,
+    CheckInStreak,
+)
+from .activity import (
+    ActivityCreate,
+    ActivityResponse,
+    ActivityListItem,
+    ActivityListResponse,
+    ActivityLatestResponse,
+    ActivityUserInfo,
+    ActivityTarget,
+)
 
 __all__ = [
     "BlogCreate",
@@ -96,4 +120,22 @@ __all__ = [
     "VerificationRequest",
     "VerificationVerify",
     "VerificationResponse",
+    "NoticeCreate",
+    "NoticeUpdate",
+    "NoticeListItem",
+    "NoticeDetail",
+    "NoticeMini",
+    "NoticeListResponse",
+    "NoticeLatestResponse",
+    "CheckInCreate",
+    "CheckInResponse",
+    "CheckInStatus",
+    "CheckInStreak",
+    "ActivityCreate",
+    "ActivityResponse",
+    "ActivityListItem",
+    "ActivityListResponse",
+    "ActivityLatestResponse",
+    "ActivityUserInfo",
+    "ActivityTarget",
 ]

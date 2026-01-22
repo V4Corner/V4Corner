@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 import auth, dependencies, models, schemas
+from models.activity import Activity
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
@@ -63,6 +64,19 @@ async def register(
     db.commit()
     db.refresh(user)
 
+    # 记录动态
+    activity = Activity(
+        type="user_joined",
+        user_id=user.id,
+        user_name=user.nickname or user.username,
+        content="加入了班级",
+        target_type="user",
+        target_id=user.id,
+        target_title=user.nickname or user.username
+    )
+    db.add(activity)
+    db.commit()
+
     # 创建访问令牌（注册后自动登录）
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
@@ -78,6 +92,7 @@ async def register(
         "user": {
             "id": user.id,
             "username": user.username,
+            "email": user.email,
             "nickname": user.nickname,
             "avatar_url": user.avatar_url
         }
