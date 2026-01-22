@@ -232,7 +232,7 @@ function Home() {
               {blogs.map((blog) => (
                 <Link key={blog.id} to={`/blogs/${blog.id}`} className="blog-card">
                   <h3 className="blog-card-title">{blog.title}</h3>
-                  <p className="blog-card-excerpt">{blog.summary || '暂无摘要'}</p>
+                  <p className="blog-card-excerpt">{blog.excerpt || '暂无摘要'}</p>
                   <div className="blog-card-meta">
                     <span>{blog.author}</span>
                     <span>{formatDate(blog.created_at)}</span>

@@ -158,13 +158,27 @@ Content-Type: application/json
 **成功响应（201）：**
 ```json
 {
-  "id": 1,
-  "username": "zhangsan",
-  "email": "zhangsan@example.com",
-  "nickname": "张三",
-  "created_at": "2025-01-10T08:30:00.000000Z"
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 604800,
+  "user": {
+    "id": 1,
+    "username": "zhangsan",
+    "email": "zhangsan@example.com",
+    "nickname": "张三",
+    "avatar_url": null
+  }
 }
 ```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| access_token | string | JWT 访问令牌（注册后自动登录） |
+| token_type | string | 固定值 "bearer" |
+| expires_in | integer | 过期时间（秒），默认 604800（7天） |
+| user | object | 当前用户信息 |
 
 **失败响应（422）：**
 ```json
@@ -224,6 +238,7 @@ Content-Type: application/json
   "user": {
     "id": 1,
     "username": "zhangsan",
+    "email": "zhangsan@example.com",
     "nickname": "张三",
     "avatar_url": null
   }
