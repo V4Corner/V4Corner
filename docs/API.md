@@ -1,8 +1,8 @@
 # V4Corner API 接口文档
 
-> 基于网页原型设计 v1.2
+> 基于网页原型设计 v1.3.2
 >
-> 最后更新：2025-01-19（v1.2.0 - 真实 AI API 集成）
+> 最后更新：2026-01-22（v1.6.0 - 最新动态系统）
 
 ## 目录
 
@@ -13,6 +13,10 @@
 - [博客管理](#博客管理)
 - [成员管理](#成员管理)
 - [班级通知与日历](#班级通知与日历)
+- [班级通知系统 (Notices)](#班级通知系统-notices)
+- [签到系统 (CheckIn)](#签到系统-checkin)
+- [统计数据 (Stats)](#统计数据-stats)
+- [最新动态系统 (Activity)](#最新动态系统-activity)
 - [AI对话管理](#ai对话管理)
 - [数据模型](#数据模型)
 - [错误码说明](#错误码说明)
@@ -31,9 +35,13 @@
 
 ### API 版本
 
-当前版本: `v1.2.0`
+当前版本: `v1.6.0`
 
 **版本历史：**
+- v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）
+- v1.5.0 (2026-01-22): 班级通知系统（完整CRUD）、签到系统（运势抽签）、统计数据 API
+- v1.4.0 (2025-01-21): 新增班级通知与日历 API
+- v1.3.0 (2025-01-20): AI 对话 BUG 修复
 - v1.2.0 (2025-01-19): 集成真实 AI API（8 种服务商、智能降级）
 - v1.1.0 (2025-01-19): 新增 AI 对话系统
 - v1.0.0 (2025-01-12): 基础功能完成（认证、博客、用户、成员）
@@ -1045,6 +1053,721 @@ Authorization: Bearer {access_token}
 
 ---
 
+## 班级通知系统 (Notices)
+
+完整的班级通知系统，支持富文本内容、重要标记、浏览量统计、权限控制等功能。
+
+### GET /api/notices
+
+获取通知列表（公开接口）
+
+**查询参数：**
+```
+?page=1&size=10
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认10，最大50） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 12,
+  "page": 1,
+  "size": 10,
+  "items": [
+    {
+      "id": 1,
+      "title": "期中答辩时间调整至本周四下午",
+      "excerpt": "请各位同学做好准备，答辩地点：主楼 A301",
+      "is_important": true,
+      "author": "辅导员",
+      "views": 156,
+      "published_at": "2025-01-12T10:30:00.000000Z",
+      "date_display": "01-12"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| excerpt | string | 通知摘要（内容前100字） |
+| is_important | boolean | 是否为重要通知 |
+| author | string | 发布者名称（冗余存储） |
+| views | integer | 浏览次数 |
+| published_at | string | 发布时间（ISO 8601） |
+| date_display | string | 显示用日期（MM-DD） |
+
+**排序规则：**
+- 重要通知优先（`is_important = true`）
+- 按发布时间倒序（最新的在前）
+
+---
+
+### GET /api/notices/latest
+
+获取最新通知（用于首页展示）
+
+**查询参数：**
+```
+?limit=3
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| limit | integer | 否 | 返回数量（默认3，最大10） |
+
+**成功响应（200）：**
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "期中答辩时间调整",
+      "is_important": true,
+      "date_display": "01-12"
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/notices/:notice_id
+
+获取通知详情（公开接口，浏览量+1）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| notice_id | integer | 通知 ID |
+
+**成功响应（200）：**
+```json
+{
+  "id": 1,
+  "title": "期中答辩时间调整至本周四下午",
+  "content": "各位同学：\n\n由于教室安排冲突...",
+  "is_important": true,
+  "author": "辅导员",
+  "author_id": 100,
+  "views": 156,
+  "published_at": "2025-01-12T10:30:00.000000Z",
+  "updated_at": null,
+  "is_owner": false,
+  "can_edit": false
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| content | string | Markdown 格式的完整内容 |
+| author_id | integer | 发布者 ID |
+| updated_at | string | 最后更新时间（null 表示未更新过） |
+| is_owner | boolean | 当前用户是否为发布者（未登录为 false） |
+| can_edit | boolean | 当前用户是否可编辑（管理员或发布者） |
+
+**注意：** 每次调用此接口，通知的 `views` 字段会自动 +1。
+
+---
+
+### POST /api/notices
+
+创建通知（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "title": "关于期末项目提交的通知",
+  "content": "## 提交要求\n\n请各小组在1月20日前提交项目报告。",
+  "is_important": false
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| title | string | 是 | 1-200字符 |
+| content | string | 是 | Markdown 格式，1-10000字符 |
+| is_important | boolean | 否 | 默认 false |
+
+**成功响应（201）：**
+```json
+{
+  "id": 4,
+  "title": "关于期末项目提交的通知",
+  "content": "## 提交要求\n\n请各小组在1月20日前...",
+  "is_important": false,
+  "author": "张三",
+  "author_id": 1,
+  "views": 0,
+  "published_at": "2025-01-12T15:00:00.000000Z",
+  "updated_at": null
+}
+```
+
+---
+
+### PUT /api/notices/:notice_id
+
+更新通知（需要认证，仅发布者或管理员）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "title": "关于期末项目提交的通知（更新）",
+  "content": "## 提交要求\n\n请各小组在1月25日前提交。",
+  "is_important": true
+}
+```
+
+**成功响应（200）：**
+```json
+{
+  "id": 4,
+  "title": "关于期末项目提交的通知（更新）",
+  "content": "## 提交要求\n\n请各小组在1月25日前提交。",
+  "is_important": true,
+  "author": "张三",
+  "author_id": 1,
+  "views": 42,
+  "published_at": "2025-01-12T15:00:00.000000Z",
+  "updated_at": "2025-01-13T09:30:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限编辑此通知"
+}
+```
+
+---
+
+### DELETE /api/notices/:notice_id
+
+删除通知（需要认证，仅发布者或管理员）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（204）：**
+无内容
+
+---
+
+## 签到系统 (CheckIn)
+
+签到系统提供每日签到、运势抽签、连续签到统计等功能。
+
+### POST /api/checkins
+
+创建签到（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（201）：**
+```json
+{
+  "id": 1,
+  "fortune": "大吉",
+  "good": [
+    {
+      "title": "写代码",
+      "desc": "灵感充沛，效率奇高"
+    },
+    {
+      "title": "复习",
+      "desc": "记忆清晰，理解透彻"
+    }
+  ],
+  "bad": [
+    {
+      "title": "熬夜",
+      "desc": "身体疲惫，效率低下"
+    },
+    {
+      "title": "刷手机",
+      "desc": "浪费时间，影响专注"
+    }
+  ],
+  "streak": 7,
+  "checkin_date": "2025-01-22"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| fortune | string | 运势等级（大吉/中吉/小吉/中平/凶/大凶） |
+| good | array | 宜做事项（包含 title 和 desc） |
+| bad | array | 忌做事项（包含 title 和 desc） |
+| streak | integer | 当前连续签到天数 |
+| checkin_date | string | 签到日期 |
+
+**失败响应（400）：**
+```json
+{
+  "detail": "今日已签到"
+}
+```
+
+---
+
+### GET /api/checkins/status
+
+获取签到状态（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "checked_today": false,
+  "current_streak": 6
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| checked_today | boolean | 今日是否已签到 |
+| current_streak | integer | 当前连续签到天数 |
+
+---
+
+### GET /api/checkins/streak
+
+获取签到统计（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "longest_streak": 15,
+  "current_streak": 6
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| longest_streak | integer | 最长连续签到天数 |
+| current_streak | integer | 当前连续签到天数 |
+
+---
+
+## 统计数据 (Stats)
+
+班级统计数据接口，提供班级成员数、博客数、签到记录等聚合信息。
+
+### GET /api/stats
+
+获取班级统计数据（公开接口）
+
+**成功响应（200）：**
+```json
+{
+  "member_count": 28,
+  "blog_count": 156,
+  "longest_streak": 15
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| member_count | integer | 班级成员总数 |
+| blog_count | integer | 发布的博客总数 |
+| longest_streak | integer | 全班最长连续签到天数 |
+
+---
+
+## 最新动态系统 (Activity)
+
+最新动态系统记录班级内的所有用户操作，提供类似社交网络的时间线功能，展示博客发布、通知发布、签到里程碑等动态。
+
+### 动态类型说明
+
+| 类型代码 | 说明 | 示例 |
+|---------|------|------|
+| `blog_created` | 发布博客 | `张三 发布了博客《机器学习入门指南》` |
+| `notice_published` | 发布通知 | `管理员 发布了通知《期末考试安排》` |
+| `checkin_streak` | 签到里程碑 | `李四 连续签到7天，获得"坚持不懈"徽章` |
+| `checkin_first` | 首次签到 | `王五 完成了首次签到` |
+| `user_joined` | 新成员加入 | `赵六 加入了班级空间` |
+
+### GET /api/activities
+
+获取动态列表（公开接口）
+
+**查询参数：**
+```
+?page=1&size=20&type=blog_created
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认20，最大50） |
+| type | string | 否 | 筛选动态类型（不传则返回所有类型） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 45,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 1,
+      "type": "blog_created",
+      "user": {
+        "id": 1,
+        "username": "zhangsan",
+        "nickname": "张三",
+        "avatar": "/uploads/avatars/zhangsan.jpg"
+      },
+      "content": "发布了博客",
+      "target": {
+        "type": "blog",
+        "id": 42,
+        "title": "机器学习入门指南：从零到实战",
+        "url": "/blogs/42"
+      },
+      "created_at": "2025-01-22T10:30:00.000000Z",
+      "time_display": "2小时前"
+    },
+    {
+      "id": 2,
+      "type": "checkin_streak",
+      "user": {
+        "id": 2,
+        "username": "lisi",
+        "nickname": "李四",
+        "avatar": null
+      },
+      "content": "连续签到7天，获得\"坚持不懈\"徽章",
+      "target": null,
+      "created_at": "2025-01-22T08:00:00.000000Z",
+      "time_display": "4小时前"
+    },
+    {
+      "id": 3,
+      "type": "notice_published",
+      "user": {
+        "id": 100,
+        "username": "admin",
+        "nickname": "管理员",
+        "avatar": "/uploads/avatars/admin.jpg"
+      },
+      "content": "发布了通知",
+      "target": {
+        "type": "notice",
+        "id": 15,
+        "title": "期末考试安排通知",
+        "url": "/notices/15"
+      },
+      "created_at": "2025-01-21T16:20:00.000000Z",
+      "time_display": "昨天"
+    },
+    {
+      "id": 4,
+      "type": "user_joined",
+      "user": {
+        "id": 3,
+        "username": "wangwu",
+        "nickname": "王五",
+        "avatar": null
+      },
+      "content": "加入了班级空间",
+      "target": null,
+      "created_at": "2025-01-20T09:15:00.000000Z",
+      "time_display": "2天前"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | integer | 动态记录 ID |
+| type | string | 动态类型（blog_created/notice_published/checkin_streak等） |
+| user | object | 执行操作的用户信息 |
+| user.id | integer | 用户 ID |
+| user.username | string | 用户名 |
+| user.nickname | string | 昵称 |
+| user.avatar | string\|null | 头像 URL（相对路径） |
+| content | string | 动态描述文本（不包含对象标题） |
+| target | object\|null | 关联对象信息（如果存在） |
+| target.type | string | 对象类型（blog/notice） |
+| target.id | integer | 对象 ID |
+| target.title | string | 对象标题 |
+| target.url | string | 对象链接 URL |
+| created_at | string | 创建时间（ISO 8601） |
+| time_display | string | 友好的时间显示（"2小时前"、"昨天"） |
+
+**排序规则：**
+- 按创建时间倒序（最新的在前）
+
+---
+
+### GET /api/activities/latest
+
+获取最新动态（用于首页展示，简化版）
+
+**查询参数：**
+```
+?limit=10
+```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| limit | integer | 否 | 返回数量（默认10，最大20） |
+
+**成功响应（200）：**
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "type": "blog_created",
+      "user_name": "张三",
+      "content": "发布了博客",
+      "target_title": "机器学习入门指南",
+      "target_url": "/blogs/42",
+      "created_at": "2025-01-22T10:30:00.000000Z",
+      "time_display": "2小时前"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| user_name | string | 用户昵称（简化版，不包含完整用户对象） |
+| target_title | string\|null | 对象标题 |
+| target_url | string\|null | 对象链接 |
+
+---
+
+### POST /api/activities
+
+创建动态记录（内部接口，由后端其他模块调用）
+
+**权限：** 需要认证（系统内部调用，通常不直接暴露给前端）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "type": "blog_created",
+  "target_type": "blog",
+  "target_id": 42,
+  "target_title": "机器学习入门指南"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|----------|
+| type | string | 是 | 动态类型（见上方类型表） |
+| target_type | string | 否 | 关联对象类型（blog/notice） |
+| target_id | integer | 否 | 关联对象 ID |
+| target_title | string | 否 | 关联对象标题 |
+
+**注意：**
+- `user_id` 和 `user_name` 从认证 Token 中自动获取
+- `created_at` 自动设置为当前时间
+- 此接口主要用于系统内部调用，一般不需要前端直接请求
+
+**成功响应（201）：**
+```json
+{
+  "id": 1,
+  "type": "blog_created",
+  "user": {
+    "id": 1,
+    "username": "zhangsan",
+    "nickname": "张三"
+  },
+  "content": "发布了博客",
+  "target": {
+    "type": "blog",
+    "id": 42,
+    "title": "机器学习入门指南",
+    "url": "/blogs/42"
+  },
+  "created_at": "2025-01-22T10:30:00.000000Z"
+}
+```
+
+---
+
+## 动态生成规则
+
+### 博客发布
+**触发时机：** 用户创建博客时
+
+**动态内容：**
+- `type`: `blog_created`
+- `content`: `"发布了博客"`
+- `target`: 博客对象（包含 id、title、url）
+
+**显示示例：** `张三 发布了博客《机器学习入门指南》`
+
+---
+
+### 通知发布
+**触发时机：** 管理员/班委发布通知时
+
+**动态内容：**
+- `type`: `notice_published`
+- `content`: `"发布了通知"`
+- `target`: 通知对象
+
+**显示示例：** `管理员 发布了通知《期末考试安排》`
+
+---
+
+### 签到里程碑
+**触发时机：** 用户签到时，检查连续天数
+
+**动态内容：**
+- `type`: `checkin_streak`
+- `content`: `"连续签到7天，获得\"坚持不懈\"徽章"`
+- `target`: null
+
+**里程碑规则：**
+- 首次签到：`checkin_first`
+- 7天：`checkin_streak`
+- 30天：`checkin_streak`
+- 100天：`checkin_streak`
+
+**显示示例：** `李四 连续签到7天，获得"坚持不懈"徽章`
+
+---
+
+### 新成员加入
+**触发时机：** 用户注册时
+
+**动态内容：**
+- `type`: `user_joined`
+- `content`: `"加入了班级空间"`
+- `target`: null
+
+**显示示例：** `王五 加入了班级空间`
+
+---
+
+## 使用示例
+
+### 场景1：发布博客时记录动态
+
+```python
+# 在 blog 创建成功后
+async def create_blog(blog: BlogCreate, current_user: User, db: Session):
+    # 1. 创建博客
+    new_blog = Blog(**blog.dict(), author_id=current_user.id)
+    db.add(new_blog)
+    db.commit()
+
+    # 2. 记录动态
+    activity = Activity(
+        type="blog_created",
+        user_id=current_user.id,
+        user_name=current_user.nickname or current_user.username,
+        content="发布了博客",
+        target_type="blog",
+        target_id=new_blog.id,
+        target_title=new_blog.title
+    )
+    db.add(activity)
+    db.commit()
+
+    return new_blog
+```
+
+### 场景2：前端显示动态列表
+
+```typescript
+// 获取动态列表
+const activities = await getActivities({ page: 1, size: 20 });
+
+// 渲染动态
+activities.items.map(activity => {
+  if (activity.type === 'blog_created') {
+    return (
+      <div className="activity-item">
+        <Avatar src={activity.user.avatar} />
+        <span>{activity.user.nickname}</span>
+        <span>{activity.content}</span>
+        <Link to={activity.target.url}>{activity.target.title}</Link>
+        <span className="activity-time">{activity.time_display}</span>
+      </div>
+    );
+  }
+});
+```
+
+---
+
 ## AI对话管理
 
 AI对话功能提供与 AI 助手的实时对话能力，支持流式输出、上下文管理、消息反馈等功能。
@@ -1655,6 +2378,49 @@ Content-Type: application/json
 
 **索引：**
 - `idx_date`: date
+
+---
+
+### Activity（最新动态）
+
+**数据库表名：** `activities`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| type | String(50) | 动态类型 | NOT NULL, values: 'blog_created', 'notice_published', 'checkin_streak', 'checkin_first', 'user_joined' |
+| user_id | Integer | 用户ID | FOREIGN KEY → users.id, NOT NULL |
+| user_name | String(50) | 用户名（冗余） | NOT NULL |
+| content | String(200) | 动态描述文本 | NOT NULL |
+| target_type | String(50) | 关联对象类型 | values: 'blog', 'notice', NULL |
+| target_id | Integer | 关联对象ID | |
+| target_title | String(200) | 关联对象标题 | |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_id`: user_id
+- `idx_created_at`: created_at (DESC)
+- `idx_type`: type
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+
+**说明：**
+- `type` 字段定义动态类型，决定前端如何显示
+- `user_name` 冗余存储避免每次查询都 join users 表
+- `target_type` 和 `target_id` 关联到具体对象（博客、通知等）
+- `target_title` 用于显示链接文本
+- 不同的 `type` 值对应不同的 `content` 文案
+
+**动态类型详解：**
+
+| type | content 模板 | target_type | target_id | 示例 |
+|------|-------------|-------------|-----------|------|
+| `blog_created` | "发布了博客" | blog | 博客ID | `张三 发布了博客《机器学习入门》` |
+| `notice_published` | "发布了通知" | notice | 通知ID | `管理员 发布了通知《期末安排》` |
+| `checkin_first` | "完成了首次签到" | NULL | NULL | `李四 完成了首次签到` |
+| `checkin_streak` | "连续签到N天，获得\"徽章名\"徽章" | NULL | NULL | `王五 连续签到7天，获得"坚持不懈"徽章` |
+| `user_joined` | "加入了班级空间" | NULL | NULL | `赵六 加入了班级空间` |
 
 ---
 
