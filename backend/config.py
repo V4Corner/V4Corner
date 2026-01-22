@@ -30,6 +30,22 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 2097152  # 2MB
     ALLOWED_FILE_TYPES: str = "jpg,jpeg,png,webp,gif,pdf,doc,docx"
 
+    # ========== 邮件配置 ==========
+
+    # QQ 邮箱 SMTP 配置（推荐，简单快速）
+    QQ_MAIL_PASSWORD: Optional[str] = None  # QQ 邮箱授权码（非登录密码）
+    ALIYUN_ACCOUNT_NAME: str = "noreply@v4corner.com"  # 发件人邮箱地址（建议使用 QQ 邮箱）
+    ALIYUN_FROM_ALIAS: str = "V4Corner"  # 发件人昵称
+
+    # ========== 短信配置 ==========
+
+    # 阿里云短信服务配置
+    SMS_ENABLED: bool = False  # 是否启用短信（优先使用短信）
+    ALIYUN_SMS_SIGN_NAME: str = "V4Corner"  # 短信签名（需要在阿里云审核）
+    ALIYUN_SMS_TEMPLATE_CODE_REGISTER: str = "SMS_123456789"  # 注册验证码模板CODE
+    ALIYUN_SMS_TEMPLATE_CODE_RESET: str = "SMS_123456789"  # 重置密码模板CODE
+    ALIYUN_SMS_REGION: str = "cn-hangzhou"  # 短信服务区域
+
     # ========== AI 模型配置 ==========
 
     # OpenAI 配置

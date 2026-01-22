@@ -5,8 +5,12 @@ import string
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+import logging
 
 import dependencies, models, schemas
+from config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/verification", tags=["验证码"])
 
@@ -16,11 +20,10 @@ async def send_verification_code(
     request: schemas.VerificationRequest,
     db: dependencies.DbSession
 ):
-    """发送验证码到邮箱"""
+    """发送验证码（支持短信和邮件）"""
 
-    # 生成随机验证码（4-6位数字）
-    code_length = random.randint(4, 6)
-    code = ''.join(random.choices(string.digits, k=code_length))
+    # 生成随机验证码（6位数字）
+    code = ''.join(random.choices(string.digits, k=6))
 
     # 检查是否在限制时间内（60秒）
     existing_code = db.query(models.VerificationCode).filter(
@@ -54,8 +57,29 @@ async def send_verification_code(
         expire_minutes=5
     )
 
-    # 发送邮件（此处为模拟，实际应调用邮件服务）
-    _send_email(request.email, code, request.type)
+    # 发送验证码（使用邮件服务）
+    try:
+        from services.email_service import send_verification_code_email
+
+        success = send_verification_code_email(
+            email=request.email,
+            code=code,
+            code_type=request.type
+        )
+
+        if not success:
+            # 邮件发送失败，使用模拟模式
+            _send_mock(request.email, code, request.type)
+
+    except Exception as e:
+        logger.error(f"发送验证码失败: {e}")
+        # 发送失败，回滚验证码
+        db.delete(code_obj)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"发送验证码失败: {str(e)}"
+        )
 
     return schemas.VerificationResponse(
         success=True,
@@ -96,10 +120,11 @@ async def verify_code(
     )
 
 
-def _send_email(email: str, code: str, code_type: str):
-    """发送验证码邮件（模拟实现）"""
-    # 实际项目中应集成邮件服务（如 SMTP、SendGrid、阿里云邮件等）
-    print(f"\n[模拟邮件] 发送验证码到 {email}")
-    print(f"[模拟邮件] 验证码: {code}")
-    print(f"[模拟邮件] 类型: {code_type}")
-    print(f"[模拟邮件] 有效期: 5分钟\n")
+def _send_mock(email: str, code: str, code_type: str):
+    """模拟模式：输出到控制台"""
+    print(f"\n[模拟模式] 发送验证码")
+    print(f"[模拟模式] 接收方式: 邮箱")
+    print(f"[模拟模式] 接收地址: {email}")
+    print(f"[模拟模式] 验证码: {code}")
+    print(f"[模拟模式] 类型: {code_type}")
+    print(f"[模拟模式] 有效期: 5分钟\n")

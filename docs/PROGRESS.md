@@ -1,10 +1,66 @@
 # V4Corner 开发进度
 
-> 最后更新：2025-01-21
+> 最后更新：2026-01-22
 
 ---
 
 ## 版本历史
+
+### v1.5.0 (2026-01-22) - 邮箱验证码功能
+
+#### ✨ 新增功能
+- **注册邮箱验证**
+  - 用户注册时需要验证邮箱
+  - 验证码通过邮件发送到用户邮箱
+  - 支持邮箱/手机号切换（UI）
+
+- **验证码管理**
+  - 验证码生成与发送
+  - 6 位数字验证码，5 分钟有效期
+  - 60 秒发送间隔限制
+  - 验证码使用后自动失效
+
+- **邮件发送服务**
+  - 支持 QQ 邮箱 SMTP 发送
+  - 精美的 HTML 邮件模板
+  - 支持模拟模式（开发测试）
+  - 邮件发送失败时自动降级到模拟模式
+
+#### 🔧 技术改进
+- 新增验证码模型
+- 新增邮件服务模块（`backend/services/email_service.py`）
+- 新增验证码 API（发送、验证）
+- 注册接口集成验证码验证
+- 注册成功后自动登录（返回 access_token）
+
+#### 📦 新增文件
+```
+backend/
+  models/verification.py       # 验证码模型
+  schemas/verification.py      # 验证码 Schema
+  schemas/auth.py              # 认证 Schema（新增）
+  routers/verification.py      # 验证码路由
+  services/email_service.py    # 邮件发送服务
+  test_verification.py         # 验证码测试脚本
+  test_email.py               # 邮件发送测试脚本
+
+frontend/
+  src/types/verification.ts    # 验证码类型
+  src/api/verification.ts     # 验证码 API
+```
+
+#### 📝 文档更新
+- 更新 `README.md` 添加邮件配置说明
+- 更新 `backend/.env.example` 添加 QQ 邮箱配置说明
+- 更新 `backend/.env` 配置文件
+- 添加邮件配置获取步骤说明
+
+#### ⚠️ 升级注意事项
+- 新增数据库表：`verification_codes`
+- 如需启用真实邮件发送，需要配置 QQ 邮箱授权码
+- 详见：README.md 中的"启用邮件验证码功能"部分
+
+---
 
 ### v1.4.0 (2025-01-21) - 首页班级通知与日历
 

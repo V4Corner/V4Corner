@@ -14,7 +14,9 @@
       "Bash(cat:*)",
       "Bash(chmod:*)",
       "Bash(./venv/Scripts/pip:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ]
   }
 }

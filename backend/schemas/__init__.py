@@ -16,6 +16,10 @@ from .user import (
     UserPublic,
     AvatarUploadResponse,
 )
+from .auth import (
+    AuthResponse,
+    RefreshTokenResponse,
+)
 from .chat import (
     ConversationCreate,
     ConversationUpdate,
@@ -65,6 +69,8 @@ __all__ = [
     "UserRead",
     "UserPublic",
     "AvatarUploadResponse",
+    "AuthResponse",
+    "RefreshTokenResponse",
     "ConversationCreate",
     "ConversationUpdate",
     "ConversationListItem",
