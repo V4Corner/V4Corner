@@ -44,6 +44,30 @@ from .calendar_event import (
     CalendarEventRead,
     CalendarEventListResponse,
 )
+from .notice import (
+    NoticeCreate,
+    NoticeUpdate,
+    NoticeListItem,
+    NoticeDetail,
+    NoticeMini,
+    NoticeListResponse,
+    NoticeLatestResponse,
+)
+from .checkin import (
+    CheckInCreate,
+    CheckInResponse,
+    CheckInStatus,
+    CheckInStreak,
+)
+from .activity import (
+    ActivityCreate,
+    ActivityResponse,
+    ActivityListItem,
+    ActivityListResponse,
+    ActivityLatestResponse,
+    ActivityUserInfo,
+    ActivityTarget,
+)
 
 __all__ = [
     "BlogCreate",
@@ -82,4 +106,22 @@ __all__ = [
     "CalendarEventUpdate",
     "CalendarEventRead",
     "CalendarEventListResponse",
+    "NoticeCreate",
+    "NoticeUpdate",
+    "NoticeListItem",
+    "NoticeDetail",
+    "NoticeMini",
+    "NoticeListResponse",
+    "NoticeLatestResponse",
+    "CheckInCreate",
+    "CheckInResponse",
+    "CheckInStatus",
+    "CheckInStreak",
+    "ActivityCreate",
+    "ActivityResponse",
+    "ActivityListItem",
+    "ActivityListResponse",
+    "ActivityLatestResponse",
+    "ActivityUserInfo",
+    "ActivityTarget",
 ]

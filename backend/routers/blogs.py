@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
 import dependencies, models, schemas, auth
+from models.activity import Activity
 
 router = APIRouter(prefix="/api/blogs", tags=["博客"])
 
@@ -97,6 +98,19 @@ async def create_blog(
     db.add(blog)
     db.commit()
     db.refresh(blog)
+
+    # 记录动态
+    activity = Activity(
+        type="blog_created",
+        user_id=current_user.id,
+        user_name=current_user.nickname or current_user.username,
+        content="发布了博客",
+        target_type="blog",
+        target_id=blog.id,
+        target_title=blog.title
+    )
+    db.add(activity)
+    db.commit()
 
     return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=True)
 
