@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { sendVerificationCode } from '../api/verification';
@@ -20,6 +20,35 @@ function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // 从 localStorage 恢复冷却时间
+  useEffect(() => {
+    const savedCountdown = localStorage.getItem('verificationCountdown');
+    const savedTimestamp = localStorage.getItem('verificationTimestamp');
+
+    if (savedCountdown && savedTimestamp) {
+      const elapsed = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
+      const remaining = parseInt(savedCountdown) - elapsed;
+
+      if (remaining > 0) {
+        setCountdown(remaining);
+        const timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              localStorage.removeItem('verificationCountdown');
+              localStorage.removeItem('verificationTimestamp');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        localStorage.removeItem('verificationCountdown');
+        localStorage.removeItem('verificationTimestamp');
+      }
+    }
+  }, []);
+
   // 发送验证码
   const handleSendCode = async () => {
     // 验证邮箱格式
@@ -36,12 +65,17 @@ function Register() {
       if (response.success) {
         // 开始倒计时（60秒）
         setCountdown(60);
+        localStorage.setItem('verificationCountdown', '60');
+        localStorage.setItem('verificationTimestamp', Date.now().toString());
         const timer = setInterval(() => {
           setCountdown((prev) => {
             if (prev <= 1) {
               clearInterval(timer);
+              localStorage.removeItem('verificationCountdown');
+              localStorage.removeItem('verificationTimestamp');
               return 0;
             }
+            localStorage.setItem('verificationCountdown', (prev - 1).toString());
             return prev - 1;
           });
         }, 1000);
