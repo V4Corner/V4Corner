@@ -1,10 +1,110 @@
 # V4Corner 开发进度
 
-> 最后更新：2026-01-22
+> 最后更新：2026-01-23
 
 ---
 
 ## 版本历史
+
+### v1.7.0 (2026-01-23) - 博客系统重大升级 ✨
+
+#### ✨ 新增功能
+
+**富文本编辑器（TipTap）**
+- 所见即所得编辑体验，实时预览
+- 完整工具栏：粗体、斜体、删除线、代码、标题（H1-H6）
+- 列表支持：有序列表、无序列表、引用块
+- 链接管理：插入、删除链接
+- 文本对齐：左对齐、居中、右对齐
+- 撤销/重做功能
+- 分割线插入
+- 自定义 Video 节点支持视频嵌入
+
+**智能媒体管理**
+- 图片上传与自动压缩（浏览器端）
+  - 使用 browser-image-compression 库
+  - 自动压缩至最大 1MB
+  - 最大分辨率 1920px
+  - 压缩质量 80%
+  - 显示压缩前后大小对比和节省比例
+
+- 视频上传与服务器端压缩
+  - 支持最大 2GB 视频上传
+  - 大于 20MB 自动触发压缩
+  - 智能码率计算（目标 50MB）
+  - 最大分辨率 1920x1080
+  - 视频码率最高 2Mbps
+  - 音频码率 128kbps
+  - 流媒体优化（faststart）
+  - FFmpeg 配置化管理
+
+- 自动清理未使用媒体
+  - 编辑博客时对比原始内容
+  - 自动识别删除的图片/视频
+  - 保存时从服务器删除未使用文件
+  - 显示清理结果提示
+
+#### 🔧 技术改进
+
+**后端实现**
+- 新增 uploads 路由：媒体文件管理
+  - `POST /api/uploads/image` - 图片上传接口
+  - `POST /api/uploads/video` - 视频上传与压缩接口
+  - `DELETE /api/uploads/media` - 批量删除媒体接口
+- 新增 ffmpeg_config.py：FFmpeg 路径配置
+- 视频压缩函数：智能码率计算、FFmpeg 调用
+- 跨平台文件移动：使用 shutil.move 替代 Path.rename
+
+**前端实现**
+- 新增 RichTextEditor 组件：
+  - 基于 TipTap 的富文本编辑器
+  - 自定义 Video 扩展节点
+  - 图片上传预检查与压缩
+  - 视频上传大小提示
+  - 上传进度提示（图片 KB，视频 MB）
+  - 成功提示显示压缩信息
+- 更新 CreateBlog/EditBlog：
+  - 集成富文本编辑器
+  - 移除左右分栏预览布局
+  - 添加媒体清理逻辑
+- 更新 BlogDetail：
+  - 支持富文本内容渲染
+  - 添加 .rich-text-content 样式
+
+**依赖更新**
+- 前端新增：
+  - @tiptap/react
+  - @tiptap/starter-kit
+  - @tiptap/extension-image
+  - @tiptap/extension-link
+  - @tiptap/extension-text-align
+  - @tiptap/extension-placeholder
+  - browser-image-compression
+- 后端新增：
+  - ffmpeg-python
+  - shutil（标准库）
+
+#### 📝 文档更新
+- 更新 README.md：v1.7.0 功能说明
+- 新增 BLOG_UPGRADE.md：博客升级任务跟踪
+- 更新技术栈：添加 TipTap 和 browser-image-compression
+- 添加 FFmpeg 配置指南
+
+#### 🐛 BUG 修复
+- 修复 Windows 跨驱动器文件移动问题（Path.rename → shutil.move）
+- 修复 FastAPI JSON body 接收问题（使用 Body(..., embed=True)）
+- 修复 token 键名不一致问题（'token' → 'access_token'）
+
+#### ⚠️ 升级注意事项
+- **新增依赖**：
+  - 前端：运行 `npm install` 安装 TipTap 相关包
+  - 后端：运行 `pip install -r requirements.txt` 安装 ffmpeg-python
+- **FFmpeg 配置**（可选）：
+  - 视频压缩功能需要 FFmpeg
+  - 编辑 `backend/ffmpeg_config.py` 配置路径
+  - 详见 README.md 中的配置说明
+
+---
 
 ### v1.6.0 (2026-01-22) - 最新动态系统
 

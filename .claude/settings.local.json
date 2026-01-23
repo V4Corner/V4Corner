@@ -16,7 +16,10 @@
       "Bash(./venv/Scripts/pip:*)",
       "mcp__zai-mcp-server__analyze_image",
       "Bash(./venv/Scripts/python.exe:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npm install:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(where:*)"
     ]
   }
 }

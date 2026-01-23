@@ -1,9 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBlog, updateBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
-import { formatMarkdown } from '../utils/markdown';
+import RichTextEditor from '../components/RichTextEditor';
 import type { Blog } from '../types/blog';
+
+// 从 HTML 内容中提取所有媒体文件 URL
+function extractMediaUrls(html: string): string[] {
+  const urls: string[] = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // 提取图片 URL
+  const images = doc.querySelectorAll('img');
+  images.forEach(img => {
+    const src = img.getAttribute('src');
+    if (src && src.includes('/static/blog/')) {
+      urls.push(src.replace('http://localhost:8000', ''));
+    }
+  });
+
+  // 提取视频 URL
+  const videos = doc.querySelectorAll('video');
+  videos.forEach(video => {
+    const src = video.getAttribute('src');
+    if (src && src.includes('/static/blog/')) {
+      urls.push(src.replace('http://localhost:8000', ''));
+    }
+  });
+
+  return urls;
+}
 
 function EditBlog() {
   const { blogId } = useParams<{ blogId: string }>();
@@ -16,7 +43,9 @@ function EditBlog() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [showPreview, setShowPreview] = useState(true);
+
+  // 保存原始媒体 URL 列表
+  const originalMediaUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!blogId) return;
@@ -28,6 +57,9 @@ function EditBlog() {
         setBlog(data);
         setTitle(data.title);
         setContent(data.content);
+
+        // 保存原始媒体 URL
+        originalMediaUrlsRef.current = extractMediaUrls(data.content);
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载失败');
       } finally {
@@ -64,7 +96,56 @@ function EditBlog() {
       setSaving(true);
       setError('');
 
+      // 获取当前内容的媒体 URL
+      const currentMediaUrls = extractMediaUrls(content);
+
+      // 找出被删除的媒体 URL
+      const deletedUrls = originalMediaUrlsRef.current.filter(
+        url => !currentMediaUrls.includes(url)
+      );
+
+      // 更新博客
       await updateBlog(parseInt(blogId), { title, content });
+
+      // 删除未使用的媒体文件
+      if (deletedUrls.length > 0) {
+        try {
+          const token = localStorage.getItem('access_token');
+          console.log('准备删除的媒体文件:', deletedUrls);
+
+          const response = await fetch('http://localhost:8000/api/uploads/media', {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ urls: deletedUrls }),
+          });
+
+          console.log('删除响应状态:', response.status);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('删除媒体文件失败:', errorText);
+          } else {
+            console.log('媒体文件删除成功');
+          }
+
+          // 显示清理提示
+          if (deletedUrls.length > 0) {
+            const cleanupMsg = document.createElement('div');
+            cleanupMsg.textContent = `🧹 已清理 ${deletedUrls.length} 个未使用的媒体文件`;
+            cleanupMsg.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+            document.body.appendChild(cleanupMsg);
+            setTimeout(() => cleanupMsg.remove(), 3000);
+          }
+        } catch (err) {
+          console.error('清理媒体文件失败:', err);
+          // 不阻止保存，只记录错误
+        }
+      } else {
+        console.log('没有需要删除的媒体文件');
+      }
 
       // 跳转到博客详情页
       navigate(`/blogs/${blogId}`);
@@ -131,15 +212,8 @@ function EditBlog() {
         <span>编辑</span>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ margin: 0 }}>编辑博客</h1>
-        <button
-          type="button"
-          onClick={() => setShowPreview(!showPreview)}
-          className="btn btn-outline"
-        >
-          {showPreview ? '隐藏预览' : '显示预览'}
-        </button>
       </div>
 
       {error && (
@@ -156,110 +230,64 @@ function EditBlog() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
-        {/* 编辑区 */}
-        <div style={{ flex: showPreview ? 1 : '1 1 100%', maxWidth: showPreview ? '50%' : '100%' }}>
-          <form onSubmit={handleSubmit} className="card" style={{ padding: '1.5rem' }}>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label htmlFor="title" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                标题 *
-              </label>
-              <input
-                id="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="请输入博客标题"
-                maxLength={200}
-                disabled={saving}
-                required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '1.1rem',
-                  fontWeight: 500
-                }}
-              />
-              <p className="small-muted" style={{ marginTop: '0.25rem' }}>
-                {title.length}/200 字符
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label htmlFor="content" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                内容 (支持 Markdown) *
-              </label>
-              <textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="# 开始写作..."
-                rows={25}
-                disabled={saving}
-                required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontFamily: 'Consolas, Monaco, Courier New, monospace',
-                  lineHeight: 1.6,
-                  resize: 'vertical'
-                }}
-              />
-              <p className="small-muted" style={{ marginTop: '0.25rem' }}>
-                {content.length} 字符
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="btn btn-outline"
-                disabled={saving}
-              >
-                取消
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={saving}
-              >
-                {saving ? '保存中...' : '保存修改'}
-              </button>
-            </div>
-          </form>
+      <form onSubmit={handleSubmit} className="card" style={{ padding: '1.5rem' }}>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label htmlFor="title" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+            标题 *
+          </label>
+          <input
+            id="title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="请输入博客标题"
+            maxLength={200}
+            disabled={saving}
+            required
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '1.1rem',
+              fontWeight: 500
+            }}
+          />
+          <p className="small-muted" style={{ marginTop: '0.25rem' }}>
+            {title.length}/200 字符
+          </p>
         </div>
 
-        {/* 预览区 */}
-        {showPreview && (
-          <div
-            style={{
-              flex: 1,
-              maxWidth: '50%',
-              position: 'sticky',
-              top: '1rem'
-            }}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+            内容 *
+          </label>
+          <RichTextEditor
+            content={content}
+            onChange={setContent}
+            placeholder="开始写作... 可以插入图片、视频等多媒体内容"
+            editable={!saving}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="btn btn-outline"
+            disabled={saving}
           >
-            <div className="card" style={{ padding: '2rem' }}>
-              <h2 style={{ marginTop: 0, paddingBottom: '1rem', borderBottom: '2px solid #e2e8f0' }}>
-                预览
-              </h2>
-              <div className="markdown-content">
-                <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>{title}</h1>
-                <div
-                  style={{ lineHeight: 1.8, fontSize: '1.05rem' }}
-                  dangerouslySetInnerHTML={{ __html: formatMarkdown(content) }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+            取消
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={saving}
+          >
+            {saving ? '保存中...' : '保存修改'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

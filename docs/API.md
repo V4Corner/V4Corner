@@ -2,7 +2,7 @@
 
 > 基于网页原型设计 v1.3.2
 >
-> 最后更新：2026-01-22（v1.6.0 - 最新动态系统）
+> 最后更新：2026-01-23（v1.7.0 - 富文本编辑器与媒体管理）
 
 ## 目录
 
@@ -11,6 +11,7 @@
 - [用户认证](#用户认证)
 - [用户管理](#用户管理)
 - [博客管理](#博客管理)
+- [文件上传 (Uploads)](#文件上传-uploads)
 - [成员管理](#成员管理)
 - [班级通知与日历](#班级通知与日历)
 - [班级通知系统 (Notices)](#班级通知系统-notices)
@@ -35,9 +36,10 @@
 
 ### API 版本
 
-当前版本: `v1.6.0`
+当前版本: `v1.7.0`
 
 **版本历史：**
+- v1.7.0 (2026-01-23): 富文本编辑器与媒体管理（图片自动压缩、视频服务器端压缩、媒体自动清理）
 - v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）
 - v1.5.0 (2026-01-22): 班级通知系统（完整CRUD）、签到系统（运势抽签）、统计数据 API
 - v1.4.0 (2025-01-21): 新增班级通知与日历 API
@@ -699,6 +701,208 @@ Authorization: Bearer {access_token}
 {
   "detail": "博客不存在"
 }
+```
+
+---
+
+## 文件上传 (Uploads)
+
+文件上传接口用于博客系统的富文本编辑器，支持图片和视频上传，并提供自动压缩和媒体清理功能。
+
+### POST /api/uploads/image
+
+上传博客图片（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
+
+**请求参数：**
+```
+file: 图片文件
+```
+
+**文件限制：**
+- 支持格式：jpg, jpeg, png, gif, webp
+- 最大大小：10MB
+- 前端自动压缩：最大 1MB，最大分辨率 1920px，压缩质量 80%
+
+**成功响应（200）：**
+```json
+{
+  "url": "/static/blog/images/abc123-def456.jpg",
+  "type": "image"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| url | string | 图片访问 URL（相对路径） |
+| type | string | 固定值 "image" |
+
+**失败响应（422）：**
+```json
+{
+  "detail": "不支持的图片类型，请上传 image/jpeg, image/jpg, image/png, image/gif, image/webp 格式的图片"
+}
+```
+
+或
+
+```json
+{
+  "detail": "图片大小不能超过 10MB"
+}
+```
+
+---
+
+### POST /api/uploads/video
+
+上传博客视频（需要认证，服务器端自动压缩）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
+
+**请求参数：**
+```
+file: 视频文件
+```
+
+**文件限制：**
+- 支持格式：mp4, webm, mov
+- 最大大小：2GB
+- 自动压缩：大于 20MB 时自动触发压缩（目标 50MB）
+
+**压缩配置：**
+- 最大分辨率：1920x1080
+- 视频码率：最高 2Mbps（智能计算）
+- 音频码率：128kbps
+- 流媒体优化：faststart
+
+**成功响应（200）- 已压缩：**
+```json
+{
+  "url": "/static/blog/videos/abc123-def456.mp4",
+  "type": "video",
+  "compressed": true,
+  "message": "压缩成功: 120.5MB → 45.2MB (节省 62.5%)"
+}
+```
+
+**成功响应（200）- 无需压缩：**
+```json
+{
+  "url": "/static/blog/videos/abc123-def456.mp4",
+  "type": "video",
+  "compressed": false,
+  "message": "视频无需压缩 (15.3MB)"
+}
+```
+
+**成功响应（200）- 压缩失败：**
+```json
+{
+  "url": "/static/blog/videos/abc123-def456.mp4",
+  "type": "video",
+  "compressed": false,
+  "message": "压缩失败，使用原始文件: FFmpeg 未找到，请在 ffmpeg_config.py 中配置 FFMPEG_PATH"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| url | string | 视频访问 URL（相对路径） |
+| type | string | 固定值 "video" |
+| compressed | boolean | 是否进行了压缩 |
+| message | string | 压缩结果信息或错误提示 |
+
+**失败响应（422）：**
+```json
+{
+  "detail": "不支持的视频类型，请上传 video/mp4, video/webm, video/quicktime 格式的视频"
+}
+```
+
+或
+
+```json
+{
+  "detail": "视频大小为 2.5GB，超过限制 2GB"
+}
+```
+
+**注意：**
+- FFmpeg 配置：编辑 `backend/ffmpeg_config.py` 配置 FFmpeg 路径
+- 压缩失败时自动使用原始文件，不影响上传
+- 详见 README.md 中的 FFmpeg 配置指南
+
+---
+
+### DELETE /api/uploads/media
+
+批量删除媒体文件（需要认证，用于编辑博客时清理未使用的媒体）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "urls": [
+    "/static/blog/images/abc123-def456.jpg",
+    "/static/blog/videos/xyz789-uvw012.mp4"
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| urls | array | 是 | 要删除的媒体 URL 列表 |
+
+**成功响应（204）：**
+无内容
+
+**使用场景：**
+- 用户编辑博客时，前端对比原始内容和当前内容
+- 自动识别被删除的图片和视频
+- 保存后调用此接口清理未使用的媒体文件
+
+**示例流程：**
+```typescript
+// 1. 编辑博客时保存原始媒体 URL
+const originalMediaUrls = ["/static/blog/images/old.jpg"];
+
+// 2. 用户编辑内容，删除了某些图片
+// 3. 提取当前内容中的媒体 URL
+const currentMediaUrls = extractMediaUrls(newContent);
+
+// 4. 找出被删除的 URL
+const deletedUrls = originalMediaUrls.filter(url => !currentMediaUrls.includes(url));
+
+// 5. 调用删除接口
+await fetch('/api/uploads/media', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({ urls: deletedUrls })
+});
 ```
 
 ---
@@ -3009,6 +3213,10 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.7.0 | 2026-01-23 | 富文本编辑器与媒体管理（图片/视频上传、自动压缩、媒体清理） |
+| v1.6.0 | 2026-01-22 | 最新动态系统（活动流、自动记录、时间显示） |
+| v1.5.0 | 2026-01-22 | 班级通知系统（完整CRUD）、签到系统、统计数据 API |
+| v1.4.0 | 2025-01-21 | 新增班级通知与日历 API |
 | v1.1.0 | 2025-01-19 | 新增 AI 对话管理功能（对话、消息、流式输出） |
 | v1.0.0 | 2025-01-11 | 基于网页原型的完整 API 设计 |
 | v0.1.0 | 2025-01-10 | 初始版本，基础博客 CRUD |
@@ -3024,15 +3232,17 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
    - `GET /api/blogs/:blog_id/comments` - 获取评论列表
    - `DELETE /api/comments/:comment_id` - 删除评论
 
-2. **文件上传**：
-   - `POST /api/upload/image` - 上传图片（用于博客内容）
-   - `POST /api/users/me/avatar` - 上传用户头像
-
-3. **搜索功能**：
+2. **搜索功能**：
    - `GET /api/search` - 全站搜索
 
-4. **统计功能**：
-   - `GET /api/stats` - 获取网站统计信息
+3. **点赞/收藏功能**：
+   - `POST /api/blogs/:blog_id/like` - 点赞博客
+   - `POST /api/blogs/:blog_id/favorite` - 收藏博客
+   - `GET /api/users/me/favorites` - 获取收藏列表
+
+4. **草稿功能**：
+   - 博客支持草稿状态
+   - 草稿仅作者可见
 
 ---
 

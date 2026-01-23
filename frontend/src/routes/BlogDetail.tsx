@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBlog, deleteBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
-import { formatMarkdown } from '../utils/markdown';
 import type { Blog } from '../types/blog';
 
 function BlogDetail() {
@@ -236,14 +235,14 @@ function BlogDetail() {
           </div>
         )}
 
-        {/* Markdown 内容 */}
+        {/* 富文本内容 */}
         <div
-          className="markdown-content"
+          className="rich-text-content"
           style={{
             lineHeight: 1.8,
             fontSize: '1.05rem'
           }}
-          dangerouslySetInnerHTML={{ __html: formatMarkdown(blog.content) }}
+          dangerouslySetInnerHTML={{ __html: blog.content }}
         />
       </div>
     </article>

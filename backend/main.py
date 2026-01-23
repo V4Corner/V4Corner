@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from database import Base, engine
-from routers import blogs, auth, users, members, chat, announcements, calendar, notices, stats, checkins, activities
+from routers import blogs, auth, users, members, chat, announcements, calendar, notices, stats, checkins, activities, uploads
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +42,13 @@ async def startup_event() -> None:
     Base.metadata.create_all(bind=engine)
 
     # Create uploads directory if it doesn't exist
-    upload_dir = Path("uploads/avatars")
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_dirs = [
+        Path("uploads/avatars"),
+        Path("uploads/blog/images"),
+        Path("uploads/blog/videos")
+    ]
+    for upload_dir in upload_dirs:
+        upload_dir.mkdir(parents=True, exist_ok=True)
 
 
 # Routers keep related endpoints grouped. Add new modules under routers/.
@@ -58,6 +63,7 @@ app.include_router(notices.router)
 app.include_router(stats.router)
 app.include_router(checkins.router)
 app.include_router(activities.router)
+app.include_router(uploads.router)
 
 # Static file serving for uploaded files (avatars)
 app.mount("/static", StaticFiles(directory="uploads"), name="static")

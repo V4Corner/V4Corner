@@ -46,9 +46,21 @@ V4Corner 是**行健-车辆4班**打造的班级在线空间，用来集中展�
 - 头像上传
 - 资料编辑
 
-### 📝 博客系统
-- 发布博客文章
-- Markdown 编辑器
+### 📝 博客系统（**v1.7.0 全新升级**）
+- **富文本编辑器**（TipTap）
+  - 所见即所得编辑体验
+  - 图片上传与自动压缩
+  - 视频上传与服务器端压缩
+  - 文本格式化（粗体、斜体、标题、列表、引用等）
+  - 链接插入与管理
+  - 文本对齐（左、中、右）
+  - 撤销/重做功能
+- **智能媒体管理**
+  - 图片自动压缩（最大 1MB）
+  - 视频服务器端压缩（目标 50MB）
+  - 支持最大 2GB 视频上传
+  - 编辑时自动清理未使用媒体
+- Markdown + 混合内容支持
 - 文章浏览和阅读计数
 - 编辑和删除自己的文章
 
@@ -105,6 +117,7 @@ V4Corner 是**行健-车辆4班**打造的班级在线空间，用来集中展�
 
 - Node.js 18+
 - Python 3.10+
+- FFmpeg（可选，用于视频压缩功能）
 - Docker & Docker Compose（可选）
 
 ### 本地开发
@@ -359,18 +372,37 @@ python test_ai_mode.py
 
 #### 常见问题
 
+**Q: 视频压缩需要配置 FFmpeg？**
+
+视频压缩功能需要 FFmpeg。配置步骤：
+
+1. **安装 FFmpeg**
+   - Windows: 下载 [ffmpeg-release-essentials.zip](https://www.gyan.dev/ffmpeg/builds/)
+   - 解压到 `C:\ffmpeg`
+   - 或使用 Chocolatey: `choco install ffmpeg`
+
+2. **配置 FFmpeg 路径**
+
+   编辑 `backend/ffmpeg_config.py`：
+   ```python
+   FFMPEG_PATH = r"C:\ffmpeg\bin\ffmpeg.exe"
+   ```
+
+3. **验证配置**
+   ```bash
+   cd backend
+   python ffmpeg_config.py
+   # 应显示: ✓ FFmpeg 文件存在
+   ```
+
+4. **重启后端**
+   ```bash
+   uvicorn main:app --reload
+   ```
+
+**注意**: 如果不配置 FFmpeg，视频上传功能仍然可用，只是不会压缩视频。
+
 **Q: AI 不回复？**
-```bash
-# 1. 检查后端日志
-uvicorn main:app --reload
-
-# 2. 运行测试
-cd backend
-python test_ai_mode.py
-
-# 3. 检查配置
-cat .env
-```
 
 **Q: 如何验证配置是否正确？**
 ```bash
@@ -397,6 +429,8 @@ curl http://localhost:11434/api/tags
 - Vite 5.4
 - React Router v6
 - ReactDOM 18
+- TipTap（富文本编辑器）
+- browser-image-compression（图片压缩）
 
 ### 后端
 - FastAPI 0.115.5
@@ -414,7 +448,16 @@ curl http://localhost:11434/api/tags
 
 ## 📖 API 版本
 
-**当前版本：v1.5.0**（2026-01-22）
+**当前版本：v1.7.0**（2026-01-23）
+
+### v1.7.0 更新内容
+- ✨ **博客系统重大升级**
+  - 富文本编辑器（TipTap）
+  - 图片自动压缩（浏览器端）
+  - 视频服务器端压缩（FFmpeg）
+  - 智能媒体文件清理
+  - 支持最大 2GB 视频上传
+  - 文本格式化、链接、对齐等丰富功能
 
 ### v1.5.0 更新内容
 - ✨ **班级通知系统（完整）**
@@ -511,17 +554,16 @@ curl http://localhost:11434/api/tags
 
 ## 🗺 路线图
 
-### v1.6.0（计划中）
-- [ ] 通知创建/编辑页面
-- [ ] 通知分类功能
-- [ ] 通知搜索功能
-- [ ] 最新动态流（活动记录）
+### v1.8.0（计划中）
+- [ ] 博客搜索功能
+- [ ] 博客草稿功能
+- [ ] 评论系统
+- [ ] 点赞/收藏功能
 
 ### 未来功能
-- [ ] 评论系统
-- [ ] 文件上传优化
+- [ ] 通知创建/编辑页面
+- [ ] 通知分类功能
 - [ ] 全站搜索
-- [ ] 通知系统
 - [ ] 数据统计
 - [ ] 深色模式
 
