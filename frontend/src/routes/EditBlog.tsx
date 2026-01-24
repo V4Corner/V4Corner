@@ -70,7 +70,7 @@ function EditBlog() {
     fetchBlog();
   }, [blogId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!blogId) {
@@ -104,55 +104,102 @@ function EditBlog() {
         url => !currentMediaUrls.includes(url)
       );
 
-      // 更新博客
-      await updateBlog(parseInt(blogId), { title, content });
+      // 更新博客为发布状态
+      await updateBlog(parseInt(blogId), { title, content, status: 'published' });
 
       // 删除未使用的媒体文件
-      if (deletedUrls.length > 0) {
-        try {
-          const token = localStorage.getItem('access_token');
-          console.log('准备删除的媒体文件:', deletedUrls);
-
-          const response = await fetch('http://localhost:8000/api/uploads/media', {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ urls: deletedUrls }),
-          });
-
-          console.log('删除响应状态:', response.status);
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('删除媒体文件失败:', errorText);
-          } else {
-            console.log('媒体文件删除成功');
-          }
-
-          // 显示清理提示
-          if (deletedUrls.length > 0) {
-            const cleanupMsg = document.createElement('div');
-            cleanupMsg.textContent = `🧹 已清理 ${deletedUrls.length} 个未使用的媒体文件`;
-            cleanupMsg.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
-            document.body.appendChild(cleanupMsg);
-            setTimeout(() => cleanupMsg.remove(), 3000);
-          }
-        } catch (err) {
-          console.error('清理媒体文件失败:', err);
-          // 不阻止保存，只记录错误
-        }
-      } else {
-        console.log('没有需要删除的媒体文件');
-      }
+      await cleanupMedia(deletedUrls);
 
       // 跳转到博客详情页
       navigate(`/blogs/${blogId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '更新失败');
+      setError(err instanceof Error ? err.message : '发布失败');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!blogId) {
+      setError('博客 ID 无效');
+      return;
+    }
+
+    // 验证
+    if (!title.trim()) {
+      setError('请输入标题');
+      return;
+    }
+    if (title.length > 200) {
+      setError('标题不能超过200字符');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError('');
+
+      // 获取当前内容的媒体 URL
+      const currentMediaUrls = extractMediaUrls(content);
+
+      // 找出被删除的媒体 URL
+      const deletedUrls = originalMediaUrlsRef.current.filter(
+        url => !currentMediaUrls.includes(url)
+      );
+
+      // 更新博客为草稿状态
+      await updateBlog(parseInt(blogId), { title, content: content || '', status: 'draft' });
+
+      // 删除未使用的媒体文件
+      await cleanupMedia(deletedUrls);
+
+      // 跳转到博客详情页
+      navigate(`/blogs/${blogId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存草稿失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cleanupMedia = async (deletedUrls: string[]) => {
+    if (deletedUrls.length > 0) {
+      try {
+        const token = localStorage.getItem('access_token');
+        console.log('准备删除的媒体文件:', deletedUrls);
+
+        const response = await fetch('http://localhost:8000/api/uploads/media', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ urls: deletedUrls }),
+        });
+
+        console.log('删除响应状态:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('删除媒体文件失败:', errorText);
+        } else {
+          console.log('媒体文件删除成功');
+        }
+
+        // 显示清理提示
+        if (deletedUrls.length > 0) {
+          const cleanupMsg = document.createElement('div');
+          cleanupMsg.textContent = `🧹 已清理 ${deletedUrls.length} 个未使用的媒体文件`;
+          cleanupMsg.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+          document.body.appendChild(cleanupMsg);
+          setTimeout(() => cleanupMsg.remove(), 3000);
+        }
+      } catch (err) {
+        console.error('清理媒体文件失败:', err);
+        // 不阻止保存，只记录错误
+      }
+    } else {
+      console.log('没有需要删除的媒体文件');
     }
   };
 
@@ -214,6 +261,20 @@ function EditBlog() {
 
       <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ margin: 0 }}>编辑博客</h1>
+        {blog.status && (
+          <p className="small-muted" style={{ marginTop: '0.25rem' }}>
+            状态:{' '}
+            <span style={{
+              backgroundColor: blog.status === 'draft' ? '#fef3c7' : '#dcfce7',
+              color: blog.status === 'draft' ? '#92400e' : '#166534',
+              padding: '0.125rem 0.5rem',
+              borderRadius: '4px',
+              fontSize: '0.875rem'
+            }}>
+              {blog.status === 'draft' ? '草稿' : '已发布'}
+            </span>
+          </p>
+        )}
       </div>
 
       {error && (
@@ -230,7 +291,7 @@ function EditBlog() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="card" style={{ padding: '1.5rem' }}>
+      <div className="card" style={{ padding: '1.5rem' }}>
         <div style={{ marginBottom: '1.5rem' }}>
           <label htmlFor="title" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
             标题 *
@@ -280,14 +341,23 @@ function EditBlog() {
             取消
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSaveDraft}
+            className="btn btn-outline"
+            disabled={saving}
+          >
+            {saving ? '保存中...' : '保存草稿'}
+          </button>
+          <button
+            type="button"
+            onClick={handlePublish}
             className="btn btn-primary"
             disabled={saving}
           >
-            {saving ? '保存中...' : '保存修改'}
+            {saving ? '发布中...' : '发布博客'}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

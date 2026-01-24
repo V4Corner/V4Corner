@@ -16,6 +16,17 @@ const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四
 const COUNTDOWN_TARGET = new Date('2025-06-30'); // 期末考试
 const COUNTDOWN_LABEL = '期末考试';
 
+/**
+ * 获取运势对应的颜色
+ * 大吉、中吉、小吉为红色，其他为黑色
+ */
+function getFortuneColor(fortune: string): string {
+  if (fortune.includes('大吉') || fortune.includes('中吉') || fortune.includes('小吉')) {
+    return '#dc2626'; // 红色
+  }
+  return '#1f2937'; // 黑色
+}
+
 function CheckInCard() {
   const { isAuthenticated, user } = useAuth();
   const [status, setStatus] = useState<CheckInStatus | null>(null);
@@ -114,23 +125,25 @@ function CheckInCard() {
     return (
       <div className="card checkin-card">
         <div className="checkin-result-title">{user?.nickname || user?.username} 的运势</div>
-        <div className="checkin-fortune">{result.fortune}</div>
+        <div className="checkin-fortune" style={{ color: getFortuneColor(result.fortune) }}>
+          {result.fortune}
+        </div>
 
         <div className="checkin-advice">
           <div className="advice-section good">
-            <div className="advice-section-label">宜</div>
+            <div className="advice-section-label" style={{ color: '#dc2626' }}>宜</div>
             {result.good.map((item, index) => (
               <div key={index} className="advice-card">
-                <div className="advice-card-title">{item.title}</div>
+                <div className="advice-card-title" style={{ color: '#dc2626' }}>{item.title}</div>
                 <div className="advice-card-desc">{item.desc}</div>
               </div>
             ))}
           </div>
           <div className="advice-section bad">
-            <div className="advice-section-label bad">忌</div>
+            <div className="advice-section-label" style={{ color: '#1f2937' }}>忌</div>
             {result.bad.map((item, index) => (
               <div key={index} className="advice-card bad">
-                <div className="advice-card-title">{item.title}</div>
+                <div className="advice-card-title" style={{ color: '#1f2937' }}>{item.title}</div>
                 <div className="advice-card-desc">{item.desc}</div>
               </div>
             ))}

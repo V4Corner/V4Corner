@@ -7,11 +7,13 @@ export async function getBlogs(params: {
   page?: number;
   size?: number;
   author?: string;
+  status?: 'draft' | 'published';
 } = {}): Promise<BlogListResponse> {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.set('page', params.page.toString());
   if (params.size) queryParams.set('size', params.size.toString());
   if (params.author) queryParams.set('author', params.author);
+  if (params.status) queryParams.set('status', params.status);
 
   const queryString = queryParams.toString();
   return get<BlogListResponse>(`/api/blogs${queryString ? `?${queryString}` : ''}`);
@@ -31,4 +33,12 @@ export async function updateBlog(blogId: number, data: BlogUpdate): Promise<Blog
 
 export async function deleteBlog(blogId: number): Promise<void> {
   return del<void>(`/api/blogs/${blogId}`);
+}
+
+// 获取草稿列表
+export async function getDrafts(params: {
+  page?: number;
+  size?: number;
+} = {}): Promise<BlogListResponse> {
+  return getBlogs({ ...params, status: 'draft' });
 }

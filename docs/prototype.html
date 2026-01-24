@@ -2350,7 +2350,10 @@
         <div class="page" id="page-blogs">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h1>博客</h1>
-                <button class="btn btn-primary" onclick="navigate('blog-create')">写博客</button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-primary" onclick="navigate('blog-create')">写博客</button>
+                    <button class="btn btn-outline" onclick="navigate('blog-drafts')">草稿箱(3)</button>
+                </div>
             </div>
             <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
             <div class="filter-bar">
@@ -2380,6 +2383,62 @@
                 <div class="blog-excerpt">TensorFlow、PyTorch、Keras...面对众多的深度学习框架，该如何选择？本文将从易用性、性能、社区支持等多个角度进行对比分析...</div>
             </div>
         </div>
+
+        <!-- Blog Drafts Page (v1.8.0) -->
+        <div class="page" id="page-blog-drafts">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                <a href="#" onclick="navigate('blogs')" style="font-size: 1.5rem; text-decoration: none;">←</a>
+                <div style="flex: 1;">
+                    <h1 style="margin: 0;">我的草稿箱</h1>
+                    <p class="small-muted" style="margin: 0.25rem 0 0;">3 篇草稿</p>
+                </div>
+            </div>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+
+            <!-- Draft Card 1 -->
+            <div class="card" style="margin-bottom: 1rem; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <h3 style="margin: 0;">机器学习笔记 - 第三章</h3>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-outline" onclick="navigate('blog-edit')">继续编辑</button>
+                        <button class="btn btn-primary" onclick="publishDraft(1)">发布</button>
+                        <button class="btn btn-outline" onclick="deleteDraft(1)">删除</button>
+                    </div>
+                </div>
+                <p class="small-muted" style="margin-bottom: 1rem;">最后编辑：3天前</p>
+                <p style="color: var(--secondary); margin: 0;">本章介绍了神经网络的基本概念和前向传播算法。神经网络是深度学习的基础，通过多层神经元的组合，可以学习复杂的非线性关系...</p>
+            </div>
+
+            <!-- Draft Card 2 -->
+            <div class="card" style="margin-bottom: 1rem; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <h3 style="margin: 0;">未命名草稿</h3>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-outline" onclick="navigate('blog-edit')">继续编辑</button>
+                        <button class="btn btn-primary" onclick="publishDraft(2)">发布</button>
+                        <button class="btn btn-outline" onclick="deleteDraft(2)">删除</button>
+                    </div>
+                </div>
+                <p class="small-muted" style="margin-bottom: 1rem;">最后编辑：昨天</p>
+                <p style="color: var(--secondary); margin: 0;">（此草稿暂无内容）</p>
+            </div>
+
+            <!-- Draft Card 3 -->
+            <div class="card" style="margin-bottom: 1rem; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <h3 style="margin: 0;">草稿标题</h3>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-outline" onclick="navigate('blog-edit')">继续编辑</button>
+                        <button class="btn btn-primary" onclick="publishDraft(3)">发布</button>
+                        <button class="btn btn-outline" onclick="deleteDraft(3)">删除</button>
+                    </div>
+                </div>
+                <p class="small-muted" style="margin-bottom: 1rem;">最后编辑：2小时前</p>
+                <p style="color: var(--secondary); margin: 0;">这是草稿内容的预览，显示前几行文字。草稿可以在后续继续编辑或直接发布...</p>
+            </div>
+        </div>
+
+        <!-- Blog Detail Page -->
 
         <!-- Blog Detail Page -->
         <div class="page" id="page-blog-detail">
@@ -2475,7 +2534,8 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-outline" onclick="navigate('blogs')">取消</button>
-                        <button type="submit" class="btn btn-primary">发布</button>
+                        <button type="button" class="btn btn-outline" onclick="saveDraft()">保存草稿</button>
+                        <button type="submit" class="btn btn-primary">发布博客</button>
                     </div>
                 </form>
             </div>
@@ -2485,7 +2545,10 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
         <div class="page" id="page-blog-edit">
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
                 <a href="#" onclick="navigate('blog-detail')" style=" font-size: 1.5rem; text-decoration: none;">←</a>
-                <h1 style="margin: 0;">编辑博客</h1>
+                <div style="flex: 1;">
+                    <h1 style="margin: 0;">编辑博客</h1>
+                    <p class="small-muted" style="margin: 0.25rem 0 0;">状态: <span style="background-color: #fef3c7; color: #92400e; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">草稿</span></p>
+                </div>
             </div>
             <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
             <div class="card">
@@ -2505,7 +2568,8 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-outline" onclick="navigate('blog-detail')">取消</button>
-                        <button type="submit" class="btn btn-primary">保存</button>
+                        <button type="button" class="btn btn-outline" onclick="saveDraft()">保存草稿</button>
+                        <button type="submit" class="btn btn-primary">发布博客</button>
                     </div>
                 </form>
             </div>
@@ -3090,6 +3154,30 @@ print(f"最小值点: {result}")</code></pre>
             if (confirm('确定要删除这篇博客吗？此操作不可恢复。')) {
                 showToast('博客已删除', 'success');
                 setTimeout(() => navigate('blogs'), 1000);
+            }
+        }
+
+        // Draft functions (v1.8.0)
+        function saveDraft() {
+            showToast('草稿已保存', 'success');
+        }
+
+        function publishDraft(draftId) {
+            if (confirm('确定要发布这篇草稿吗？')) {
+                showToast('博客发布成功！', 'success');
+                setTimeout(() => navigate('blog-detail'), 1000);
+            }
+        }
+
+        function deleteDraft(draftId) {
+            if (confirm('确定要删除这篇草稿吗？此操作无法撤销。')) {
+                showToast('草稿已删除', 'success');
+                // Remove draft card from DOM
+                event.target.closest('.card').remove();
+                // Update draft count
+                const draftCount = document.querySelectorAll('#page-blog-drafts .card').length;
+                document.querySelector('#page-blog-drafts .small-muted').textContent = draftCount + ' 篇草稿';
+                document.querySelector('#page-blogs .btn-outline').textContent = '草稿箱(' + draftCount + ')';
             }
         }
 

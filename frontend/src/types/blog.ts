@@ -6,6 +6,7 @@ export interface Blog {
   author: string;
   author_id: number;
   author_avatar_url: string | null;
+  status: 'draft' | 'published';
   views: number;
   is_owner: boolean;
   created_at: string;
@@ -15,18 +16,20 @@ export interface Blog {
 export interface BlogCreate {
   title: string;
   content: string;
+  status?: 'draft' | 'published';
 }
 
 export interface BlogUpdate {
-  title: string;
-  content: string;
+  title?: string;
+  content?: string;
+  status?: 'draft' | 'published';
 }
 
 export interface BlogListResponse {
   total: number;
   page: number;
   size: number;
-  items: Blog[];
+  items: BlogListItem[];
 }
 
 export interface BlogListItem {
@@ -36,6 +39,7 @@ export interface BlogListItem {
   author: string;
   author_id: number;
   author_avatar_url: string | null;
+  status: 'draft' | 'published';
   views: number;
   created_at: string;
 }

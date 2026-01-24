@@ -1,25 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { getBlogs } from '../api/blogs';
+import { getBlogs, getDrafts } from '../api/blogs';
 import BlogCard from '../components/BlogCard';
 import { useAuth } from '../contexts/AuthContext';
 import type { Blog } from '../types/blog';
 
 function Blogs() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [draftCount, setDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getBlogs()
+    // 加载博客列表
+    getBlogs({ status: 'published' })
       .then((data) => setBlogs(data.items))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+
+    // 如果已登录，加载草稿数量
+    if (isAuthenticated && user) {
+      getDrafts()
+        .then((data) => setDraftCount(data.total))
+        .catch(() => setDraftCount(0));
+    }
+  }, [isAuthenticated, user]);
 
   if (loading) return <p>加载中...</p>;
   if (error) return <p className="small-muted">{error}</p>;
@@ -32,9 +41,14 @@ function Blogs() {
           <p className="small-muted" style={{ marginTop: '0.5rem' }}>来自同学们的文章</p>
         </div>
         {isAuthenticated && (
-          <Link to="/blogs/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-            写博客
-          </Link>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Link to="/blogs/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+              写博客
+            </Link>
+            <Link to="/blogs/drafts" className="btn btn-outline" style={{ textDecoration: 'none' }}>
+              草稿箱{draftCount > 0 && `(${draftCount})`}
+            </Link>
+          </div>
         )}
       </div>
 

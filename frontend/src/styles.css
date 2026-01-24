@@ -685,27 +685,23 @@ nav {
 .advice-card {
   padding: 0.875rem 1rem;
   background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-left: 3px solid #0f172a;
+  border: none;
   border-radius: 8px;
   transition: all 0.2s;
 }
 
 .advice-card:hover {
   background-color: #f1f5f9;
-  border-left-color: #1e293b;
   box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
 }
 
 .advice-card.bad {
-  border-left-color: #ef4444;
-  background-color: #fef2f2;
-  border-color: #fecaca;
+  background-color: #f9fafb;
+  border: none;
 }
 
 .advice-card.bad:hover {
-  background-color: #fee2e2;
-  border-left-color: #dc2626;
+  background-color: #f3f4f6;
 }
 
 .advice-card-title {
@@ -716,7 +712,7 @@ nav {
 }
 
 .advice-card.bad .advice-card-title {
-  color: #991b1b;
+  color: #1f2937;
 }
 
 .advice-card-desc {

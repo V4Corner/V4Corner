@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './routes/Home';
 import Blogs from './routes/Blogs';
+import Drafts from './routes/Drafts';
 import BlogDetail from './routes/BlogDetail';
 import CreateBlog from './routes/CreateBlog';
 import EditBlog from './routes/EditBlog';
@@ -30,6 +31,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blogs/drafts" element={<Drafts />} />
           <Route path="/blogs/new" element={<CreateBlog />} />
           <Route path="/blogs/:blogId/edit" element={<EditBlog />} />
           <Route path="/blogs/:blogId" element={<BlogDetail />} />

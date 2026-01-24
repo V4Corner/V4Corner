@@ -106,7 +106,9 @@ function ActivityFeed() {
               <div className="activity-header">
                 <span className="activity-user">{activity.user_name}</span>
                 <span className="activity-action">{activity.content}</span>
-                {activity.target_title && activity.target_url && (
+                {/* 只在博客和通知时显示链接 */}
+                {activity.target_title && activity.target_url &&
+                 (activity.type === 'blog_created' || activity.type === 'notice_published') && (
                   <Link to={activity.target_url} className="activity-target">
                     {activity.target_title}
                   </Link>

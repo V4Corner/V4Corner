@@ -2,7 +2,7 @@
 
 > 基于网页原型设计 v1.3.2
 >
-> 最后更新：2026-01-23（v1.7.0 - 富文本编辑器与媒体管理）
+> 最后更新：2026-01-23（v1.8.0 - 草稿功能）
 
 ## 目录
 
@@ -36,9 +36,10 @@
 
 ### API 版本
 
-当前版本: `v1.7.0`
+当前版本: `v1.8.0`
 
 **版本历史：**
+- v1.8.0 (2026-01-23): 草稿功能（博客状态、草稿箱、保存草稿/发布）
 - v1.7.0 (2026-01-23): 富文本编辑器与媒体管理（图片自动压缩、视频服务器端压缩、媒体自动清理）
 - v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）
 - v1.5.0 (2026-01-22): 班级通知系统（完整CRUD）、签到系统（运势抽签）、统计数据 API
@@ -441,7 +442,7 @@ avatar: 图片文件
 
 ### GET /api/users/:user_id/blogs
 
-获取指定用户的博客列表
+获取指定用户的博客列表（仅已发布）
 
 **路径参数：**
 
@@ -453,6 +454,11 @@ avatar: 图片文件
 ```
 ?page=1&size=10
 ```
+
+**说明：**
+- 此接口仅返回该用户**已发布**的博客
+- 草稿不会出现在此列表中
+- 分页参数：`page`（页码，默认1）、`size`（每页数量，默认10）
 
 **成功响应（200）：**
 ```json
@@ -466,6 +472,9 @@ avatar: 图片文件
       "title": "机器学习入门指南",
       "excerpt": "机器学习是人工智能的核心技术之一...",
       "author": "张三",
+      "author_id": 1,
+      "author_avatar_url": null,
+      "status": "published",
       "views": 128,
       "created_at": "2025-01-10T08:30:00.000000Z"
     }
@@ -483,7 +492,7 @@ avatar: 图片文件
 
 **查询参数：**
 ```
-?page=1&size=20&author=zhangsan
+?page=1&size=20&author=zhangsan&status=published
 ```
 
 **参数说明：**
@@ -493,6 +502,13 @@ avatar: 图片文件
 | page | integer | 否 | 页码（默认1） |
 | size | integer | 否 | 每页数量（默认20，最大100） |
 | author | string | 否 | 按作者筛选（用户名） |
+| status | string | 否 | 状态筛选（`draft` 仅返回自己的草稿，`published` 返回已发布，默认 `published`） |
+
+**注意：**
+- 未登录用户：`status` 参数无效，只能查看已发布的博客
+- 已登录用户：
+  - `status=published`：查看所有已发布的博客
+  - `status=draft`：仅查看自己的草稿
 
 **成功响应（200）：**
 ```json
@@ -507,6 +523,7 @@ avatar: 图片文件
       "excerpt": "机器学习是人工智能的核心技术之一，本文将介绍机器学习的基本概念、常见算法和实际应用...",
       "author": "张三",
       "author_id": 1,
+      "status": "published",
       "views": 128,
       "created_at": "2025-01-10T08:30:00.000000Z"
     },
@@ -516,6 +533,7 @@ avatar: 图片文件
       "excerpt": "学习数据结构与算法是每个程序员的必修课，本文将总结常用的数据结构和算法技巧...",
       "author": "李四",
       "author_id": 2,
+      "status": "published",
       "views": 95,
       "created_at": "2025-01-09T15:20:00.000000Z"
     }
@@ -529,6 +547,7 @@ avatar: 图片文件
 |------|------|------|
 | excerpt | string | 博客摘要（内容前150字） |
 | author_id | integer | 作者 ID（用于跳转到用户中心） |
+| status | string | 状态（`draft` 或 `published`）|
 
 ---
 
@@ -550,6 +569,7 @@ avatar: 图片文件
   "content": "机器学习是人工智能的核心技术之一...\n\n## 什么是机器学习\n\n...",
   "author": "张三",
   "author_id": 1,
+  "status": "published",
   "views": 128,
   "is_owner": false,
   "created_at": "2025-01-10T08:30:00.000000Z",
@@ -561,11 +581,23 @@ avatar: 图片文件
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| content | string | Markdown 格式的完整内容 |
+| content | string | 富文本格式的完整内容 |
+| status | string | 状态（`draft` 或 `published`） |
 | is_owner | boolean | 当前用户是否为作者（未登录为 false） |
 | updated_at | string | 最后更新时间（可选） |
 
-**注意：** 每次调用此接口，博客的 `views` 字段会自动 +1。
+**注意：**
+- 每次调用此接口，博客的 `views` 字段会自动 +1（仅已发布博客）。
+- **权限控制**：
+  - 草稿博客：仅作者可查看，其他用户访问返回 404
+  - 已发布博客：所有人可查看
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限查看此草稿"
+}
+```
 
 **失败响应（404）：**
 ```json
@@ -586,11 +618,21 @@ Authorization: Bearer {access_token}
 Content-Type: application/json
 ```
 
-**请求体：**
+**请求体（发布博客）：**
 ```json
 {
   "title": "机器学习入门指南",
-  "content": "## 简介\n\n机器学习是..."
+  "content": "<p>机器学习是人工智能的核心技术之一...</p>",
+  "status": "published"
+}
+```
+
+**请求体（保存草稿）：**
+```json
+{
+  "title": "未命名草稿",
+  "content": "<p>暂未完成的内容...</p>",
+  "status": "draft"
 }
 ```
 
@@ -599,16 +641,26 @@ Content-Type: application/json
 | 字段 | 类型 | 必填 | 验证规则 |
 |------|------|------|----------|
 | title | string | 是 | 1-200字符 |
-| content | string | 是 | Markdown 格式，不能为空 |
+| content | string | 发布时是，草稿时否 | 富文本格式 |
+| status | string | 否 | `draft`（草稿）或 `published`（发布），默认 `published` |
+
+**验证规则：**
+- **发布博客** (`status=published`)：
+  - 标题：必填，1-200字符
+  - 内容：必填，不能为空
+- **保存草稿** (`status=draft`)：
+  - 标题：必填，1-200字符
+  - 内容：可选
 
 **成功响应（201）：**
 ```json
 {
   "id": 1,
   "title": "机器学习入门指南",
-  "content": "## 简介\n\n机器学习是...",
+  "content": "<p>机器学习是人工智能的核心技术之一...</p>",
   "author": "张三",
   "author_id": 1,
+  "status": "published",
   "views": 0,
   "created_at": "2025-01-11T10:00:00.000000Z"
 }
@@ -639,11 +691,29 @@ Content-Type: application/json
 |------|------|------|
 | blog_id | integer | 博客 ID |
 
-**请求体：**
+**请求体（更新内容并保持状态）：**
 ```json
 {
   "title": "机器学习入门指南（更新版）",
-  "content": "## 简介\n\n机器学习是..."
+  "content": "<p>机器学习是...</p>"
+}
+```
+
+**请求体（草稿→发布）：**
+```json
+{
+  "title": "机器学习入门指南",
+  "content": "<p>机器学习是...</p>",
+  "status": "published"
+}
+```
+
+**请求体（已发布→草稿）：**
+```json
+{
+  "title": "机器学习入门指南",
+  "content": "<p>机器学习是...</p>",
+  "status": "draft"
 }
 ```
 
@@ -654,9 +724,10 @@ Content-Type: application/json
 {
   "id": 1,
   "title": "机器学习入门指南（更新版）",
-  "content": "## 简介\n\n机器学习是...",
+  "content": "<p>机器学习是...</p>",
   "author": "张三",
   "author_id": 1,
+  "status": "published",
   "views": 128,
   "updated_at": "2025-01-11T14:30:00.000000Z"
 }
@@ -2473,7 +2544,8 @@ Content-Type: application/json
 |------|------|------|------|
 | id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
 | title | String(200) | 标题 | NOT NULL |
-| content | Text | 内容（Markdown） | NOT NULL |
+| content | Text | 内容（富文本） | NOT NULL |
+| status | String(20) | 状态 | DEFAULT 'published', values: 'draft', 'published' |
 | author_id | Integer | 作者ID | FOREIGN KEY → users.id, NOT NULL |
 | author_name | String(50) | 作者名（冗余） | NOT NULL |
 | views | Integer | 阅读次数 | DEFAULT 0 |
@@ -2482,10 +2554,19 @@ Content-Type: application/json
 
 **索引：**
 - `idx_author_id`: author_id
+- `idx_status`: status
 - `idx_created_at`: created_at (DESC)
+- `idx_author_status`: (author_id, status) 复合索引
 
 **外键：**
 - `author_id` → `users.id` (ON DELETE CASCADE)
+
+**字段说明：**
+- `status`：博客状态
+  - `draft`：草稿，仅作者可见
+  - `published`：已发布，所有人可见
+- 草稿不统计浏览次数（views 始终为 0）
+- 草稿不出现在公开列表中
 
 ### Conversation（对话）
 
@@ -3213,6 +3294,7 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.8.0 | 2026-01-23 | 草稿功能（博客状态、草稿箱、保存草稿/发布） |
 | v1.7.0 | 2026-01-23 | 富文本编辑器与媒体管理（图片/视频上传、自动压缩、媒体清理） |
 | v1.6.0 | 2026-01-22 | 最新动态系统（活动流、自动记录、时间显示） |
 | v1.5.0 | 2026-01-22 | 班级通知系统（完整CRUD）、签到系统、统计数据 API |

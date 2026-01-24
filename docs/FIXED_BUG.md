@@ -4,6 +4,249 @@
 
 ---
 
+## v1.8.0 相关 BUG（2026-01-24）
+
+### BUG #8: 数据库缺少 status 列导致查询失败
+
+**问题描述：**
+- 访问博客相关页面时出现 `sqlite3.OperationalError: no such column: blogs.status`
+- F12 控制台显示 500 错误
+- 影响功能：
+  - 用户个人中心无法加载
+  - 博客列表页无法显示
+
+**根本原因：**
+1. **模型更新但数据库未迁移**：
+   - Blog 模型添加了 `status` 字段
+   - SQLite 数据库中还没有这个列
+   - SQLAlchemy 尝试查询不存在的列导致错误
+
+2. **多处代码依赖 status 字段**：
+   - `users.py` 中的 `get_user_blogs()` 函数查询博客时
+   - 所有创建 BlogListItem 的地方都需要 status 字段
+
+**修复方案：**
+
+1. **创建数据库迁移脚本**：
+   ```python
+   # backend/migrate_add_status.py
+   - ALTER TABLE blogs ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'published'
+   - CREATE INDEX idx_author_status ON blogs(author_id, status)
+   ```
+
+2. **执行迁移**：
+   ```bash
+   cd backend
+   python migrate_add_status.py
+   ```
+
+3. **更新 users.py 路由**：
+   ```python
+   # 添加 status 字段到 BlogListItem
+   items.append(schemas.BlogListItem(
+       # ... 其他字段
+       status=blog.status,  # ✅ 新增
+   ))
+
+   # 只显示已发布的博客
+   .filter(
+       models.Blog.author_id == user_id,
+       models.Blog.status == "published"  # ✅ 新增
+   )
+   ```
+
+**影响范围：**
+- `backend/models/blog.py`
+- `backend/schemas/blog.py`
+- `backend/routers/blogs.py`
+- `backend/routers/users.py`
+- 数据库（添加列和索引）
+
+**测试验证：**
+1. 运行迁移脚本 ✅
+2. 验证 status 列已添加 ✅
+3. 现有博客自动设置为 published ✅
+4. 个人中心页面正常显示 ✅
+5. 博客列表页正常显示 ✅
+
+**预防措施：**
+- SQLAlchemy 更改模型后及时执行数据库迁移
+- 生产环境应使用 Alembic 管理数据库迁移
+- 开发环境可提供迁移脚本
+
+---
+
+### BUG #9: EditBlog 组件函数引用错误
+
+**问题描述：**
+- 访问编辑博客页面时显示空白页
+- F12 控制台显示：`Uncaught ReferenceError: handleSubmit is not defined`
+- React 错误边界捕获错误
+
+**根本原因：**
+1. **函数重命名但未更新引用**：
+   - 在代码重构时将 `handleSubmit` 重命名为 `handlePublish`
+   - 但表单的 `onSubmit={handleSubmit}` 还在引用旧函数名
+   - 导致运行时找不到函数
+
+2. **按钮类型错误**：
+   - 发布按钮使用 `type="submit"`
+   - 会触发表单的 `onSubmit` 事件
+   - 导致函数调用链断裂
+
+**修复方案：**
+
+1. **移除表单提交逻辑**：
+   ```tsx
+   // 旧代码
+   <form onSubmit={handleSubmit}>
+
+   // 新代码
+   <div className="card">  // 移除 form 标签
+   ```
+
+2. **改为按钮 onClick 处理**：
+   ```tsx
+   // 所有按钮都使用 type="button"
+   <button
+     type="button"  // ✅ 不再是 type="submit"
+     onClick={handlePublish}  // ✅ 直接调用函数
+   >
+     发布博客
+   </button>
+   ```
+
+**影响范围：**
+- `frontend/src/routes/EditBlog.tsx`
+
+**测试验证：**
+1. 刷新编辑博客页面 ✅
+2. 页面正常显示 ✅
+3. 点击"发布博客"按钮正常工作 ✅
+4. 点击"保存草稿"按钮正常工作 ✅
+
+**预防措施：**
+- 重命名函数时使用 IDE 的重命名功能（自动更新引用）
+- 避免在表单中使用多个提交按钮，改为 button + onClick
+- 添加 PropTypes 或 TypeScript 检查
+
+---
+
+### BUG #10: 活动动态链接显示错误
+
+**问题描述：**
+- 最新动态中，成员加入和签到里程碑也显示了超链接
+- 这些活动类型不应该有关联对象的链接
+- 只有博客创建和通知发布才应该显示链接
+
+**根本原因：**
+1. **缺少活动类型检查**：
+   - ActivityFeed 组件渲染链接时没有检查活动类型
+   - 只要 `target_title` 和 `target_url` 存在就显示链接
+   - 但成员加入和签到活动不应该有链接
+
+**修复方案：**
+
+1. **添加活动类型检查**：
+   ```tsx
+   // frontend/src/components/ActivityFeed.tsx
+   {activity.target_title && activity.target_url &&
+    (activity.type === 'blog_created' || activity.type === 'notice_published') && (
+     <Link to={activity.target_url}>{activity.target_title}</Link>
+   )}
+   ```
+
+**影响范围：**
+- `frontend/src/components/ActivityFeed.tsx`
+
+**测试验证：**
+1. 成员加入活动不显示链接 ✅
+2. 签到里程碑活动不显示链接 ✅
+3. 博客创建活动显示链接 ✅
+4. 通知发布活动显示链接 ✅
+
+**预防措施：**
+- 条件渲染时应该明确检查类型，而不是依赖字段是否存在
+- 后端 API 应该保证数据结构的一致性
+
+---
+
+### BUG #11: 签到卡片样式错误
+
+**问题描述：**
+- 运势文字颜色不符合预期（应该大吉/中吉/小吉为红色，其他为黑色）
+- 宜忌卡片有不需要的边框
+- 忌卡片背景色显示为红色（应该是灰色）
+
+**根本原因：**
+1. **缺少颜色逻辑函数**：
+   - CheckInCard 组件直接使用固定颜色
+   - 没有根据运势内容动态判断颜色
+
+2. **CSS 样式冲突**：
+   - 宜忌卡片在 CSS 中定义了边框
+   - 忌卡片有特殊的红色背景样式
+
+**修复方案：**
+
+1. **添加运势颜色函数**：
+   ```tsx
+   // frontend/src/components/CheckInCard.tsx
+   function getFortuneColor(fortune: string): string {
+     if (fortune.includes('大吉') || fortune.includes('中吉') || fortune.includes('小吉')) {
+       return '#dc2626'; // 红色
+     }
+     return '#1f2937'; // 黑色
+   }
+
+   // 应用颜色
+   <div style={{ color: getFortuneColor(result.fortune) }}>
+     {result.fortune}
+   </div>
+   ```
+
+2. **宜忌卡片颜色和样式**：
+   ```tsx
+   // 宜：红色
+   <div className="advice-section-label" style={{ color: '#dc2626' }}>宜</div>
+   <div className="advice-card-title" style={{ color: '#dc2626' }}>{item.title}</div>
+
+   // 忌：黑色
+   <div className="advice-section-label" style={{ color: '#1f2937' }}>忌</div>
+   <div className="advice-card-title" style={{ color: '#1f2937' }}>{item.title}</div>
+   ```
+
+3. **移除卡片边框**：
+   ```css
+   /* frontend/src/styles.css */
+   .advice-card {
+     border: none;  /* 移除边框 */
+   }
+
+   .advice-card.bad {
+     background-color: #f9fafb;  /* 灰色背景 */
+     border: none;
+   }
+   ```
+
+**影响范围：**
+- `frontend/src/components/CheckInCard.tsx`
+- `frontend/src/styles.css`
+
+**测试验证：**
+1. 大吉/中吉/小吉运势显示红色 ✅
+2. 其他运势显示黑色 ✅
+3. 宜标签和标题显示红色 ✅
+4. 忌标签和标题显示黑色 ✅
+5. 忌卡片背景为灰色 ✅
+6. 所有卡片无边框 ✅
+
+**预防措施：**
+- 使用语义化的颜色变量而不是硬编码颜色值
+- 复杂的条件样式应该使用函数而不是内联三元表达式
+
+---
+
 ## v1.3.0 相关 BUG（2025-01-20）
 
 ### BUG #3: AI 对话功能 CORS 错误和验证错误
@@ -328,4 +571,4 @@ useEffect(() => {
 
 ---
 
-**最后更新**: 2025-01-19
+**最后更新**: 2026-01-24

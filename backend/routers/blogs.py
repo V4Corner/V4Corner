@@ -13,7 +13,9 @@ router = APIRouter(prefix="/api/blogs", tags=["博客"])
 @router.get("", response_model=schemas.BlogListResponse)
 async def list_blogs(
     db: dependencies.DbSession,
+    current_user: dependencies.CurrentUserOptional,
     author: Optional[str] = Query(None, description="按作者筛选"),
+    status_filter: Optional[str] = Query(None, alias="status", description="状态筛选 (draft/published)"),
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(20, ge=1, le=100, description="每页数量")
 ):
@@ -23,6 +25,22 @@ async def list_blogs(
     # 按作者筛选
     if author:
         query = query.filter(models.Blog.author_name == author)
+
+    # 按状态筛选
+    if status_filter:
+        if status_filter == "draft":
+            # 草稿仅返回自己的
+            if not current_user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="查看草稿需要登录"
+                )
+            query = query.filter(models.Blog.author_id == current_user.id, models.Blog.status == "draft")
+        elif status_filter == "published":
+            query = query.filter(models.Blog.status == "published")
+    else:
+        # 默认只返回已发布的
+        query = query.filter(models.Blog.status == "published")
 
     # 统计总数
     total = query.count()
@@ -42,6 +60,7 @@ async def list_blogs(
             author=blog.author_name,
             author_id=blog.author_id,
             author_avatar_url=blog.author.avatar_url if blog.author else None,
+            status=blog.status,
             views=blog.views,
             created_at=blog.created_at
         ))
@@ -69,10 +88,19 @@ async def get_blog(
             detail="博客不存在"
         )
 
-    # 增加阅读次数
-    blog.views += 1
-    db.commit()
-    db.refresh(blog)
+    # 草稿权限检查
+    if blog.status == "draft":
+        if not current_user or current_user.id != blog.author_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="博客不存在"
+            )
+
+    # 增加阅读次数（仅已发布的博客）
+    if blog.status == "published":
+        blog.views += 1
+        db.commit()
+        db.refresh(blog)
 
     # 判断是否为作者
     is_owner = current_user and current_user.id == blog.author_id
@@ -87,11 +115,12 @@ async def create_blog(
     current_user: dependencies.CurrentUser,
     db: dependencies.DbSession
 ):
-    """创建新博客"""
+    """创建新博客或草稿"""
     # 创建博客
     blog = models.Blog(
         title=blog_data.title,
         content=blog_data.content,
+        status=blog_data.status,
         author_id=current_user.id,
         author_name=current_user.nickname or current_user.username
     )
@@ -99,18 +128,19 @@ async def create_blog(
     db.commit()
     db.refresh(blog)
 
-    # 记录动态
-    activity = Activity(
-        type="blog_created",
-        user_id=current_user.id,
-        user_name=current_user.nickname or current_user.username,
-        content="发布了博客",
-        target_type="blog",
-        target_id=blog.id,
-        target_title=blog.title
-    )
-    db.add(activity)
-    db.commit()
+    # 仅已发布的博客记录动态
+    if blog.status == "published":
+        activity = Activity(
+            type="blog_created",
+            user_id=current_user.id,
+            user_name=current_user.nickname or current_user.username,
+            content="发布了博客",
+            target_type="blog",
+            target_id=blog.id,
+            target_title=blog.title
+        )
+        db.add(activity)
+        db.commit()
 
     return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=True)
 
@@ -140,8 +170,13 @@ async def update_blog(
         )
 
     # 更新字段
-    blog.title = blog_data.title
-    blog.content = blog_data.content
+    if blog_data.title is not None:
+        blog.title = blog_data.title
+    if blog_data.content is not None:
+        blog.content = blog_data.content
+    if blog_data.status is not None:
+        blog.status = blog_data.status
+
     db.commit()
     db.refresh(blog)
 

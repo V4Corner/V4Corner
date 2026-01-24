@@ -160,7 +160,7 @@ async def get_user_blogs(
     page: int = 1,
     size: int = 10
 ):
-    """获取指定用户的博客列表"""
+    """获取指定用户的博客列表（仅已发布）"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
 
     if not user:
@@ -169,13 +169,17 @@ async def get_user_blogs(
             detail="用户不存在"
         )
 
-    # 统计总数
-    total = db.query(models.Blog).filter(models.Blog.author_id == user_id).count()
+    # 只统计已发布的博客
+    total = db.query(models.Blog).filter(
+        models.Blog.author_id == user_id,
+        models.Blog.status == "published"
+    ).count()
 
-    # 查询博客
+    # 查询已发布的博客
     from sqlalchemy.orm import joinedload
     blogs = db.query(models.Blog).options(joinedload(models.Blog.author)).filter(
-        models.Blog.author_id == user_id
+        models.Blog.author_id == user_id,
+        models.Blog.status == "published"
     ).order_by(
         models.Blog.created_at.desc()
     ).offset((page - 1) * size).limit(size).all()
@@ -191,6 +195,7 @@ async def get_user_blogs(
             author=blog.author_name,
             author_id=blog.author_id,
             author_avatar_url=blog.author.avatar_url if blog.author else None,
+            status=blog.status,
             views=blog.views,
             created_at=blog.created_at
         ))

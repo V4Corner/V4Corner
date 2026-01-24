@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 # 博客内容摘要（前150字）
@@ -13,16 +14,19 @@ def generate_excerpt(content: str, max_length: int = 150) -> str:
 class BlogBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
+    status: Literal["draft", "published"] = "published"
 
 
 class BlogCreate(BlogBase):
     """创建博客时的输入（不需要 author 字段，从 Token 获取）"""
-    pass
+    content: str = Field("", min_length=0)  # 草稿时内容可以为空
 
 
-class BlogUpdate(BlogBase):
+class BlogUpdate(BaseModel):
     """更新博客时的输入"""
-    pass
+    title: str | None = Field(None, min_length=1, max_length=200)
+    content: str | None = None
+    status: Literal["draft", "published"] | None = None
 
 
 class BlogListItem(BaseModel):
@@ -33,6 +37,7 @@ class BlogListItem(BaseModel):
     author: str
     author_id: int
     author_avatar_url: str | None = None
+    status: str
     views: int
     created_at: datetime
 
@@ -46,6 +51,7 @@ class BlogRead(BaseModel):
     author: str
     author_id: int
     author_avatar_url: str | None = None
+    status: str
     views: int
     is_owner: bool = False  # 当前用户是否为作者
     created_at: datetime
@@ -66,6 +72,7 @@ class BlogRead(BaseModel):
             author=blog.author_name,
             author_id=blog.author_id,
             author_avatar_url=blog.author.avatar_url if blog.author else None,
+            status=blog.status,
             views=blog.views,
             is_owner=is_owner,
             created_at=blog.created_at,

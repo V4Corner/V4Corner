@@ -34,12 +34,38 @@ function CreateBlog() {
       setLoading(true);
       setError('');
 
-      const blog = await createBlog({ title, content });
+      const blog = await createBlog({ title, content, status: 'published' });
 
       // 跳转到博客详情页
       navigate(`/blogs/${blog.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '创建失败');
+      setError(err instanceof Error ? err.message : '发布失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    // 验证
+    if (!title.trim()) {
+      setError('请输入标题');
+      return;
+    }
+    if (title.length > 200) {
+      setError('标题不能超过200字符');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const blog = await createBlog({ title, content: content || '', status: 'draft' });
+
+      // 跳转到博客列表页
+      navigate('/blogs');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存草稿失败');
     } finally {
       setLoading(false);
     }
@@ -134,6 +160,14 @@ function CreateBlog() {
             disabled={loading}
           >
             取消
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="btn btn-outline"
+            disabled={loading}
+          >
+            {loading ? '保存中...' : '保存草稿'}
           </button>
           <button
             type="submit"
