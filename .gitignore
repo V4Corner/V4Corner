@@ -77,3 +77,10 @@ coverage/
 *.seed
 *.pid.lock
 .cache/
+
+# Local Development Scripts (避免提交到仓库)
+local-dev/
+*.bat
+DEV_STARTUP.md
+health-check.py
+nul
