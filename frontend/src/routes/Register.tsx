@@ -22,12 +22,11 @@ function Register() {
 
   // 从 localStorage 恢复冷却时间
   useEffect(() => {
-    const savedCountdown = localStorage.getItem('verificationCountdown');
     const savedTimestamp = localStorage.getItem('verificationTimestamp');
 
-    if (savedCountdown && savedTimestamp) {
+    if (savedTimestamp) {
       const elapsed = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
-      const remaining = parseInt(savedCountdown) - elapsed;
+      const remaining = 60 - elapsed; // 固定60秒冷却时间
 
       if (remaining > 0) {
         setCountdown(remaining);
@@ -42,6 +41,8 @@ function Register() {
             return prev - 1;
           });
         }, 1000);
+
+        return () => clearInterval(timer); // 清理定时器
       } else {
         localStorage.removeItem('verificationCountdown');
         localStorage.removeItem('verificationTimestamp');
@@ -65,7 +66,6 @@ function Register() {
       if (response.success) {
         // 开始倒计时（60秒）
         setCountdown(60);
-        localStorage.setItem('verificationCountdown', '60');
         localStorage.setItem('verificationTimestamp', Date.now().toString());
         const timer = setInterval(() => {
           setCountdown((prev) => {
@@ -75,7 +75,6 @@ function Register() {
               localStorage.removeItem('verificationTimestamp');
               return 0;
             }
-            localStorage.setItem('verificationCountdown', (prev - 1).toString());
             return prev - 1;
           });
         }, 1000);
