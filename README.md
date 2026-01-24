@@ -362,6 +362,11 @@ QQ_MAIL_PASSWORD=your-authorization-code
 uvicorn main:app --reload
 ```
 
+#### 🔧 Bug 修复（v1.4.1）
+
+- **验证码冷却倒计时优化** - 修复倒计时显示异常（2秒1跳问题）
+- **页面刷新冷却保持** - 优化冷却时间计算逻辑，确保刷新后时间准确
+
 #### 配置步骤详解
 
 1. **获取 QQ 邮箱授权码**
