@@ -2,6 +2,9 @@
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
+// 导出 API_BASE 供其他模块使用
+export { API_BASE };
+
 // 从 localStorage 获取 Token
 export function getAccessToken(): string | null {
   return localStorage.getItem('access_token');

@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from database import Base, engine
-from routers import blogs, auth, users, members, chat, announcements, calendar, notices, stats, checkins, activities, uploads
+from routers import blogs, auth, users, members, chat, announcements, calendar, notices, stats, checkins, activities, uploads, comments, notifications
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,8 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": f"内部服务器错误: {str(exc)}"}
+        content={"detail": str(exc)},
+        headers={"Access-Control-Allow-Origin": "*"}
     )
 
 
@@ -64,6 +65,8 @@ app.include_router(stats.router)
 app.include_router(checkins.router)
 app.include_router(activities.router)
 app.include_router(uploads.router)
+app.include_router(comments.router)
+app.include_router(notifications.router)
 
 # Static file serving for uploaded files (avatars)
 app.mount("/static", StaticFiles(directory="uploads"), name="static")

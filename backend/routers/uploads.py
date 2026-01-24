@@ -57,32 +57,44 @@ async def upload_image(
             detail=f"不支持的图片类型，请上传 {', '.join(ALLOWED_IMAGE_TYPES.keys())} 格式的图片"
         )
 
-    # 读取文件内容
-    content = await file.read()
+    try:
+        # 创建上传目录
+        upload_dir = Path("uploads/blog/images")
+        upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # 验证文件大小
-    if len(content) > MAX_IMAGE_SIZE:
+        # 生成唯一文件名
+        file_extension = ALLOWED_IMAGE_TYPES[file.content_type]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = upload_dir / unique_filename
+
+        # 流式写入文件
+        with open(file_path, "wb") as f:
+            while chunk := await file.read(1024 * 1024):  # 每次读取1MB
+                f.write(chunk)
+
+        file_size = file_path.stat().st_size
+        file_url = f"/static/blog/images/{unique_filename}"
+
+        print(f"图片上传成功: {file.filename}, 大小: {file_size / (1024 * 1024):.2f}MB")
+
+        return {"url": file_url, "type": "image", "size": file_size}
+
+    except Exception as e:
+        print(f"图片上传错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+        # 清理部分上传的文件
+        if 'file_path' in locals() and file_path.exists():
+            try:
+                file_path.unlink()
+            except:
+                pass
+
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"图片大小不能超过 {MAX_IMAGE_SIZE // (1024 * 1024)}MB"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"图片上传失败: {str(e)}"
         )
-
-    # 创建上传目录
-    upload_dir = Path("uploads/blog/images")
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    # 生成唯一文件名
-    file_extension = ALLOWED_IMAGE_TYPES[file.content_type]
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = upload_dir / unique_filename
-
-    # 保存文件
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    # 返回文件 URL
-    file_url = f"/static/blog/images/{unique_filename}"
-    return {"url": file_url, "type": "image"}
 
 
 def compress_video(input_path: Path, output_path: Path) -> tuple[bool, str, str]:
@@ -181,12 +193,37 @@ async def delete_media(
     return None
 
 
+@router.post("/media/sizes", response_model=dict)
+async def get_media_sizes(
+    urls: List[str] = Body(..., embed=True),
+    current_user: dependencies.CurrentUser = None
+):
+    """获取媒体文件大小信息"""
+    sizes = {}
+    for url in urls:
+        # 从 URL 中提取文件路径
+        if url.startswith("/static/"):
+            file_path = Path("uploads") / url.replace("/static/", "")
+            if file_path.exists():
+                try:
+                    size_bytes = file_path.stat().st_size
+                    sizes[url] = size_bytes
+                except Exception as e:
+                    print(f"获取文件大小失败 {file_path}: {e}")
+                    sizes[url] = 0
+            else:
+                sizes[url] = 0
+        else:
+            sizes[url] = 0
+    return {"sizes": sizes}
+
+
 @router.post("/video", response_model=dict)
 async def upload_video(
     current_user: dependencies.CurrentUser,
     file: UploadFile = File(...)
 ):
-    """上传博客视频（服务器端自动压缩）"""
+    """上传博客视频"""
     # 验证文件类型
     if file.content_type not in ALLOWED_VIDEO_TYPES:
         raise HTTPException(
@@ -194,22 +231,8 @@ async def upload_video(
             detail=f"不支持的视频类型，请上传 {', '.join(ALLOWED_VIDEO_TYPES.keys())} 格式的视频"
         )
 
-    # 创建临时文件保存上传的视频
-    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename or "video").suffix) as temp_file:
-        content = await file.read()
-        temp_file.write(content)
-        temp_file.flush()
-        temp_path = Path(temp_file.name)
-
+    temp_path = None
     try:
-        # 验证文件大小
-        if temp_path.stat().st_size > MAX_VIDEO_SIZE:
-            size_gb = temp_path.stat().st_size / (1024 * 1024 * 1024)
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"视频大小为 {size_gb:.1f}GB，超过限制 {MAX_VIDEO_SIZE // (1024 * 1024 * 1024)}GB"
-            )
-
         # 创建上传目录
         upload_dir = Path("uploads/blog/videos")
         upload_dir.mkdir(parents=True, exist_ok=True)
@@ -219,60 +242,42 @@ async def upload_video(
         unique_filename = f"{uuid.uuid4()}{file_extension}"
         final_path = upload_dir / unique_filename
 
-        # 压缩视频
-        original_size_mb = temp_path.stat().st_size / (1024 * 1024)
-        should_compress = original_size_mb > 20  # 大于 20MB 时压缩
+        # 直接流式写入到最终位置（避免临时文件）
+        with open(final_path, "wb") as f:
+            while chunk := await file.read(1024 * 1024):  # 每次读取1MB
+                f.write(chunk)
 
-        if should_compress:
-            # 使用临时文件进行压缩
-            with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as compressed_file:
-                compressed_path = Path(compressed_file.name)
+        # 获取文件大小
+        file_size = final_path.stat().st_size
+        file_url = f"/static/blog/videos/{unique_filename}"
 
-            success, message, result_path = compress_video(temp_path, compressed_path)
+        print(f"视频上传成功: {file.filename}, 大小: {file_size / (1024 * 1024):.1f}MB")
 
-            if success and result_path:
-                # 压缩成功，使用压缩后的文件（使用 shutil.move 支持跨驱动器）
-                shutil.move(str(result_path), str(final_path))
-                # 清理原始临时文件
-                temp_path.unlink()
-
-                file_url = f"/static/blog/videos/{unique_filename}"
-                return {
-                    "url": file_url,
-                    "type": "video",
-                    "compressed": True,
-                    "message": message
-                }
-            else:
-                # 压缩失败，使用原始文件
-                shutil.move(str(temp_path), str(final_path))
-                file_url = f"/static/blog/videos/{unique_filename}"
-                return {
-                    "url": file_url,
-                    "type": "video",
-                    "compressed": False,
-                    "message": f"压缩失败，使用原始文件: {message}"
-                }
-        else:
-            # 文件较小，直接使用原始文件
-            shutil.move(str(temp_path), str(final_path))
-            file_url = f"/static/blog/videos/{unique_filename}"
-            return {
-                "url": file_url,
-                "type": "video",
-                "compressed": False,
-                "message": f"视频无需压缩 ({original_size_mb:.1f}MB)"
-            }
+        return {
+            "url": file_url,
+            "type": "video",
+            "compressed": False,
+            "message": f"视频上传成功 ({file_size / (1024 * 1024):.1f}MB)",
+            "size": file_size
+        }
 
     except HTTPException:
         # 清理临时文件
-        if temp_path.exists():
+        if temp_path and temp_path.exists():
             temp_path.unlink()
         raise
     except Exception as e:
-        # 清理临时文件
-        if temp_path.exists():
-            temp_path.unlink()
+        print(f"视频上传错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+        # 清理部分上传的文件
+        if 'final_path' in locals() and final_path.exists():
+            try:
+                final_path.unlink()
+            except:
+                pass
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"视频处理失败: {str(e)}"

@@ -2,7 +2,7 @@
 
 > 基于网页原型设计 v1.3.2
 >
-> 最后更新：2026-01-23（v1.8.0 - 草稿功能）
+> 最后更新：2026-01-24（v1.9.0 - 评论与通知系统）
 
 ## 目录
 
@@ -18,6 +18,8 @@
 - [签到系统 (CheckIn)](#签到系统-checkin)
 - [统计数据 (Stats)](#统计数据-stats)
 - [最新动态系统 (Activity)](#最新动态系统-activity)
+- [评论系统 (Comments)](#评论系统-comments)
+- [用户通知 (Notifications)](#用户通知-notifications)
 - [AI对话管理](#ai对话管理)
 - [数据模型](#数据模型)
 - [错误码说明](#错误码说明)
@@ -36,9 +38,10 @@
 
 ### API 版本
 
-当前版本: `v1.8.0`
+当前版本: `v1.9.0`（已完成）
 
 **版本历史：**
+- v1.9.0 (2026-01-24): 评论系统（楼中楼、编辑、删除、排序、级联删除）+ 通知系统（评论通知、通知中心）
 - v1.8.0 (2026-01-23): 草稿功能（博客状态、草稿箱、保存草稿/发布）
 - v1.7.0 (2026-01-23): 富文本编辑器与媒体管理（图片自动压缩、视频服务器端压缩、媒体自动清理）
 - v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）
@@ -944,6 +947,66 @@ Content-Type: application/json
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | urls | array | 是 | 要删除的媒体 URL 列表 |
+
+**成功响应（204 No Content）：**
+- 无响应体，删除成功
+
+**注意：**
+- 只能删除 `/static/blog/` 路径下的文件
+- 不存在的文件会自动跳过
+- 失败不影响其他文件的删除
+
+---
+
+### POST /api/uploads/media/sizes
+
+批量获取媒体文件大小（需要认证，用于编辑博客时加载已有媒体的大小）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "urls": [
+    "/static/blog/images/abc123-def456.jpg",
+    "/static/blog/videos/xyz789-uvw012.mp4"
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| urls | array | 是 | 要查询的媒体 URL 列表 |
+
+**成功响应（200）：**
+```json
+{
+  "sizes": {
+    "/static/blog/images/abc123-def456.jpg": 524288,
+    "/static/blog/videos/xyz789-uvw012.mp4": 15728640
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| sizes | object | URL → 文件大小（字节）的映射 |
+
+**注意：**
+- 返回的是实际文件系统的字节数
+- 不存在的文件返回 0
+- 非 `/static/` 开头的 URL 返回 0
+- 用于前端实时统计媒体总大小
+
+---
 
 **成功响应（204）：**
 无内容
@@ -2043,6 +2106,601 @@ activities.items.map(activity => {
 
 ---
 
+## 评论系统 (Comments)
+
+评论系统支持楼中楼回复、编辑评论、多种排序方式，并与通知系统集成。
+
+### 功能特性
+
+| 功能 | 说明 |
+|------|------|
+| 楼中楼 | 支持最多 2 层嵌套评论（顶级评论 → 一级回复 → 二级回复） |
+| 编辑评论 | 评论作者可编辑自己的评论 |
+| 删除评论 | 软删除，显示"已删除"而非物理删除 |
+| 排序方式 | 时间正序（旧→新）/ 时间倒序（新→旧）/ 热度排序 |
+| 权限控制 | 登录用户可评论，仅作者/博主可删除 |
+
+---
+
+### GET /api/blogs/:blog_id/comments
+
+获取博客的评论列表（公开接口）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**查询参数：**
+```
+?sort=asc&page=1&size=20
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sort | string | 否 | 排序方式：`asc`（时间正序，默认）、`desc`（时间倒序）、`hot`（热度） |
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认20，最大50） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 15,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 1,
+      "content": "这篇文章写得很好，学到了很多！",
+      "author": {
+        "id": 2,
+        "username": "lisi",
+        "nickname": "李四",
+        "avatar_url": null
+      },
+      "parent_id": null,
+      "parent_author": null,
+      "replies_count": 2,
+      "is_deleted": false,
+      "created_at": "2025-01-24T10:00:00.000000Z",
+      "updated_at": null,
+      "is_author": false,
+      "can_edit": false
+    },
+    {
+      "id": 2,
+      "content": "我同意楼上的观点，特别是关于梯度下降的部分。",
+      "author": {
+        "id": 3,
+        "username": "wangwu",
+        "nickname": "王五",
+        "avatar_url": "/uploads/avatars/user_3.jpg"
+      },
+      "parent_id": 1,
+      "parent_author": "李四",
+      "replies_count": 0,
+      "is_deleted": false,
+      "created_at": "2025-01-24T10:05:00.000000Z",
+      "updated_at": null,
+      "is_author": false,
+      "can_edit": false
+    },
+    {
+      "id": 3,
+      "content": "这篇博客很有启发，谢谢分享！",
+      "author": {
+        "id": 4,
+        "username": "zhaoliu",
+        "nickname": "赵六",
+        "avatar_url": null
+      },
+      "parent_id": null,
+      "parent_author": null,
+      "replies_count": 0,
+      "is_deleted": false,
+      "created_at": "2025-01-24T09:30:00.000000Z",
+      "updated_at": "2025-01-24T09:45:00.000000Z",
+      "is_author": false,
+      "can_edit": false
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| content | string | 评论内容（纯文本，已删除的评论显示"已删除"） |
+| author | object | 评论作者信息 |
+| author.id | integer | 作者 ID |
+| author.username | string | 用户名 |
+| author.nickname | string | 昵称 |
+| author.avatar_url | string\|null | 头像 URL |
+| parent_id | integer\|null | 父评论 ID（null 表示顶级评论） |
+| parent_author | string\|null | 父评论作者昵称（用于楼中楼显示） |
+| replies_count | integer | 子评论数量（用于热度排序） |
+| is_deleted | boolean | 是否已删除（软删除标记） |
+| updated_at | string\|null | 最后编辑时间（null 表示未编辑过） |
+| is_author | boolean | 当前用户是否为博客作者（未登录为 false） |
+| can_edit | boolean | 当前用户是否可编辑此评论（未登录为 false） |
+
+**排序规则：**
+- `asc`（默认）：按创建时间正序（旧评论在前）
+- `desc`：按创建时间倒序（新评论在前）
+- `hot`：按热度排序（回复数多的在前，同级按时间倒序）
+
+**嵌套结构说明：**
+- 前端需根据 `parent_id` 构建嵌套结构
+- 最多支持 2 层嵌套：顶级评论 → 一级回复 → 二级回复
+- `parent_id` 为 `null` 的评论是顶级评论
+- `parent_id` 指向顶级评论的评论是一级回复
+- `parent_id` 指向一级回复的评论是二级回复
+
+---
+
+### POST /api/blogs/:blog_id/comments
+
+发表评论（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**请求体（发表顶级评论）：**
+```json
+{
+  "content": "这篇文章写得很好，学到了很多！"
+}
+```
+
+**请求体（回复评论）：**
+```json
+{
+  "content": "我同意楼上的观点",
+  "parent_id": 1
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| content | string | 是 | 1-1000字符，纯文本 |
+| parent_id | integer | 否 | 父评论 ID（不填则为顶级评论） |
+
+**验证规则：**
+- 嵌套深度限制：最多回复到第 2 层
+- 如果 `parent_id` 对应的评论已经是二级回复，返回错误
+
+**成功响应（201）：**
+```json
+{
+  "id": 4,
+  "content": "这篇文章写得很好，学到了很多！",
+  "author": {
+    "id": 2,
+    "username": "lisi",
+    "nickname": "李四",
+    "avatar_url": null
+  },
+  "parent_id": null,
+  "parent_author": null,
+  "replies_count": 0,
+  "is_deleted": false,
+  "created_at": "2025-01-24T10:10:00.000000Z",
+  "updated_at": null,
+  "is_author": false,
+  "can_edit": true
+}
+```
+
+**失败响应（400）：**
+```json
+{
+  "detail": "回复层级超过限制，最多支持2层嵌套"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+或
+
+```json
+{
+  "detail": "父评论不存在或已删除"
+}
+```
+
+**注意：**
+- 发表评论成功后，自动创建通知给被回复的用户（如果是回复评论）
+- 博客作者也会收到通知（如果评论者不是作者本人）
+
+---
+
+### PUT /api/comments/:comment_id
+
+编辑评论（需要认证，仅评论作者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| comment_id | integer | 评论 ID |
+
+**请求体：**
+```json
+{
+  "content": "更新后的评论内容"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| content | string | 是 | 1-1000字符，纯文本 |
+
+**成功响应（200）：**
+```json
+{
+  "id": 4,
+  "content": "更新后的评论内容",
+  "author": {
+    "id": 2,
+    "username": "lisi",
+    "nickname": "李四",
+    "avatar_url": null
+  },
+  "parent_id": null,
+  "parent_author": null,
+  "replies_count": 0,
+  "is_deleted": false,
+  "created_at": "2025-01-24T10:10:00.000000Z",
+  "updated_at": "2025-01-24T10:15:00.000000Z",
+  "is_author": false,
+  "can_edit": true
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限编辑此评论"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "评论不存在"
+}
+```
+
+**注意：**
+- 只能编辑自己的评论
+- 已删除的评论不能编辑
+- 编辑后 `updated_at` 字段会更新
+
+---
+
+### DELETE /api/comments/:comment_id
+
+删除评论（需要认证，仅评论作者或博客作者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| comment_id | integer | 评论 ID |
+
+**成功响应（204）：**
+无内容
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限删除此评论"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "评论不存在"
+}
+```
+
+**权限说明：**
+- 评论作者可以删除自己的评论
+- 博客作者可以删除该博客下的任何评论
+
+**软删除机制：**
+- 删除评论为软删除，设置 `is_deleted = true`
+- 删除后评论内容显示为"已删除"
+- 子评论不会被删除，但会显示"父评论已删除"
+
+---
+
+## 用户通知 (Notifications)
+
+用户通知系统用于向用户推送各类消息，如评论回复、系统通知等。
+
+### 通知类型
+
+| 类型代码 | 说明 | 触发条件 |
+|---------|------|----------|
+| `comment_reply` | 评论回复 | 有人回复了你的评论 |
+| `blog_comment` | 博客评论 | 有人评论了你的博客 |
+| `comment_reply_blog` | 博客评论回复 | 有人回复了你博客下的评论 |
+| `system` | 系统通知 | 管理员发送的系统公告 |
+
+---
+
+### GET /api/notifications
+
+获取当前用户的通知列表（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**查询参数：**
+```
+?unread_only=true&page=1&size=20
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| unread_only | boolean | 否 | 仅显示未读通知（默认 false） |
+| type | string | 否 | 筛选通知类型（不传则返回所有类型） |
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认20，最大50） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 25,
+  "unread_count": 5,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 1,
+      "type": "comment_reply",
+      "title": "李四 回复了你的评论",
+      "content": "我同意楼上的观点，特别是关于梯度下降的部分。",
+      "related_type": "comment",
+      "related_id": 2,
+      "related_url": "/blogs/42?comment=2",
+      "is_read": false,
+      "created_at": "2025-01-24T10:05:00.000000Z",
+      "time_display": "5分钟前"
+    },
+    {
+      "id": 2,
+      "type": "blog_comment",
+      "title": "王五 评论了你的博客《机器学习入门指南》",
+      "content": "这篇博客很有启发，谢谢分享！",
+      "related_type": "blog",
+      "related_id": 42,
+      "related_url": "/blogs/42?comment=3",
+      "is_read": false,
+      "created_at": "2025-01-24T09:30:00.000000Z",
+      "time_display": "40分钟前"
+    },
+    {
+      "id": 3,
+      "type": "system",
+      "title": "系统通知",
+      "content": "欢迎加入车辆4班班级空间！请完善您的个人信息。",
+      "related_type": null,
+      "related_id": null,
+      "related_url": null,
+      "is_read": true,
+      "created_at": "2025-01-23T08:00:00.000000Z",
+      "time_display": "昨天"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | integer | 通知 ID |
+| type | string | 通知类型 |
+| title | string | 通知标题（简短描述） |
+| content | string | 通知内容（评论内容或系统消息） |
+| related_type | string\|null | 关联对象类型（comment/blog/null） |
+| related_id | integer\|null | 关联对象 ID |
+| related_url | string\|null | 关联对象链接 URL |
+| is_read | boolean | 是否已读 |
+| time_display | string | 友好的时间显示 |
+
+**排序规则：**
+- 按创建时间倒序（最新的在前）
+
+---
+
+### POST /api/notifications/read-all
+
+标记所有通知为已读（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "message": "已标记所有通知为已读",
+  "marked_count": 25
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| marked_count | integer | 标记为已读的通知数量 |
+
+---
+
+### PUT /api/notifications/:notification_id/read
+
+标记单个通知为已读（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| notification_id | integer | 通知 ID |
+
+**成功响应（200）：**
+```json
+{
+  "id": 1,
+  "type": "comment_reply",
+  "title": "李四 回复了你的评论",
+  "content": "我同意楼上的观点...",
+  "related_type": "comment",
+  "related_id": 2,
+  "related_url": "/blogs/42?comment=2",
+  "is_read": true,
+  "created_at": "2025-01-24T10:05:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限访问此通知"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "通知不存在"
+}
+```
+
+---
+
+### DELETE /api/notifications
+
+清除已读通知（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**查询参数：**
+```
+?all=false
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| all | boolean | 否 | 是否清除所有通知（true），仅清除已读（false，默认） |
+
+**成功响应（200）：**
+```json
+{
+  "message": "已清除 10 条通知",
+  "deleted_count": 10
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| deleted_count | integer | 清除的通知数量 |
+
+**注意：**
+- `all=false`（默认）：仅清除已读通知
+- `all=true`：清除所有通知（包括未读）
+
+---
+
+### DELETE /api/notifications/:notification_id
+
+删除单个通知（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| notification_id | integer | 通知 ID |
+
+**成功响应（204）：**
+无内容
+
+---
+
+### GET /api/notifications/unread-count
+
+获取未读通知数量（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "unread_count": 5
+}
+```
+
+**使用场景：**
+- 导航栏显示通知铃铛的红点/数字
+- 前端可轮询此接口获取最新未读数量
+
+---
+
 ## AI对话管理
 
 AI对话功能提供与 AI 助手的实时对话能力，支持流式输出、上下文管理、消息反馈等功能。
@@ -2620,6 +3278,88 @@ Content-Type: application/json
 **关系：**
 - 一个 Conversation 包含多个 Message（一对多）
 - 一个 User 可以创建多个 Conversation（一对多）
+
+---
+
+### Comment（评论）
+
+**数据库表名：** `comments`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| blog_id | Integer | 博客ID | FOREIGN KEY → blogs.id, NOT NULL |
+| user_id | Integer | 评论者ID | FOREIGN KEY → users.id, NOT NULL |
+| content | String(1000) | 评论内容 | NOT NULL |
+| parent_id | Integer | 父评论ID | FOREIGN KEY → comments.id, NULL |
+| is_deleted | Boolean | 是否已删除 | DEFAULT false |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+| updated_at | DateTime | 更新时间 | |
+
+**索引：**
+- `idx_blog_id`: blog_id
+- `idx_parent_id`: parent_id
+- `idx_created_at`: created_at
+
+**外键：**
+- `blog_id` → `blogs.id` (ON DELETE CASCADE)
+- `user_id` → `users.id` (ON DELETE CASCADE)
+- `parent_id` → `comments.id` (ON DELETE SET NULL)
+
+**说明：**
+- `parent_id` 用于实现楼中楼回复功能
+- `is_deleted` 实现软删除，删除后设置 `is_deleted = true`
+- 嵌套深度限制：最多 2 层（顶级评论 → 一级回复 → 二级回复）
+- 删除父评论时，子评论不删除但会显示"父评论已删除"
+
+**楼层规则：**
+- 顶级评论：`parent_id IS NULL`
+- 一级回复：`parent_id` 指向顶级评论
+- 二级回复：`parent_id` 指向一级回复
+- 禁止回复二级回复（达到 2 层限制）
+
+---
+
+### Notification（用户通知）
+
+**数据库表名：** `notifications`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 接收者ID | FOREIGN KEY → users.id, NOT NULL |
+| type | String(50) | 通知类型 | NOT NULL |
+| title | String(200) | 通知标题 | NOT NULL |
+| content | String(1000) | 通知内容 | NOT NULL |
+| related_type | String(50) | 关联对象类型 | values: 'blog', 'comment', NULL |
+| related_id | Integer | 关联对象ID | |
+| related_url | String(500) | 关联对象URL | |
+| is_read | Boolean | 是否已读 | DEFAULT false |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_id`: user_id
+- `idx_is_read`: is_read
+- `idx_created_at`: created_at (DESC)
+- `idx_user_read`: (user_id, is_read) 复合索引
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+
+**说明：**
+- `type` 字段定义通知类型（comment_reply, blog_comment, system 等）
+- `related_type` 和 `related_id` 关联到具体对象（博客、评论等）
+- `related_url` 用于前端跳转到关联对象
+- 不同 `type` 值对应不同的通知场景
+
+**通知类型详解：**
+
+| type | title 模板 | 触发条件 | related_type | related_id |
+|------|-----------|----------|-------------|-----------|
+| `comment_reply` | "{nickname} 回复了你的评论" | 有人回复了你的评论 | comment | 被回复的评论 ID |
+| `blog_comment` | "{nickname} 评论了你的博客《{blog_title}》" | 有人评论了你的博客 | blog | 博客 ID |
+| `comment_reply_blog` | "{nickname} 回复了你博客下的评论" | 有人回复了你博客下的评论 | comment | 被回复的评论 ID |
+| `system` | "系统通知" | 管理员发送系统通知 | NULL | NULL |
 
 ---
 
@@ -3294,6 +4034,7 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.9.0 | 2026-01-24 | 评论系统（楼中楼、编辑、排序）+ 通知系统（设计） |
 | v1.8.0 | 2026-01-23 | 草稿功能（博客状态、草稿箱、保存草稿/发布） |
 | v1.7.0 | 2026-01-23 | 富文本编辑器与媒体管理（图片/视频上传、自动压缩、媒体清理） |
 | v1.6.0 | 2026-01-22 | 最新动态系统（活动流、自动记录、时间显示） |
@@ -3309,22 +4050,21 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 
 以下功能已预留接口，将在后续版本实现：
 
-1. **评论系统**：
-   - `POST /api/blogs/:blog_id/comments` - 发表评论
-   - `GET /api/blogs/:blog_id/comments` - 获取评论列表
-   - `DELETE /api/comments/:comment_id` - 删除评论
-
-2. **搜索功能**：
+1. **搜索功能**：
    - `GET /api/search` - 全站搜索
+   - 支持搜索博客、用户、评论等
 
-3. **点赞/收藏功能**：
+2. **点赞/收藏功能**：
    - `POST /api/blogs/:blog_id/like` - 点赞博客
    - `POST /api/blogs/:blog_id/favorite` - 收藏博客
    - `GET /api/users/me/favorites` - 获取收藏列表
 
-4. **草稿功能**：
-   - 博客支持草稿状态
-   - 草稿仅作者可见
+3. **评论功能增强**（v1.9.0 已完成基础版）：
+   - ✅ 楼中楼回复
+   - ✅ 编辑评论
+   - ✅ 排序方式
+   - ⏳ 评论点赞
+   - ⏳ @提及功能
 
 ---
 

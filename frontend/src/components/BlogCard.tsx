@@ -44,7 +44,19 @@ function BlogCard({ blog }: Props) {
         <p className="small-muted" style={{ marginBottom: '0.75rem' }}>
           {new Date(blog.created_at).toLocaleDateString()} · {blog.views} 次阅读
         </p>
-        <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.6 }}>
+        <p
+          style={{
+            color: '#475569',
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'pre-line',
+          }}
+        >
           {blog.excerpt}
         </p>
       </Link>

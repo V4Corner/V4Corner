@@ -19,7 +19,18 @@
       "Bash(timeout:*)",
       "Bash(npm install:*)",
       "Bash(ffmpeg:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(wmic:*)",
+      "Bash(pip install:*)",
+      "Bash(netstat:*)",
+      "Bash(find:*)",
+      "Bash(for:*)",
+      "Bash(do taskkill /F /PID $pid)",
+      "Bash(done:*)"
     ]
   }
 }

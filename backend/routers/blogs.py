@@ -116,6 +116,24 @@ async def create_blog(
     db: dependencies.DbSession
 ):
     """创建新博客或草稿"""
+
+    # 检查字数限制（5千字）
+    if len(blog_data.content) > 5000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="博客内容不能超过5000字"
+        )
+
+    # 检查媒体文件总大小（2GB）
+    media_size = schemas.calculate_media_size(blog_data.content)
+    MAX_MEDIA_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
+    if media_size > MAX_MEDIA_SIZE:
+        size_mb = media_size / (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"博客中的媒体文件总大小不能超过2GB（当前{size_mb:.1f}MB）"
+        )
+
     # 创建博客
     blog = models.Blog(
         title=blog_data.title,
@@ -168,6 +186,24 @@ async def update_blog(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权限编辑此博客"
         )
+
+    # 检查字数限制（5千字）
+    if blog_data.content is not None and len(blog_data.content) > 5000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="博客内容不能超过5000字"
+        )
+
+    # 检查媒体文件总大小（2GB）
+    if blog_data.content is not None:
+        media_size = schemas.calculate_media_size(blog_data.content)
+        MAX_MEDIA_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
+        if media_size > MAX_MEDIA_SIZE:
+            size_mb = media_size / (1024 * 1024)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"博客中的媒体文件总大小不能超过2GB（当前{size_mb:.1f}MB）"
+            )
 
     # 更新字段
     if blog_data.title is not None:

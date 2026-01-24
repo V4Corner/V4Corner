@@ -20,6 +20,7 @@ class Blog(Base):
 
     # 关系
     author = relationship("User", back_populates="blogs")
+    comments = relationship("Comment", back_populates="blog", cascade="all, delete-orphan")
 
     # 索引
     __table_args__ = (

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBlog, deleteBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
 import type { Blog } from '../types/blog';
+import Comments from '../components/Comments';
 
 function BlogDetail() {
   const { blogId } = useParams<{ blogId: string }>();
@@ -245,6 +246,9 @@ function BlogDetail() {
           dangerouslySetInnerHTML={{ __html: blog.content }}
         />
       </div>
+
+      {/* 评论区 */}
+      <Comments blogId={blog.id} blogAuthorId={blog.author_id} />
     </article>
   );
 }

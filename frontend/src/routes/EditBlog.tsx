@@ -1,33 +1,64 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import React from 'react';
 import { getBlog, updateBlog } from '../api/blogs';
+import { getMediaSizes } from '../api/uploads';
 import { useAuth } from '../contexts/AuthContext';
 import RichTextEditor from '../components/RichTextEditor';
 import type { Blog } from '../types/blog';
 
+// 从HTML中提取纯文本字数
+function getPlainTextLength(html: string): number {
+  const text = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  return text.length;
+}
+
+// 统计媒体文件数量
+function getMediaCount(html: string): number {
+  const imgMatches = html.match(/<img[^>]+src="/g);
+  const videoMatches = html.match(/<video[^>]*>/g);
+  const imgCount = imgMatches ? imgMatches.length : 0;
+  const videoCount = videoMatches ? videoMatches.length : 0;
+  return imgCount + videoCount;
+}
+
 // 从 HTML 内容中提取所有媒体文件 URL
 function extractMediaUrls(html: string): string[] {
   const urls: string[] = [];
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
 
   // 提取图片 URL
-  const images = doc.querySelectorAll('img');
-  images.forEach(img => {
-    const src = img.getAttribute('src');
-    if (src && src.includes('/static/blog/')) {
-      urls.push(src.replace('http://localhost:8000', ''));
+  const imgRegex = /<img[^>]+src="([^"]+)"/g;
+  let match;
+  while ((match = imgRegex.exec(html)) !== null) {
+    const url = match[1];
+    if (url.includes('/static/blog/')) {
+      urls.push(url.replace('http://localhost:8000', ''));
     }
-  });
+  }
 
-  // 提取视频 URL
-  const videos = doc.querySelectorAll('video');
-  videos.forEach(video => {
-    const src = video.getAttribute('src');
-    if (src && src.includes('/static/blog/')) {
-      urls.push(src.replace('http://localhost:8000', ''));
+  // 提取视频 URL（支持 <video src=""> 和 <video><source src=""></video>）
+  const videoSrcRegex = /<video[^>]*src="([^"]+)"/g;
+  while ((match = videoSrcRegex.exec(html)) !== null) {
+    const url = match[1];
+    if (url.includes('/static/blog/')) {
+      urls.push(url.replace('http://localhost:8000', ''));
     }
-  });
+  }
+
+  const videoSourceRegex = /<source[^>]+src="([^"]+)"/g;
+  while ((match = videoSourceRegex.exec(html)) !== null) {
+    const url = match[1];
+    if (url.includes('/static/blog/')) {
+      urls.push(url.replace('http://localhost:8000', ''));
+    }
+  }
 
   return urls;
 }
@@ -47,6 +78,29 @@ function EditBlog() {
   // 保存原始媒体 URL 列表
   const originalMediaUrlsRef = useRef<string[]>([]);
 
+  // 存储已上传的媒体文件信息
+  const mediaFilesRef = useRef<Map<string, number>>(new Map());
+
+  const MAX_CONTENT_LENGTH = 5000; // 5千字限制
+  const MAX_MEDIA_COUNT = 20; // 最大媒体文件数
+  const MAX_MEDIA_SIZE_MB = 2 * 1024; // 2GB，单位MB
+
+  // 实时统计
+  const [textLength, setTextLength] = useState(0);
+  const [mediaCount, setMediaCount] = useState(0);
+  const [mediaSizeMB, setMediaSizeMB] = useState(0);
+
+  // 处理媒体上传回调
+  const handleMediaUpload = (url: string, size: number) => {
+    mediaFilesRef.current.set(url, size);
+  };
+
+  // 获取剩余容量（字节）
+  const getRemainingCapacity = () => {
+    const currentUsage = mediaSizeMB * 1024 * 1024; // 转换为字节
+    return (MAX_MEDIA_SIZE_MB * 1024 * 1024) - currentUsage; // 2GB - 当前使用量
+  };
+
   useEffect(() => {
     if (!blogId) return;
 
@@ -58,8 +112,32 @@ function EditBlog() {
         setTitle(data.title);
         setContent(data.content);
 
+        // 更新纯文本字数和媒体数量
+        setTextLength(getPlainTextLength(data.content));
+        setMediaCount(getMediaCount(data.content));
+
         // 保存原始媒体 URL
-        originalMediaUrlsRef.current = extractMediaUrls(data.content);
+        const mediaUrls = extractMediaUrls(data.content);
+        originalMediaUrlsRef.current = mediaUrls;
+
+        // 获取已有媒体文件的大小
+        let totalSize = 0;
+        if (mediaUrls.length > 0) {
+          try {
+            const sizes = await getMediaSizes(mediaUrls);
+            // 保存到 mediaFilesRef 并计算总大小
+            Object.entries(sizes).forEach(([url, size]) => {
+              if (size > 0) {
+                mediaFilesRef.current.set(url, size);
+                totalSize += size;
+              }
+            });
+          } catch (err) {
+            console.error('获取媒体文件大小失败:', err);
+          }
+        }
+        // 设置媒体大小
+        setMediaSizeMB(totalSize / (1024 * 1024));
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载失败');
       } finally {
@@ -69,6 +147,51 @@ function EditBlog() {
 
     fetchBlog();
   }, [blogId]);
+
+  // 当内容变化时，更新统计
+  useEffect(() => {
+    if (!content) return;
+
+    // 更新纯文本字数
+    setTextLength(getPlainTextLength(content));
+
+    // 更新媒体数量
+    setMediaCount(getMediaCount(content));
+
+    // 从内容中提取所有媒体URL
+    const urls: string[] = [];
+    const imgRegex = /<img[^>]+src="([^"]+)"/g;
+    const videoSrcRegex = /<video[^>]*src="([^"]+)"/g;
+    const videoSourceRegex = /<source[^>]+src="([^"]+)"/g;
+
+    let match;
+    while ((match = imgRegex.exec(content)) !== null) {
+      let url = match[1];
+      // 移除 http://localhost:8000 前缀以匹配存储的 URL
+      url = url.replace('http://localhost:8000', '');
+      urls.push(url);
+    }
+    while ((match = videoSrcRegex.exec(content)) !== null) {
+      let url = match[1];
+      url = url.replace('http://localhost:8000', '');
+      urls.push(url);
+    }
+    while ((match = videoSourceRegex.exec(content)) !== null) {
+      let url = match[1];
+      url = url.replace('http://localhost:8000', '');
+      urls.push(url);
+    }
+
+    // 计算媒体文件总大小（从存储的大小信息中获取）
+    let totalSize = 0;
+    urls.forEach(url => {
+      const size = mediaFilesRef.current.get(url);
+      if (size) {
+        totalSize += size;
+      }
+    });
+    setMediaSizeMB(totalSize / (1024 * 1024)); // 转换为MB
+  }, [content]);
 
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +212,18 @@ function EditBlog() {
     }
     if (title.length > 200) {
       setError('标题不能超过200字符');
+      return;
+    }
+    if (textLength > MAX_CONTENT_LENGTH) {
+      setError(`博客内容不能超过${MAX_CONTENT_LENGTH}字（当前${textLength}字）`);
+      return;
+    }
+    if (mediaCount > MAX_MEDIA_COUNT) {
+      setError(`媒体文件数量不能超过${MAX_MEDIA_COUNT}个（当前${mediaCount}个）`);
+      return;
+    }
+    if (mediaSizeMB > MAX_MEDIA_SIZE_MB) {
+      setError(`媒体文件总大小不能超过${MAX_MEDIA_SIZE_MB / 1024}GB（当前${mediaSizeMB.toFixed(1)}MB）`);
       return;
     }
 
@@ -132,6 +267,18 @@ function EditBlog() {
     }
     if (title.length > 200) {
       setError('标题不能超过200字符');
+      return;
+    }
+    if (textLength > MAX_CONTENT_LENGTH) {
+      setError(`博客内容不能超过${MAX_CONTENT_LENGTH}字（当前${textLength}字）`);
+      return;
+    }
+    if (mediaCount > MAX_MEDIA_COUNT) {
+      setError(`媒体文件数量不能超过${MAX_MEDIA_COUNT}个（当前${mediaCount}个）`);
+      return;
+    }
+    if (mediaSizeMB > MAX_MEDIA_SIZE_MB) {
+      setError(`媒体文件总大小不能超过${MAX_MEDIA_SIZE_MB / 1024}GB（当前${mediaSizeMB.toFixed(1)}MB）`);
       return;
     }
 
@@ -328,7 +475,20 @@ function EditBlog() {
             onChange={setContent}
             placeholder="开始写作... 可以插入图片、视频等多媒体内容"
             editable={!saving}
+            onMediaUpload={handleMediaUpload}
+            getRemainingCapacity={getRemainingCapacity}
           />
+          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <p className="small-muted" style={{ margin: 0, color: textLength > MAX_CONTENT_LENGTH * 0.9 ? '#dc2626' : '#64748b' }}>
+              📝 纯文本字数: {textLength.toLocaleString()} / {MAX_CONTENT_LENGTH.toLocaleString()}
+            </p>
+            <p className="small-muted" style={{ margin: 0, color: mediaCount > MAX_MEDIA_COUNT * 0.9 ? '#dc2626' : '#64748b' }}>
+              🖼️ 媒体文件: {mediaCount} / {MAX_MEDIA_COUNT}
+            </p>
+            <p className="small-muted" style={{ margin: 0, color: mediaSizeMB > MAX_MEDIA_SIZE_MB * 0.9 ? '#dc2626' : '#64748b' }}>
+              💾 媒体大小: {mediaSizeMB.toFixed(1)} MB / {MAX_MEDIA_SIZE_MB / 1024} GB
+            </p>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>

@@ -1,20 +1,112 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Literal
+import re
+import os
 
 
-# 博客内容摘要（前150字）
+# 博客内容摘要（移除HTML标签，媒体文件替换为占位符）
 def generate_excerpt(content: str, max_length: int = 150) -> str:
     """生成博客摘要"""
-    if len(content) <= max_length:
-        return content
-    return content[:max_length] + "..."
+    import re
+
+    # 移除所有 HTML 标签，获取纯文本
+    text = re.sub(r'<[^>]+>', '', content)
+
+    # 替换 HTML 实体
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&lt;', '<')
+    text = text.replace('&gt;', '>')
+    text = text.replace('&amp;', '&')
+    text = text.replace('&quot;', '"')
+    text = text.replace('&#39;', "'")
+
+    # 统计媒体文件数量
+    img_count = len(re.findall(r'<img[^>]+src="[^"]+"', content))
+    video_count = len(re.findall(r'<video[^>]*>', content))
+
+    # 为每个媒体文件创建占位符（每个独占一行）
+    media_lines = []
+    for _ in range(img_count):
+        media_lines.append('【图片】')
+    for _ in range(video_count):
+        media_lines.append('【视频】')
+
+    # 移除多余空白
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # 组合媒体占位符和文本（用换行符分隔）
+    if media_lines:
+        text = '\n'.join(media_lines) + '\n' + text
+
+    # 截断到指定长度（考虑换行符）
+    if len(text) > max_length:
+        text = text[:max_length].rsplit(' ', 1)[0] + '...'
+
+    return text
+
+
+# 提取博客内容中的媒体文件路径
+def extract_media_paths(content: str) -> list[str]:
+    """从富文本内容中提取所有媒体文件路径"""
+    # 匹配 <img src="..."> 和 <video src="...">
+    img_pattern = r'<img[^>]+src="([^"]+)"'
+    video_pattern = r'<video[^>]*>.*?<source[^>]+src="([^"]+)"'
+
+    media_paths = []
+
+    # 提取图片路径
+    for match in re.finditer(img_pattern, content):
+        url = match.group(1)
+        if url.startswith('/static/') or url.startswith('/uploads/'):
+            # 提取文件系统路径
+            if url.startswith('/static/'):
+                path = 'uploads' + url[7:]  # /static/xxx -> uploads/xxx
+            else:
+                path = 'uploads' + url[8:]  # /uploads/xxx -> uploads/xxx
+            media_paths.append(path)
+
+    # 提取视频路径
+    for match in re.finditer(video_pattern, content, re.DOTALL):
+        url = match.group(1)
+        if url.startswith('/static/') or url.startswith('/uploads/'):
+            if url.startswith('/static/'):
+                path = 'uploads' + url[7:]
+            else:
+                path = 'uploads' + url[8:]
+            media_paths.append(path)
+
+    return media_paths
+
+
+def calculate_media_size(content: str, uploads_dir: str = 'uploads') -> int:
+    """计算博客内容中所有媒体文件的总大小（字节）"""
+    try:
+        media_paths = extract_media_paths(content)
+        total_size = 0
+
+        for path in media_paths:
+            full_path = os.path.join(uploads_dir, path)
+            if os.path.exists(full_path):
+                total_size += os.path.getsize(full_path)
+
+        return total_size
+    except Exception:
+        # 如果计算出错，返回0（不限制）
+        return 0
 
 
 class BlogBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
-    content: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1, max_length=5000)  # 字数限制5千字
     status: Literal["draft", "published"] = "published"
+
+    @validator('content')
+    def validate_content_length(cls, v):
+        """验证内容长度"""
+        if len(v) > 5000:
+            raise ValueError('博客内容不能超过5000字')
+        return v
 
 
 class BlogCreate(BlogBase):

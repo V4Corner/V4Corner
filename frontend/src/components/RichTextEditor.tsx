@@ -13,6 +13,8 @@ interface Props {
   onChange: (content: string) => void;
   placeholder?: string;
   editable?: boolean;
+  onMediaUpload?: (url: string, size: number) => void; // 新增：媒体上传回调
+  getRemainingCapacity?: () => number; // 新增：获取剩余容量（字节）
 }
 
 // 自定义 Video 扩展
@@ -48,7 +50,7 @@ const Video = Node.create({
   },
 });
 
-function RichTextEditor({ content, onChange, placeholder = '开始写作...', editable = true }: Props) {
+function RichTextEditor({ content, onChange, placeholder = '开始写作...', editable = true, onMediaUpload, getRemainingCapacity }: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -114,35 +116,52 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
           return;
         }
 
-        // 显示压缩中提示
-        const compressMsg = document.createElement('div');
-        compressMsg.textContent = `图片压缩中... (${(file.size / 1024).toFixed(0)}KB)`;
-        compressMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #0f172a; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
-        document.body.appendChild(compressMsg);
+        const fileSizeMB = file.size / (1024 * 1024);
+        let fileToUpload = file;
 
-        // 图片压缩配置
-        const options = {
-          maxSizeMB: 1, // 最大1MB
-          maxWidthOrHeight: 1920, // 最大宽/高
-          useWebWorker: true,
-          initialQuality: 0.8, // 初始质量
-        };
+        // 如果图片 > 20MB，询问是否压缩
+        if (fileSizeMB > 20) {
+          const shouldCompress = confirm(`图片大小为 ${fileSizeMB.toFixed(1)}MB，是否压缩？\n\n压缩将大幅减小文件大小，但可能会略微降低图片质量。`);
+          if (!shouldCompress) {
+            // 用户选择不压缩，直接上传
+            console.log('用户选择不压缩，直接上传');
+          } else {
+            // 用户选择压缩
+            const compressMsg = document.createElement('div');
+            compressMsg.textContent = `图片压缩中... (${fileSizeMB.toFixed(1)}MB)`;
+            compressMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #0f172a; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+            document.body.appendChild(compressMsg);
 
-        // 压缩图片
-        const compressedFile = await imageCompression(file, options);
+            try {
+              // 图片压缩配置
+              const options = {
+                maxSizeMB: 1, // 最大1MB
+                maxWidthOrHeight: 1920, // 最大宽/高
+                useWebWorker: true,
+                initialQuality: 0.8, // 初始质量
+              };
 
-        compressMsg.textContent = `压缩后: ${(compressedFile.size / 1024).toFixed(0)}KB (节省 ${((1 - compressedFile.size / file.size) * 100).toFixed(0)}%)`;
+              // 压缩图片
+              const compressedFile = await imageCompression(file, options);
+              fileToUpload = compressedFile;
 
-        setTimeout(() => compressMsg.remove(), 2000);
+              compressMsg.textContent = `压缩后: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB (节省 ${((1 - compressedFile.size / file.size) * 100).toFixed(0)}%)`;
+              setTimeout(() => compressMsg.remove(), 2000);
+            } catch (err) {
+              compressMsg.remove();
+              throw new Error('图片压缩失败，请重试或选择不压缩');
+            }
+          }
+        }
 
         // 显示上传中提示
         const uploadMsg = document.createElement('div');
-        uploadMsg.textContent = `图片上传中... (${(compressedFile.size / 1024).toFixed(0)}KB)`;
+        uploadMsg.textContent = `图片上传中... (${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB)`;
         uploadMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #0f172a; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
         document.body.appendChild(uploadMsg);
 
         const formData = new FormData();
-        formData.append('file', compressedFile, file.name);
+        formData.append('file', fileToUpload, file.name);
 
         const response = await fetch('http://localhost:8000/api/uploads/image', {
           method: 'POST',
@@ -162,12 +181,20 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
         const data = await response.json();
         const imageUrl = `http://localhost:8000${data.url}`;
 
+        // 通知父组件媒体文件信息（使用实际保存的文件大小）
+        if (onMediaUpload && data.size !== undefined) {
+          onMediaUpload(imageUrl, data.size);
+        }
+
         // 插入图片到编辑器
         editor.chain().focus().setImage({ src: imageUrl }).run();
 
         // 显示成功提示
         const successMsg = document.createElement('div');
-        successMsg.textContent = `✅ 图片上传成功 (已压缩 ${((1 - compressedFile.size / file.size) * 100).toFixed(0)}%)`;
+        const wasCompressed = fileToUpload.size < file.size;
+        successMsg.textContent = wasCompressed
+          ? `✅ 图片上传成功 (已压缩 ${((1 - fileToUpload.size / file.size) * 100).toFixed(0)}%)`
+          : '✅ 图片上传成功';
         successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
         document.body.appendChild(successMsg);
         setTimeout(() => successMsg.remove(), 3000);
@@ -188,15 +215,22 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      // 预检查文件大小
-      const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
+      const fileSizeMB = file.size / (1024 * 1024);
 
-      if (file.size > maxSize) {
-        alert(`视频文件过大 (${(file.size / 1024 / 1024 / 1024).toFixed(1)}GB)，请选择小于 2GB 的视频`);
-        return;
+      // 检查剩余容量
+      if (getRemainingCapacity) {
+        const remainingCapacity = getRemainingCapacity();
+        if (file.size > remainingCapacity) {
+          const remainingGB = remainingCapacity / (1024 * 1024 * 1024);
+          const remainingMB = remainingCapacity / (1024 * 1024);
+          const capacityText = remainingCapacity >= 1024 * 1024 * 1024
+            ? `${remainingGB.toFixed(2)}GB`
+            : `${remainingMB.toFixed(0)}MB`;
+
+          alert(`视频文件 (${fileSizeMB.toFixed(1)}MB) 超过剩余上传容量 (${capacityText})\n\n请先压缩视频或删除一些媒体文件后再试。`);
+          return;
+        }
       }
-
-      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
 
       try {
         const token = localStorage.getItem('access_token');
@@ -205,14 +239,18 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
           return;
         }
 
-        // 显示上传和压缩中提示
+        // 显示上传中提示
         const uploadMsg = document.createElement('div');
-        uploadMsg.innerHTML = `📤 视频上传中... (${sizeMB}MB)<br><small>服务器将自动压缩大于 20MB 的视频</small>`;
+        uploadMsg.innerHTML = `📤 视频上传中... (${fileSizeMB.toFixed(1)}MB)`;
         uploadMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #0f172a; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 300px;';
         document.body.appendChild(uploadMsg);
 
         const formData = new FormData();
         formData.append('file', file);
+
+        // 设置超时时间为10分钟（用于大文件上传）
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
 
         const response = await fetch('http://localhost:8000/api/uploads/video', {
           method: 'POST',
@@ -220,7 +258,10 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
             Authorization: `Bearer ${token}`,
           },
           body: formData,
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -230,18 +271,18 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
         const data = await response.json();
         const videoUrl = `http://localhost:8000${data.url}`;
 
+        // 通知父组件媒体文件信息（使用实际保存的文件大小）
+        if (onMediaUpload && data.size !== undefined) {
+          onMediaUpload(videoUrl, data.size);
+        }
+
         // 移除上传提示
         uploadMsg.remove();
 
         // 显示结果提示
         const resultMsg = document.createElement('div');
-        if (data.compressed) {
-          resultMsg.innerHTML = `✅ 视频上传成功<br><small>${data.message}</small>`;
-          resultMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 300px;';
-        } else {
-          resultMsg.innerHTML = `✅ 视频上传成功<br><small>${data.message}</small>`;
-          resultMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 300px;';
-        }
+        resultMsg.innerHTML = `✅ 视频上传成功<br><small>${data.message}</small>`;
+        resultMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 300px;';
         document.body.appendChild(resultMsg);
         setTimeout(() => resultMsg.remove(), 5000);
 
