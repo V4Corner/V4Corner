@@ -2,7 +2,7 @@
 
 > 基于网页原型设计 v1.3.2
 >
-> 最后更新：2026-01-24（v1.9.0 - 评论与通知系统）
+> 最后更新：2026-01-25（v2.0.0 - 点赞与收藏系统）
 
 ## 目录
 
@@ -11,6 +11,7 @@
 - [用户认证](#用户认证)
 - [用户管理](#用户管理)
 - [博客管理](#博客管理)
+- [点赞与收藏系统 (Likes & Favorites)](#点赞与收藏系统-likes--favorites)
 - [文件上传 (Uploads)](#文件上传-uploads)
 - [成员管理](#成员管理)
 - [班级通知与日历](#班级通知与日历)
@@ -38,9 +39,10 @@
 
 ### API 版本
 
-当前版本: `v1.9.0`（已完成）
+当前版本: `v2.0.0`（开发中）
 
 **版本历史：**
+- v2.0.0 (2026-01-25): 点赞与收藏系统（点赞、收藏文件夹、权限控制、作者通知）
 - v1.9.0 (2026-01-24): 评论系统（楼中楼、编辑、删除、排序、级联删除）+ 通知系统（评论通知、通知中心）
 - v1.8.0 (2026-01-23): 草稿功能（博客状态、草稿箱、保存草稿/发布）
 - v1.7.0 (2026-01-23): 富文本编辑器与媒体管理（图片自动压缩、视频服务器端压缩、媒体自动清理）
@@ -64,7 +66,8 @@ Authorization: Bearer {access_token}
 - 用户管理（查看/更新个人信息）
 - 创建博客
 - 编辑/删除博客
-- 评论功能（计划中）
+- 点赞/收藏功能
+- 评论功能
 
 **公开接口：**
 - 注册/登录
@@ -776,6 +779,888 @@ Authorization: Bearer {access_token}
   "detail": "博客不存在"
 }
 ```
+
+---
+
+## 点赞与收藏系统 (Likes & Favorites)
+
+点赞与收藏系统允许用户表达对博客的喜爱，并支持收藏文件夹管理、权限控制和作者通知功能。
+
+**功能特性：**
+- 点赞/收藏博客（允许作者对自己的博客点赞/收藏）
+- 收藏文件夹管理（创建、重命名、设置权限）
+- 文件夹权限：公开（其他用户可查看）/ 私有（仅自己可见）
+- 作者通知：点赞/收藏后通知博客作者
+- 一键切换：点击即可点赞/取消点赞、收藏/取消收藏（无需确认）
+
+**设计要点：**
+- 防重复：同一用户对同一博客只能点赞/收藏一次
+- 乐观更新：前端点击立即更新 UI，失败时回滚
+- 级联删除：博客或用户删除时自动清理关联数据
+- 计数冗余：Blog 表存储 `likes_count` 和 `favorites_count`，避免频繁 COUNT 查询
+
+---
+
+### 1.1 点赞博客
+
+点赞博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**成功响应（200）：**
+```json
+{
+  "liked": true,
+  "likes_count": 42
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | boolean | 是否已点赞（始终为 true） |
+| likes_count | integer | 当前点赞总数 |
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**失败响应（409）：**
+```json
+{
+  "detail": "已经点赞过了"
+}
+```
+
+**后端逻辑：**
+1. 检查博客是否存在
+2. 检查用户是否已点赞（复合唯一索引 `user_id + blog_id`）
+3. 创建 Like 记录，递增 `blogs.likes_count`
+4. 创建通知（如果点赞者不是作者）：
+   ```json
+   {
+     "type": "blog_liked",
+     "user_id": {作者ID},
+     "content": "{点赞者昵称} 点赞了你的博客《{博客标题}》",
+     "target_type": "blog",
+     "target_id": {博客ID}
+   }
+   ```
+5. 返回点赞状态和总数
+
+---
+
+### 1.2 取消点赞
+
+取消点赞博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**成功响应（200）：**
+```json
+{
+  "liked": false,
+  "likes_count": 41
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | boolean | 是否已点赞（始终为 false） |
+| likes_count | integer | 当前点赞总数 |
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "未点赞过该博客"
+}
+```
+
+**后端逻辑：**
+1. 检查点赞记录是否存在
+2. 删除 Like 记录，递减 `blogs.likes_count`
+3. 返回点赞状态和总数
+
+---
+
+### 1.3 查询点赞状态
+
+查询当前用户对博客的点赞状态（可选认证）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**成功响应（200）- 已登录：**
+```json
+{
+  "is_liked": true,
+  "likes_count": 42
+}
+```
+
+**成功响应（200）- 未登录：**
+```json
+{
+  "is_liked": false,
+  "likes_count": 42
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| is_liked | boolean | 当前用户是否已点赞（未登录时为 false） |
+| likes_count | integer | 当前点赞总数 |
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**后端逻辑：**
+- 已登录：查询 Like 表判断 `is_liked`
+- 未登录：`is_liked = false`
+- 始终返回 `likes_count`（从 Blog 表）
+
+---
+
+### 2.1 创建收藏文件夹
+
+创建收藏文件夹（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "name": "前端技术",
+  "is_public": true
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 是 | 文件夹名称（1-50字符） |
+| is_public | boolean | 否 | 是否公开，默认 `true` |
+
+**成功响应（201）：**
+```json
+{
+  "id": 1,
+  "name": "前端技术",
+  "is_public": true,
+  "favorites_count": 0,
+  "created_at": "2025-01-25T10:00:00.000000Z"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | integer | 文件夹 ID |
+| name | string | 文件夹名称 |
+| is_public | boolean | 是否公开 |
+| favorites_count | integer | 收藏数量 |
+| created_at | string | 创建时间 |
+
+**失败响应（400）：**
+```json
+{
+  "detail": "文件夹名称不能为空"
+}
+```
+
+或
+
+```json
+{
+  "detail": "文件夹名称已存在"
+}
+```
+
+**后端逻辑：**
+1. 验证名称非空、长度限制
+2. 检查同名文件夹（同一用户下）
+3. 创建 FavoriteFolder 记录
+4. 返回文件夹信息
+
+---
+
+### 2.2 获取收藏文件夹列表
+
+获取当前用户的收藏文件夹列表（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "folders": [
+    {
+      "id": 1,
+      "name": "前端技术",
+      "is_public": true,
+      "favorites_count": 5,
+      "created_at": "2025-01-25T10:00:00.000000Z"
+    },
+    {
+      "id": 2,
+      "name": "算法学习",
+      "is_public": false,
+      "favorites_count": 3,
+      "created_at": "2025-01-25T11:30:00.000000Z"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| folders | array | 文件夹列表 |
+| folders[].id | integer | 文件夹 ID |
+| folders[].name | string | 文件夹名称 |
+| folders[].is_public | boolean | 是否公开 |
+| folders[].favorites_count | integer | 收藏数量 |
+| folders[].created_at | string | 创建时间 |
+
+**后端逻辑：**
+1. 查询当前用户的所有文件夹
+2. 统计每个文件夹的收藏数量（LEFT JOIN Favorite 表）
+3. 按创建时间倒序返回
+
+---
+
+### 2.3 更新收藏文件夹
+
+更新收藏文件夹名称或权限（需要认证，仅创建者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| folder_id | integer | 文件夹 ID |
+
+**请求体：**
+```json
+{
+  "name": "前端开发技术",
+  "is_public": false
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 否 | 新文件夹名称（1-50字符） |
+| is_public | boolean | 否 | 是否公开 |
+
+**成功响应（200）：**
+```json
+{
+  "id": 1,
+  "name": "前端开发技术",
+  "is_public": false,
+  "favorites_count": 5,
+  "created_at": "2025-01-25T10:00:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限修改此文件夹"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查文件夹是否存在
+2. 验证是否为创建者
+3. 更新指定字段（仅更新提供的字段）
+4. 返回更新后的文件夹信息
+
+---
+
+### 2.4 删除收藏文件夹
+
+删除收藏文件夹（需要认证，仅创建者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| folder_id | integer | 文件夹 ID |
+
+**成功响应（204）：**
+无内容
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限删除此文件夹"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查文件夹是否存在
+2. 验证是否为创建者
+3. 删除文件夹及其所有收藏记录（CASCADE）
+
+---
+
+### 2.5 收藏博客
+
+收藏博客到指定文件夹（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**请求体：**
+```json
+{
+  "folder_id": 1
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 是 | 目标文件夹 ID |
+
+**成功响应（200）：**
+```json
+{
+  "favorited": true,
+  "favorites_count": 15
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| favorited | boolean | 是否已收藏（始终为 true） |
+| favorites_count | integer | 当前收藏总数 |
+
+**失败响应（400）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+或
+
+```json
+{
+  "detail": "不能收藏到别人的私有文件夹"
+}
+```
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**失败响应（409）：**
+```json
+{
+  "detail": "该博客已在此文件夹中"
+}
+```
+
+**后端逻辑：**
+1. 检查博客和文件夹是否存在
+2. 验证文件夹权限（私有文件夹仅创建者可添加）
+3. 检查是否已收藏（复合唯一索引 `user_id + blog_id + folder_id`）
+4. 创建 Favorite 记录，递增 `blogs.favorites_count`
+5. 创建通知（如果收藏者不是作者）：
+   ```json
+   {
+     "type": "blog_favorited",
+     "user_id": {作者ID},
+     "content": "{收藏者昵称} 收藏了你的博客《{博客标题}》",
+     "target_type": "blog",
+     "target_id": {博客ID}
+   }
+   ```
+6. 返回收藏状态和总数
+
+**注意：**
+- 允许收藏博客到多个文件夹
+- 同一文件夹内不能重复收藏
+
+---
+
+### 2.6 取消收藏
+
+取消收藏博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**请求体（可选）：**
+```json
+{
+  "folder_id": 1
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 否 | 指定文件夹 ID（不提供则从所有文件夹移除） |
+
+**成功响应（200）：**
+```json
+{
+  "favorited": false,
+  "favorites_count": 14
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| favorited | boolean | 是否已收藏（如果从所有文件夹移除则为 false） |
+| favorites_count | integer | 当前收藏总数 |
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+或
+
+```json
+{
+  "detail": "未收藏过该博客"
+}
+```
+
+**后端逻辑：**
+1. 检查收藏记录是否存在
+2. 删除 Favorite 记录，递减 `blogs.favorites_count`
+3. 如果博客在其他文件夹中仍有收藏，`favorited` 返回 `true`
+4. 返回收藏状态和总数
+
+---
+
+### 2.7 查询收藏状态
+
+查询当前用户对博客的收藏状态（可选认证）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 否 | 筛选指定文件夹的收藏状态 |
+
+**成功响应（200）- 已登录：**
+```json
+{
+  "is_favorited": true,
+  "folders": [
+    {
+      "id": 1,
+      "name": "前端技术"
+    },
+    {
+      "id": 3,
+      "name": "必读文章"
+    }
+  ],
+  "favorites_count": 15
+}
+```
+
+**成功响应（200）- 未登录：**
+```json
+{
+  "is_favorited": false,
+  "folders": [],
+  "favorites_count": 15
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| is_favorited | boolean | 当前用户是否已收藏（未登录时为 false） |
+| folders | array | 收藏所在的文件夹列表 |
+| folders[].id | integer | 文件夹 ID |
+| folders[].name | string | 文件夹名称 |
+| favorites_count | integer | 当前收藏总数 |
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**后端逻辑：**
+- 已登录：查询 Favorite 表，返回收藏的文件夹列表
+- 未登录：`is_favorited = false`，`folders = []`
+- 始终返回 `favorites_count`（从 Blog 表）
+
+---
+
+### 2.8 获取文件夹收藏列表
+
+获取指定文件夹的收藏博客列表（需要认证，仅创建者可查看私有文件夹）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| folder_id | integer | 文件夹 ID |
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码，默认 1 |
+| size | integer | 否 | 每页数量，默认 20，最大 100 |
+
+**成功响应（200）：**
+```json
+{
+  "folder": {
+    "id": 1,
+    "name": "前端技术",
+    "is_public": true,
+    "favorites_count": 5
+  },
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 10,
+      "title": "React Hooks 完全指南",
+      "excerpt": "React Hooks 是 React 16.8 引入的新特性...",
+      "author": "张三",
+      "author_id": 2,
+      "author_avatar_url": "/static/avatars/abc123.jpg",
+      "views": 128,
+      "likes_count": 42,
+      "favorites_count": 15,
+      "is_liked": true,
+      "is_favorited": true,
+      "created_at": "2025-01-25T10:00:00.000000Z",
+      "favorited_at": "2025-01-25T12:30:00.000000Z"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| folder | object | 文件夹信息 |
+| total | integer | 总收藏数 |
+| page | integer | 当前页码 |
+| size | integer | 每页数量 |
+| items | array | 博客列表 |
+| items[].favorited_at | string | 收藏时间（按此倒序） |
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限查看此文件夹"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查文件夹是否存在
+2. 验证权限（创建者或公开文件夹）
+3. 查询收藏记录，LEFT JOIN Blog 和 Author
+4. 按收藏时间倒序分页返回
+5. 附带当前用户的点赞/收藏状态
+
+---
+
+### 3.1 获取用户的所有收藏
+
+获取当前用户在所有文件夹中的收藏博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码，默认 1 |
+| size | integer | 否 | 每页数量，默认 20，最大 100 |
+
+**成功响应（200）：**
+```json
+{
+  "total": 12,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 10,
+      "title": "React Hooks 完全指南",
+      "excerpt": "React Hooks 是 React 16.8 引入的新特性...",
+      "author": "张三",
+      "author_id": 2,
+      "author_avatar_url": "/static/avatars/abc123.jpg",
+      "views": 128,
+      "likes_count": 42,
+      "favorites_count": 15,
+      "is_liked": true,
+      "is_favorited": true,
+      "created_at": "2025-01-25T10:00:00.000000Z",
+      "folders": [
+        {
+          "id": 1,
+          "name": "前端技术"
+        }
+      ],
+      "favorited_at": "2025-01-25T12:30:00.000000Z"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items[].folders | array | 收藏所在的文件夹列表 |
+| items[].favorited_at | string | 最早收藏时间 |
+
+**后端逻辑：**
+1. 查询当前用户的所有收藏记录
+2. 使用 DISTINCT ON (blog_id) 去重（同一博客可能在多个文件夹）
+3. 按收藏时间倒序分页返回
+4. 附带文件夹列表和点赞/收藏状态
+
+---
+
+### 3.2 获取公开收藏
+
+获取指定用户的公开收藏（可选认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token} (可选)
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| user_id | integer | 用户 ID |
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 否 | 筛选指定文件夹 |
+| page | integer | 否 | 页码，默认 1 |
+| size | integer | 否 | 每页数量，默认 20，最大 100 |
+
+**成功响应（200）：**
+```json
+{
+  "user": {
+    "id": 2,
+    "nickname": "张三",
+    "avatar_url": "/static/avatars/abc123.jpg"
+  },
+  "folder": {
+    "id": 1,
+    "name": "前端技术",
+    "favorites_count": 5
+  },
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "items": [...]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| user | object | 用户信息 |
+| folder | object | 文件夹信息（如果指定 folder_id） |
+| items | array | 博客列表 |
+
+**失败响应（403）：**
+```json
+{
+  "detail": "该文件夹未公开"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "用户不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查用户是否存在
+2. 查询用户的公开文件夹（`is_public = true`）
+3. 如果指定 `folder_id`，验证是否为公开文件夹
+4. 返回收藏列表
 
 ---
 
@@ -3207,6 +4092,8 @@ Content-Type: application/json
 | author_id | Integer | 作者ID | FOREIGN KEY → users.id, NOT NULL |
 | author_name | String(50) | 作者名（冗余） | NOT NULL |
 | views | Integer | 阅读次数 | DEFAULT 0 |
+| likes_count | Integer | 点赞数（冗余） | DEFAULT 0 |
+| favorites_count | Integer | 收藏数（冗余） | DEFAULT 0 |
 | created_at | DateTime | 创建时间 | DEFAULT utcnow() |
 | updated_at | DateTime | 更新时间 | |
 
@@ -3320,6 +4207,86 @@ Content-Type: application/json
 
 ---
 
+### Like（点赞）
+
+**数据库表名：** `likes`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 点赞者ID | FOREIGN KEY → users.id, NOT NULL |
+| blog_id | Integer | 博客ID | FOREIGN KEY → blogs.id, NOT NULL |
+| created_at | DateTime | 点赞时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_blog`: (user_id, blog_id) 复合唯一索引（防止重复点赞）
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+- `blog_id` → `blogs.id` (ON DELETE CASCADE)
+
+**说明：**
+- 使用复合唯一索引 `(user_id, blog_id)` 防止用户重复点赞
+- 用户可以点赞自己的博客
+- 点赞后自动创建通知给博客作者（如果点赞者不是作者）
+
+---
+
+### FavoriteFolder（收藏文件夹）
+
+**数据库表名：** `favorite_folders`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 创建者ID | FOREIGN KEY → users.id, NOT NULL |
+| name | String(50) | 文件夹名称 | NOT NULL |
+| is_public | Boolean | 是否公开 | DEFAULT true |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_id`: user_id
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+
+**说明：**
+- `is_public`: 公开文件夹可被其他用户查看，私有文件夹仅创建者可见
+- 默认文件夹为公开（`is_public = true`）
+- 用户删除时，所有文件夹及收藏自动删除（CASCADE）
+
+---
+
+### Favorite（收藏）
+
+**数据库表名：** `favorites`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 收藏者ID | FOREIGN KEY → users.id, NOT NULL |
+| blog_id | Integer | 博客ID | FOREIGN KEY → blogs.id, NOT NULL |
+| folder_id | Integer | 文件夹ID | FOREIGN KEY → favorite_folders.id, NOT NULL |
+| created_at | DateTime | 收藏时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_blog_folder`: (user_id, blog_id, folder_id) 复合唯一索引（防止重复收藏）
+- `idx_folder_id`: folder_id
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+- `blog_id` → `blogs.id` (ON DELETE CASCADE)
+- `folder_id` → `favorite_folders.id` (ON DELETE CASCADE)
+
+**说明：**
+- 使用复合唯一索引 `(user_id, blog_id, folder_id)` 防止在同一文件夹重复收藏
+- 允许将同一博客收藏到多个不同文件夹
+- 用户可以收藏自己的博客
+- 收藏后自动创建通知给博客作者（如果收藏者不是作者）
+- 文件夹删除时，所有收藏自动删除（CASCADE）
+
+---
+
 ### Notification（用户通知）
 
 **数据库表名：** `notifications`
@@ -3359,6 +4326,8 @@ Content-Type: application/json
 | `comment_reply` | "{nickname} 回复了你的评论" | 有人回复了你的评论 | comment | 被回复的评论 ID |
 | `blog_comment` | "{nickname} 评论了你的博客《{blog_title}》" | 有人评论了你的博客 | blog | 博客 ID |
 | `comment_reply_blog` | "{nickname} 回复了你博客下的评论" | 有人回复了你博客下的评论 | comment | 被回复的评论 ID |
+| `blog_liked` | "{nickname} 点赞了你的博客《{blog_title}》" | 有人点赞了你的博客 | blog | 博客 ID |
+| `blog_favorited` | "{nickname} 收藏了你的博客《{blog_title}》" | 有人收藏了你的博客 | blog | 博客 ID |
 | `system` | "系统通知" | 管理员发送系统通知 | NULL | NULL |
 
 ---
@@ -4054,12 +5023,7 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
    - `GET /api/search` - 全站搜索
    - 支持搜索博客、用户、评论等
 
-2. **点赞/收藏功能**：
-   - `POST /api/blogs/:blog_id/like` - 点赞博客
-   - `POST /api/blogs/:blog_id/favorite` - 收藏博客
-   - `GET /api/users/me/favorites` - 获取收藏列表
-
-3. **评论功能增强**（v1.9.0 已完成基础版）：
+2. **评论功能增强**（v1.9.0 已完成基础版）：
    - ✅ 楼中楼回复
    - ✅ 编辑评论
    - ✅ 排序方式
