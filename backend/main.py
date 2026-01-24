@@ -62,6 +62,9 @@ async def startup_event() -> None:
     upload_dir.mkdir(parents=True, exist_ok=True)
 
 
+# Create uploads directory before mounting static files
+Path("uploads").mkdir(exist_ok=True)
+
 # Routers keep related endpoints grouped. Add new modules under routers/.
 app.include_router(auth.router)
 app.include_router(blogs.router)
