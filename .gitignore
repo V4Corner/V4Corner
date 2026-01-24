@@ -78,9 +78,11 @@ coverage/
 *.pid.lock
 .cache/
 
-# Local Development Scripts (避免提交到仓库)
+# Local Development Files (避免提交到仓库)
 local-dev/
+.local-only/
 *.bat
 DEV_STARTUP.md
 health-check.py
-nul
+README_LOCAL_DEV.md
+REMINDER.md
