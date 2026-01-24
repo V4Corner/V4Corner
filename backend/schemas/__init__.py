@@ -16,6 +16,10 @@ from .user import (
     UserPublic,
     AvatarUploadResponse,
 )
+from .auth import (
+    AuthResponse,
+    RefreshTokenResponse,
+)
 from .chat import (
     ConversationCreate,
     ConversationUpdate,
@@ -43,6 +47,11 @@ from .calendar_event import (
     CalendarEventUpdate,
     CalendarEventRead,
     CalendarEventListResponse,
+)
+from .verification import (
+    VerificationRequest,
+    VerificationVerify,
+    VerificationResponse,
 )
 from .notice import (
     NoticeCreate,
@@ -84,6 +93,8 @@ __all__ = [
     "UserRead",
     "UserPublic",
     "AvatarUploadResponse",
+    "AuthResponse",
+    "RefreshTokenResponse",
     "ConversationCreate",
     "ConversationUpdate",
     "ConversationListItem",
@@ -106,6 +117,9 @@ __all__ = [
     "CalendarEventUpdate",
     "CalendarEventRead",
     "CalendarEventListResponse",
+    "VerificationRequest",
+    "VerificationVerify",
+    "VerificationResponse",
     "NoticeCreate",
     "NoticeUpdate",
     "NoticeListItem",

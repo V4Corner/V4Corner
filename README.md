@@ -63,6 +63,7 @@ V4Corner 是**行健-车辆4班**打造的班级在线空间，用来集中展�
 
 ### 🔐 用户认证
 - 用户注册和登录
+- **邮件验证码**（注册需要邮箱验证）
 - JWT Token 认证
 - 个人中心管理
 
@@ -338,6 +339,90 @@ AI_TIMEOUT=30           # API 超时时间（秒）
 ```
 
 详细配置说明：参考 `backend/.env.example` 文件中的注释
+
+### 📧 启用邮件验证码功能
+
+系统使用 **QQ 邮箱 SMTP** 发送验证码邮件。
+
+#### 快速配置
+
+```bash
+cd backend
+
+# 1. 编辑 .env 文件
+ALIYUN_ACCOUNT_NAME=your-email@qq.com
+ALIYUN_FROM_ALIAS=V4Corner
+QQ_MAIL_PASSWORD=your-authorization-code
+
+# 2. 获取 QQ 邮箱授权码
+# 登录 QQ 邮箱 -> 设置 -> 账户 -> 开启 IMAP/SMTP
+# 手机验证后会显示授权码（不是登录密码！）
+
+# 3. 重启后端服务
+uvicorn main:app --reload
+```
+
+#### 🔧 Bug 修复（v1.4.1）
+
+- **验证码冷却倒计时优化** - 修复倒计时显示异常（2秒1跳问题）
+- **页面刷新冷却保持** - 优化冷却时间计算逻辑，确保刷新后时间准确
+
+#### 配置步骤详解
+
+1. **获取 QQ 邮箱授权码**
+   - 访问 https://mail.qq.com 登录 QQ 邮箱
+   - 点击顶部"设置"
+   - 选择"账户"标签
+   - 找到"POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务"
+   - 点击"开启 IMAP/SMTP 服务"
+   - 按提示发送短信验证
+   - 验证成功后，系统会显示**16位授权码**
+   - 复制授权码并填入 `.env` 的 `QQ_MAIL_PASSWORD`
+
+2. **配置环境变量**
+   ```bash
+   # backend/.env
+   ALIYUN_ACCOUNT_NAME=your-email@qq.com    # 你的 QQ 邮箱
+   QQ_MAIL_PASSWORD=xxxxxxxxxxxx            # 16位授权码（不是密码！）
+   ```
+
+3. **测试邮件发送**
+   ```bash
+   cd backend
+   python test_email.py
+   ```
+
+4. **使用模拟模式（开发测试）**
+   - 不配置 `QQ_MAIL_PASSWORD` 时，系统自动使用模拟模式
+   - 验证码会输出到后端控制台
+   - 适合快速开发测试
+
+#### 邮件模板特点
+
+- **精美的 HTML 邮件**：渐变背景、卡片式设计
+- **验证码高亮显示**：大字体、醒目样式
+- **有效期提醒**：明确标注 5 分钟有效期
+- **安全提示**：提醒用户注意账号安全
+
+#### 测试验证码功能
+
+1. **启动服务**
+   ```bash
+   # 后端
+   cd backend
+   uvicorn main:app --reload
+
+   # 前端
+   cd frontend
+   npm run dev
+   ```
+
+2. **测试注册流程**
+   - 访问 http://localhost:3000/register
+   - 输入邮箱
+   - 点击"发送验证码"
+   - 检查邮箱收件箱（或查看控制台模拟输出）
+   - 输入验证码完成注册
 
 #### 后端测试脚本
 
