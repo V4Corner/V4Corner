@@ -20,6 +20,27 @@ export async function getUserById(userId: number): Promise<UserPublic> {
   return get<UserPublic>(`/api/users/${userId}`);
 }
 
-export async function getUserBlogs(userId: number, page: number = 1, size: number = 10): Promise<BlogListResponse> {
-  return get<BlogListResponse>(`/api/users/${userId}/blogs?page=${page}&size=${size}`);
+export async function getUserBlogs(
+  userId: number,
+  params?: {
+    page?: number;
+    size?: number;
+    q?: string;
+    sort_by?: string;
+    sort_order?: string;
+    date_from?: string;
+    date_to?: string;
+  }
+): Promise<BlogListResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.size) queryParams.append('size', params.size.toString());
+  if (params?.q) queryParams.append('q', params.q);
+  if (params?.sort_by) queryParams.append('sort_by', params.sort_by);
+  if (params?.sort_order) queryParams.append('sort_order', params.sort_order);
+  if (params?.date_from) queryParams.append('date_from', params.date_from);
+  if (params?.date_to) queryParams.append('date_to', params.date_to);
+
+  const queryString = queryParams.toString();
+  return get<BlogListResponse>(`/api/users/${userId}/blogs${queryString ? `?${queryString}` : ''}`);
 }

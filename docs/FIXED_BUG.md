@@ -4,7 +4,499 @@
 
 ---
 
-## v1.3.1 相关 BUG（2026-01-23）
+## v2.1.1 相关 BUG（2026-01-25）
+
+### BUG #16: 未登录用户访问博客/通知详情页时 Pydantic 验证错误
+
+**问题描述：**
+- 未登录用户访问博客详情页时返回 500 错误
+- 错误信息：`1 validation error for BlogRead is_owner Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]`
+- F12 控制台显示：`XHRGET http://localhost:8000/api/blogs/42 [HTTP/1.1 500 Internal Server Error]`
+- 同样的问题出现在班级通知详情页，报错：`is_owner` 和 `can_edit` 字段验证失败
+
+**根本原因：**
+1. **Python and 运算符特性**：
+   - 在 Python 中，`None and <anything>` 的返回值是 `None`（不是 `False`）
+   - 当用户未登录时，`current_user` 为 `None`
+   - `is_owner = current_user and current_user.id == blog.author_id` 返回 `None`
+   - Pydantic schema 验证期望 `is_owner` 是布尔值，但收到的是 `None`
+
+2. **涉及的代码位置**：
+   - `backend/routers/blogs.py:180` - 博客详情接口
+   - `backend/schemas/notice.py:75` - 通知详情 schema
+
+**修复方案：**
+
+1. **博客详情接口**（`backend/routers/blogs.py`）：
+   ```python
+   # 修复前
+   is_owner = current_user and current_user.id == blog.author_id
+
+   # 修复后
+   is_owner = current_user is not None and current_user.id == blog.author_id
+   ```
+
+2. **通知详情 Schema**（`backend/schemas/notice.py`）：
+   ```python
+   # 修复前
+   is_owner = current_user and current_user.id == notice.author_id
+   can_edit = is_owner  # 只有作者可以编辑
+
+   # 修复后
+   is_owner = current_user is not None and current_user.id == notice.author_id
+   can_edit = is_owner  # 只有作者可以编辑
+   ```
+
+3. **修复原理**：
+   - 使用 `is not None` 显式检查，确保返回布尔值
+   - 当 `current_user` 为 `None` 时，表达式短路返回 `False`（不是 `None`）
+   - Pydantic 验证通过，因为接收到布尔类型
+
+**影响范围：**
+- `backend/routers/blogs.py`
+- `backend/schemas/notice.py`
+
+**测试验证：**
+1. 退出登录状态 ✅
+2. 访问博客详情页，正常显示 ✅
+3. 访问通知详情页，正常显示 ✅
+4. `is_owner` 和 `can_edit` 字段均为 `false` ✅
+5. 登录后访问，字段值正确判断 ✅
+
+**经验教训：**
+- Python 的 `and`/`or` 运算符返回操作数之一，不一定是布尔值
+- 涉及 Pydantic 验证的字段必须确保类型正确
+- 布尔字段判断应该使用显式比较：`x is not None and x.y == z`
+- 参考：`comments.py` 中已正确使用 `bool()` 转换
+
+---
+
+## v2.0.0 相关 BUG（2026-01-25）
+
+### BUG #12: 路由参数验证错误 - favorites 被解析为 user_id
+
+**问题描述：**
+- 访问 `/api/users/favorites` 时返回 422 错误
+- 错误信息：`Input should be a valid integer, unable to parse string as an integer`
+- F12 控制台显示：`XHRGET http://localhost:8000/api/users/favorites?page=1&size=20 [HTTP/1.1 422 Unprocessable Entity]`
+
+**根本原因：**
+1. **路由注册顺序错误**：
+   - `users.router` 在 `favorites.router` 之前注册
+   - `users.py` 有路由 `GET /api/users/{user_id}`
+   - `favorites.py` 有路由 `GET /api/users/favorites`
+   - FastAPI 按注册顺序匹配，`/api/users/favorites` 被 `/api/users/{user_id}` 匹配
+   - FastAPI 尝试将 "favorites" 解析为整数 `user_id`，导致验证失败
+
+2. **路由设计问题**：
+   - 两个路由器都有 `/api/users/` 前缀下的路由
+   - `users.router` 使用 `prefix="/api/users"`，路由为 `/{user_id}`
+   - `favorites.router` 使用 `prefix="/api"`，路由为 `/users/favorites`
+   - 最终完整路径都是 `/api/users/...`，容易冲突
+
+**修复方案：**
+
+1. **调整路由注册顺序**（`backend/main.py`）：
+   ```python
+   # 修复前
+   app.include_router(users.router)      # 先注册
+   app.include_router(favorites.router)  # 后注册
+
+   # 修复后
+   app.include_router(favorites.router)  # 先注册（特定路由）
+   app.include_router(users.router)      # 后注册（参数化路由）
+   ```
+
+2. **原理**：
+   - FastAPI 按路由注册顺序匹配请求
+   - 先注册特定路由（`/users/favorites`），后注册参数化路由（`/users/{user_id}`）
+   - 确保 `/users/favorites` 不会被 `/users/{user_id}` 抢先匹配
+
+**验证方法：**
+```bash
+curl "http://localhost:8000/api/users/favorites?page=1&size=20"
+# 预期结果：{"detail":"Not authenticated"} （需要认证，而非参数验证错误）
+```
+
+**经验教训：**
+- FastAPI 路由匹配顺序很重要
+- 特定路由必须在参数化路由之前注册
+- 当多个路由器共享前缀时，注意路由注册顺序
+
+---
+
+### BUG #13: 重复函数定义导致代码冗余
+
+**问题描述：**
+- `backend/routers/favorites.py` 文件末尾有重复代码
+- `get_folder_favorites` 函数定义了两次
+- 第一次在 line 382，第二次在 line 574（缺少装饰器）
+
+**根本原因：**
+- 之前编辑文件时，移动了函数位置但未删除原函数
+- 导致同一个功能有两份代码实现
+- 文件长度异常（662 行，正常应为约 570 行）
+
+**修复方案：**
+删除 line 574-661 的重复函数定义，保留 line 382-469 的原始函数
+
+**影响：**
+- 代码冗余，增加维护成本
+- 如果两份代码逻辑不一致，会导致不可预测的行为
+- 不会影响功能运行（因为第二个定义缺少装饰器，不会被注册为路由）
+
+---
+
+### BUG #14: 收藏页面刷新后重定向到登录页
+
+**问题描述：**
+- 已登录用户访问"我的收藏"页面（`/favorites`）正常
+- 刷新页面后重定向到 `/login`
+- 即使已经登录，仍然要求重新登录
+
+**根本原因：**
+- `Favorites.tsx` 组件在 `useEffect` 中检查 `isAuthenticated`
+- `AuthContext` 的 `isLoading` 状态为 `true` 时，`isAuthenticated` 暂时为 `false`
+- 组件在认证状态加载完成前就执行了导航逻辑
+- 时序问题：
+  1. 页面加载，`isLoading=true`, `isAuthenticated=false`
+  2. `useEffect` 立即执行，检测到 `!isAuthenticated`，导航到 `/login`
+  3. `AuthContext` 加载完成，`isLoading=false`, `isAuthenticated=true`
+  4. 但已经重定向到登录页
+
+**修复方案：**
+
+修改 `frontend/src/routes/Favorites.tsx`：
+```typescript
+// 修复前
+useEffect(() => {
+  if (!isAuthenticated) {
+    navigate('/login');
+    return;
+  }
+  // fetch favorites...
+}, [isAuthenticated, page, navigate]);
+
+if (loading) {
+  return <div>Loading...</div>;
+}
+
+// 修复后
+const { isAuthenticated, isLoading } = useAuth();
+
+useEffect(() => {
+  if (isLoading) {
+    return;  // 等待认证状态加载完成
+  }
+
+  if (!isAuthenticated) {
+    navigate('/login');
+    return;
+  }
+  // fetch favorites...
+}, [isAuthenticated, isLoading, page, navigate]);
+
+if (isLoading || loading) {  // 同时检查两个加载状态
+  return <div>Loading...</div>;
+}
+```
+
+**关键点：**
+1. 从 `useAuth()` 解构出 `isLoading` 状态
+2. `useEffect` 中先检查 `isLoading`，如果正在加载则直接返回
+3. 渲染时同时检查 `isLoading || loading`
+4. `useEffect` 依赖项添加 `isLoading`
+
+**经验教训：**
+- 所有需要认证的页面都应该检查 `isLoading` 状态
+- 使用 `AuthContext` 时，始终按 `isLoading` → `isAuthenticated` 顺序检查
+- 导航逻辑应该在认证状态完全加载后执行
+
+---
+
+### BUG #15: 数据库索引名称冲突
+
+**问题描述：**
+- 运行数据库迁移脚本时报错：`sqlite3.OperationalError: index idx_user_id already exists`
+- 多个表都有名为 `idx_user_id` 的索引
+- SQLite 要求索引名称在同一数据库中唯一
+
+**根本原因：**
+- 不同表使用了相同的索引名称
+- `favorite_folders` 表有索引 `idx_user_id`
+- `favorites` 表也想创建索引 `idx_user_id`
+- 索引名称没有表前缀，导致冲突
+
+**涉及的索引：**
+- `favorite_folders.user_id` → `idx_user_id` ❌
+- `favorites.user_id` → `idx_user_id` ❌
+- `favorites(folder_id)` → `idx_folder_id` ❌（可能与未来的表冲突）
+
+**修复方案：**
+
+1. **修改模型定义**，添加表前缀：
+   ```python
+   # favorite_folders.py
+   Index('idx_favorite_folders_user_id', 'user_id'),
+
+   # favorites.py
+   Index('idx_favorites_user_blog_folder', 'user_id', 'blog_id', 'folder_id', unique=True),
+   Index('idx_favorites_folder_id', 'folder_id'),
+   ```
+
+2. **创建清理脚本** `backend/fix_duplicate_indexes.py`：
+   - 删除旧的冲突索引
+   - 重新创建带前缀的索引
+
+**经验教训：**
+- 数据库索引名称应该包含表前缀
+- 命名格式：`idx_{table_name}_{column_name(s)}`
+- 避免使用通用名称（如 `idx_user_id`）
+
+---
+
+## v1.8.0 相关 BUG（2026-01-24）
+
+### BUG #8: 数据库缺少 status 列导致查询失败
+
+**问题描述：**
+- 访问博客相关页面时出现 `sqlite3.OperationalError: no such column: blogs.status`
+- F12 控制台显示 500 错误
+- 影响功能：
+  - 用户个人中心无法加载
+  - 博客列表页无法显示
+
+**根本原因：**
+1. **模型更新但数据库未迁移**：
+   - Blog 模型添加了 `status` 字段
+   - SQLite 数据库中还没有这个列
+   - SQLAlchemy 尝试查询不存在的列导致错误
+
+2. **多处代码依赖 status 字段**：
+   - `users.py` 中的 `get_user_blogs()` 函数查询博客时
+   - 所有创建 BlogListItem 的地方都需要 status 字段
+
+**修复方案：**
+
+1. **创建数据库迁移脚本**：
+   ```python
+   # backend/migrate_add_status.py
+   - ALTER TABLE blogs ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'published'
+   - CREATE INDEX idx_author_status ON blogs(author_id, status)
+   ```
+
+2. **执行迁移**：
+   ```bash
+   cd backend
+   python migrate_add_status.py
+   ```
+
+3. **更新 users.py 路由**：
+   ```python
+   # 添加 status 字段到 BlogListItem
+   items.append(schemas.BlogListItem(
+       # ... 其他字段
+       status=blog.status,  # ✅ 新增
+   ))
+
+   # 只显示已发布的博客
+   .filter(
+       models.Blog.author_id == user_id,
+       models.Blog.status == "published"  # ✅ 新增
+   )
+   ```
+
+**影响范围：**
+- `backend/models/blog.py`
+- `backend/schemas/blog.py`
+- `backend/routers/blogs.py`
+- `backend/routers/users.py`
+- 数据库（添加列和索引）
+
+**测试验证：**
+1. 运行迁移脚本 ✅
+2. 验证 status 列已添加 ✅
+3. 现有博客自动设置为 published ✅
+4. 个人中心页面正常显示 ✅
+5. 博客列表页正常显示 ✅
+
+**预防措施：**
+- SQLAlchemy 更改模型后及时执行数据库迁移
+- 生产环境应使用 Alembic 管理数据库迁移
+- 开发环境可提供迁移脚本
+
+---
+
+### BUG #9: EditBlog 组件函数引用错误
+
+**问题描述：**
+- 访问编辑博客页面时显示空白页
+- F12 控制台显示：`Uncaught ReferenceError: handleSubmit is not defined`
+- React 错误边界捕获错误
+
+**根本原因：**
+1. **函数重命名但未更新引用**：
+   - 在代码重构时将 `handleSubmit` 重命名为 `handlePublish`
+   - 但表单的 `onSubmit={handleSubmit}` 还在引用旧函数名
+   - 导致运行时找不到函数
+
+2. **按钮类型错误**：
+   - 发布按钮使用 `type="submit"`
+   - 会触发表单的 `onSubmit` 事件
+   - 导致函数调用链断裂
+
+**修复方案：**
+
+1. **移除表单提交逻辑**：
+   ```tsx
+   // 旧代码
+   <form onSubmit={handleSubmit}>
+
+   // 新代码
+   <div className="card">  // 移除 form 标签
+   ```
+
+2. **改为按钮 onClick 处理**：
+   ```tsx
+   // 所有按钮都使用 type="button"
+   <button
+     type="button"  // ✅ 不再是 type="submit"
+     onClick={handlePublish}  // ✅ 直接调用函数
+   >
+     发布博客
+   </button>
+   ```
+
+**影响范围：**
+- `frontend/src/routes/EditBlog.tsx`
+
+**测试验证：**
+1. 刷新编辑博客页面 ✅
+2. 页面正常显示 ✅
+3. 点击"发布博客"按钮正常工作 ✅
+4. 点击"保存草稿"按钮正常工作 ✅
+
+**预防措施：**
+- 重命名函数时使用 IDE 的重命名功能（自动更新引用）
+- 避免在表单中使用多个提交按钮，改为 button + onClick
+- 添加 PropTypes 或 TypeScript 检查
+
+---
+
+### BUG #10: 活动动态链接显示错误
+
+**问题描述：**
+- 最新动态中，成员加入和签到里程碑也显示了超链接
+- 这些活动类型不应该有关联对象的链接
+- 只有博客创建和通知发布才应该显示链接
+
+**根本原因：**
+1. **缺少活动类型检查**：
+   - ActivityFeed 组件渲染链接时没有检查活动类型
+   - 只要 `target_title` 和 `target_url` 存在就显示链接
+   - 但成员加入和签到活动不应该有链接
+
+**修复方案：**
+
+1. **添加活动类型检查**：
+   ```tsx
+   // frontend/src/components/ActivityFeed.tsx
+   {activity.target_title && activity.target_url &&
+    (activity.type === 'blog_created' || activity.type === 'notice_published') && (
+     <Link to={activity.target_url}>{activity.target_title}</Link>
+   )}
+   ```
+
+**影响范围：**
+- `frontend/src/components/ActivityFeed.tsx`
+
+**测试验证：**
+1. 成员加入活动不显示链接 ✅
+2. 签到里程碑活动不显示链接 ✅
+3. 博客创建活动显示链接 ✅
+4. 通知发布活动显示链接 ✅
+
+**预防措施：**
+- 条件渲染时应该明确检查类型，而不是依赖字段是否存在
+- 后端 API 应该保证数据结构的一致性
+
+---
+
+### BUG #11: 签到卡片样式错误
+
+**问题描述：**
+- 运势文字颜色不符合预期（应该大吉/中吉/小吉为红色，其他为黑色）
+- 宜忌卡片有不需要的边框
+- 忌卡片背景色显示为红色（应该是灰色）
+
+**根本原因：**
+1. **缺少颜色逻辑函数**：
+   - CheckInCard 组件直接使用固定颜色
+   - 没有根据运势内容动态判断颜色
+
+2. **CSS 样式冲突**：
+   - 宜忌卡片在 CSS 中定义了边框
+   - 忌卡片有特殊的红色背景样式
+
+**修复方案：**
+
+1. **添加运势颜色函数**：
+   ```tsx
+   // frontend/src/components/CheckInCard.tsx
+   function getFortuneColor(fortune: string): string {
+     if (fortune.includes('大吉') || fortune.includes('中吉') || fortune.includes('小吉')) {
+       return '#dc2626'; // 红色
+     }
+     return '#1f2937'; // 黑色
+   }
+
+   // 应用颜色
+   <div style={{ color: getFortuneColor(result.fortune) }}>
+     {result.fortune}
+   </div>
+   ```
+
+2. **宜忌卡片颜色和样式**：
+   ```tsx
+   // 宜：红色
+   <div className="advice-section-label" style={{ color: '#dc2626' }}>宜</div>
+   <div className="advice-card-title" style={{ color: '#dc2626' }}>{item.title}</div>
+
+   // 忌：黑色
+   <div className="advice-section-label" style={{ color: '#1f2937' }}>忌</div>
+   <div className="advice-card-title" style={{ color: '#1f2937' }}>{item.title}</div>
+   ```
+
+3. **移除卡片边框**：
+   ```css
+   /* frontend/src/styles.css */
+   .advice-card {
+     border: none;  /* 移除边框 */
+   }
+
+   .advice-card.bad {
+     background-color: #f9fafb;  /* 灰色背景 */
+     border: none;
+   }
+   ```
+
+**影响范围：**
+- `frontend/src/components/CheckInCard.tsx`
+- `frontend/src/styles.css`
+
+**测试验证：**
+1. 大吉/中吉/小吉运势显示红色 ✅
+2. 其他运势显示黑色 ✅
+3. 宜标签和标题显示红色 ✅
+4. 忌标签和标题显示黑色 ✅
+5. 忌卡片背景为灰色 ✅
+6. 所有卡片无边框 ✅
+
+**预防措施：**
+- 使用语义化的颜色变量而不是硬编码颜色值
+- 复杂的条件样式应该使用函数而不是内联三元表达式
+
+## v1.6.1 相关 BUG（2026-01-23）
 
 ### BUG #4: 邮件验证码冷却时间在页面刷新后丢失
 
@@ -379,4 +871,4 @@ useEffect(() => {
 
 ---
 
-**最后更新**: 2025-01-19
+**最后更新**: 2026-01-25 (v2.1.1)

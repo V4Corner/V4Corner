@@ -89,15 +89,15 @@ function NoticeList() {
                 <div style={{ flex: 1 }}>
                   {notice.is_important && (
                     <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
                       backgroundColor: '#ef4444',
-                      color: 'white',
-                      padding: '0.25rem 0.6rem',
-                      borderRadius: '12px',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      marginRight: '0.5rem'
+                      marginRight: '0.5rem',
+                      verticalAlign: 'middle',
+                      marginTop: '-0.1rem'
                     }}>
-                      重要
                     </span>
                   )}
                   <h3 style={{ margin: '0.5rem 0', fontSize: '1.1rem', display: 'inline' }}>

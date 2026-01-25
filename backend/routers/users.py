@@ -3,9 +3,11 @@
 import os
 import uuid
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from typing import Optional
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 import dependencies, models, schemas
 
@@ -157,10 +159,16 @@ async def get_user_public_info(
 async def get_user_blogs(
     user_id: int,
     db: dependencies.DbSession,
+    current_user: dependencies.CurrentUserOptional = None,
     page: int = 1,
-    size: int = 10
+    size: int = 10,
+    q: Optional[str] = Query(None, description="搜索关键词（标题/内容）"),
+    sort_by: Optional[str] = Query("created_at", description="排序字段"),
+    sort_order: Optional[str] = Query("desc", description="排序方向"),
+    date_from: Optional[datetime] = Query(None, description="起始日期"),
+    date_to: Optional[datetime] = Query(None, description="结束日期")
 ):
-    """获取指定用户的博客列表"""
+    """获取指定用户的博客列表（仅已发布）"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
 
     if not user:
@@ -169,16 +177,57 @@ async def get_user_blogs(
             detail="用户不存在"
         )
 
+    # 构建查询条件
+    conditions = [
+        models.Blog.author_id == user_id,
+        models.Blog.status == "published"
+    ]
+
+    # 搜索条件
+    if q:
+        search_condition = or_(
+            models.Blog.title.contains(q),
+            models.Blog.content.contains(q)
+        )
+        conditions.append(search_condition)
+
+    # 日期范围筛选
+    if date_from:
+        conditions.append(models.Blog.created_at >= date_from)
+    if date_to:
+        conditions.append(models.Blog.created_at <= date_to)
+
     # 统计总数
-    total = db.query(models.Blog).filter(models.Blog.author_id == user_id).count()
+    total = db.query(models.Blog).filter(*conditions).count()
+
+    # 构建排序
+    sort_column = getattr(models.Blog, sort_by, models.Blog.created_at)
+    if sort_order == "desc":
+        order_by = sort_column.desc()
+    else:
+        order_by = sort_column.asc()
 
     # 查询博客
     from sqlalchemy.orm import joinedload
     blogs = db.query(models.Blog).options(joinedload(models.Blog.author)).filter(
-        models.Blog.author_id == user_id
+        *conditions
     ).order_by(
-        models.Blog.created_at.desc()
+        order_by
     ).offset((page - 1) * size).limit(size).all()
+
+    # 获取当前用户的点赞和收藏信息
+    liked_blog_ids = set()
+    favorited_blog_ids = set()
+    if current_user:
+        liked_blogs = db.query(models.Like.blog_id).filter(
+            models.Like.user_id == current_user.id
+        ).all()
+        liked_blog_ids = {blog_id for (blog_id,) in liked_blogs}
+
+        favorited_blogs = db.query(models.Favorite.blog_id).filter(
+            models.Favorite.user_id == current_user.id
+        ).all()
+        favorited_blog_ids = {blog_id for (blog_id,) in favorited_blogs}
 
     # 构造响应
     items = []
@@ -191,7 +240,12 @@ async def get_user_blogs(
             author=blog.author_name,
             author_id=blog.author_id,
             author_avatar_url=blog.author.avatar_url if blog.author else None,
+            status=blog.status,
             views=blog.views,
+            likes_count=blog.likes_count,
+            favorites_count=blog.favorites_count,
+            is_liked=blog.id in liked_blog_ids,
+            is_favorited=blog.id in favorited_blog_ids,
             created_at=blog.created_at
         ))
 

@@ -58,12 +58,34 @@ async def get_current_user(
 
 
 async def get_current_user_optional(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False))
 ) -> models.User | None:
     """获取当前用户（可选，未登录返回 None）"""
+    if credentials is None:
+        return None
+
     try:
-        return await get_current_user(credentials, db)
+        # 解码 Token
+        token = credentials.credentials
+        payload = auth.decode_token(token)
+        if payload is None:
+            return None
+
+        # 获取用户 ID
+        user_id_raw = payload.get("sub")
+        if user_id_raw is None:
+            return None
+
+        # Convert to int
+        try:
+            user_id = int(user_id_raw)
+        except (ValueError, TypeError):
+            return None
+
+        # 查询用户
+        user = auth.get_user_by_id(db, user_id)
+        return user
     except HTTPException:
         return None
 

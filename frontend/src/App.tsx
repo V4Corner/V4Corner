@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './routes/Home';
 import Blogs from './routes/Blogs';
+import Drafts from './routes/Drafts';
 import BlogDetail from './routes/BlogDetail';
 import CreateBlog from './routes/CreateBlog';
 import EditBlog from './routes/EditBlog';
@@ -16,6 +17,7 @@ import ChatList from './routes/ChatList';
 import ChatDetail from './routes/ChatDetail';
 import NoticeList from './routes/NoticeList';
 import NoticeDetail from './routes/NoticeDetail';
+import Favorites from './routes/Favorites';
 
 // Main layout wires shared navigation + footer around routed pages.
 // Add new pages by registering a new <Route> entry.
@@ -30,6 +32,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blogs/drafts" element={<Drafts />} />
+          <Route path="/favorites" element={<Favorites />} />
           <Route path="/blogs/new" element={<CreateBlog />} />
           <Route path="/blogs/:blogId/edit" element={<EditBlog />} />
           <Route path="/blogs/:blogId" element={<BlogDetail />} />

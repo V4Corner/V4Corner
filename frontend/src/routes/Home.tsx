@@ -7,9 +7,12 @@ import { getLatestNotices } from '../api/notice';
 import { getClassStats } from '../api/stats';
 import CheckInCard from '../components/CheckInCard';
 import ActivityFeed from '../components/ActivityFeed';
+import LikeButton from '../components/LikeButton';
+import FavoriteButton from '../components/FavoriteButton';
+import { formatNumber } from '../utils/formatNumber';
 import type { Announcement } from '../types/announcement';
 import type { CalendarEvent } from '../types/calendar';
-import type { Blog } from '../types/blog';
+import type { BlogListItem } from '../types/blog';
 import type { NoticeMini } from '../types/notice';
 import type { ClassStats } from '../types/stats';
 
@@ -43,18 +46,35 @@ function getEventDetail(event: CalendarEvent): string {
 function Home() {
   const today = new Date();
   const todayKey = toDateKey(today);
-  const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  const monthLabel = `${today.getFullYear()} 年 ${today.getMonth() + 1} 月`;
 
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [blogs, setBlogs] = useState<BlogListItem[]>([]);
   const [notices, setNotices] = useState<NoticeMini[]>([]);
   const [stats, setStats] = useState<ClassStats | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(todayKey);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const monthStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+  const monthLabel = `${currentMonth.getFullYear()} 年 ${currentMonth.getMonth() + 1} 月`;
+
+  const handlePrevMonth = () => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() - 1);
+    setCurrentMonth(newMonth);
+    setSelectedDate(null);
+  };
+
+  const handleNextMonth = () => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + 1);
+    setCurrentMonth(newMonth);
+    setSelectedDate(null);
+  };
+
+  // 加载其他数据（通知、博客、统计）- 只在组件挂载时加载一次
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
@@ -62,25 +82,18 @@ function Home() {
 
     Promise.allSettled([
       getAnnouncements({ page: 1, size: 5 }),
-      getCalendarEvents(monthStr),
-      getBlogs({ page: 1, size: 5 }),
+      getBlogs({ page: 1, size: 6 }),
       getLatestNotices(3),
       getClassStats(),
     ]).then((results) => {
       if (!isMounted) return;
 
-      const [announcementsResult, eventsResult, blogsResult, noticesResult, statsResult] = results;
+      const [announcementsResult, blogsResult, noticesResult, statsResult] = results;
 
       if (announcementsResult.status === 'fulfilled') {
         setAnnouncements(announcementsResult.value.items);
       } else {
         setError(announcementsResult.reason?.message ?? '通知加载失败');
-      }
-
-      if (eventsResult.status === 'fulfilled') {
-        setEvents(eventsResult.value.items);
-      } else {
-        setError(eventsResult.reason?.message ?? '日历加载失败');
       }
 
       if (blogsResult.status === 'fulfilled') {
@@ -107,6 +120,28 @@ function Home() {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  // 加载日历事件 - 只在月份变化时重新加载
+  useEffect(() => {
+    let isMounted = true;
+
+    getCalendarEvents(monthStr)
+      .then((data) => {
+        if (isMounted) {
+          setEvents(data.items);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch calendar events:', err);
+        if (isMounted) {
+          setError(err.message ?? '日历加载失败');
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [monthStr]);
 
   const eventMap = useMemo(() => {
@@ -120,8 +155,8 @@ function Home() {
   }, [events]);
 
   const calendarCells = useMemo(() => {
-    const year = today.getFullYear();
-    const month = today.getMonth();
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
     const firstDay = new Date(year, month, 1);
     const startOffset = (firstDay.getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -143,7 +178,7 @@ function Home() {
       const dateValue = new Date(year, month, dayIndex);
       return { date: dateValue, inCurrentMonth: true };
     });
-  }, [today]);
+  }, [currentMonth]);
 
   if (loading) {
     return <p>加载中...</p>;
@@ -173,15 +208,15 @@ function Home() {
                     <Link to={`/notices/${notice.id}`} className="notice-title">
                       {notice.is_important && (
                         <span style={{
+                          display: 'inline-block',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
                           backgroundColor: '#ef4444',
-                          color: 'white',
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '10px',
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          marginRight: '0.5rem'
+                          marginRight: '0.5rem',
+                          verticalAlign: 'middle',
+                          marginTop: '-0.1rem'
                         }}>
-                          重要
                         </span>
                       )}
                       {notice.title}
@@ -228,19 +263,133 @@ function Home() {
               <h2 className="section-title">精选博客</h2>
               <Link to="/blogs" className="link-inline">查看更多</Link>
             </div>
-            <div className="blog-cards-grid">
-              {blogs.map((blog) => (
-                <Link key={blog.id} to={`/blogs/${blog.id}`} className="blog-card">
-                  <h3 className="blog-card-title">{blog.title}</h3>
-                  <p className="blog-card-excerpt">{blog.excerpt || '暂无摘要'}</p>
-                  <div className="blog-card-meta">
-                    <span>{blog.author}</span>
-                    <span>{formatDate(blog.created_at)}</span>
+
+            {/* 精选博客列表视图 */}
+            <div
+              style={{
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                backgroundColor: 'white',
+                overflow: 'hidden',
+              }}
+            >
+              {blogs.map((blog, index) => (
+                <div
+                  key={blog.id}
+                  style={{
+                    padding: '1rem 1.2rem',
+                    borderBottom: index < blogs.length - 1 ? '1px solid #e2e8f0' : 'none',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: '1rem',
+                    alignItems: 'center',
+                  }}
+                >
+                  {/* 左侧信息 */}
+                  <div style={{ minWidth: 0 }}>
+                    <Link
+                      to={`/blogs/${blog.id}`}
+                      style={{
+                        margin: '0 0 0.4rem 0',
+                        fontSize: '1.1rem',
+                        fontWeight: 600,
+                        color: '#1e293b',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 1,
+                        WebkitBoxOrient: 'vertical',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {blog.title}
+                    </Link>
+                    <p
+                      className="small-muted"
+                      style={{
+                        margin: '0 0 0.6rem 0',
+                        fontSize: '0.9rem',
+                        lineHeight: '1.5',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}
+                    >
+                      {blog.excerpt}
+                    </p>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.25rem',
+                        alignItems: 'center',
+                        fontSize: '0.85rem',
+                        color: '#64748b',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          backgroundColor: '#0f172a',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          flexShrink: 0
+                        }}
+                      >
+                        {blog.author_avatar_url ? (
+                          <img
+                            src={`http://localhost:8000${blog.author_avatar_url}`}
+                            alt={`${blog.author}'s avatar`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <span>{blog.author[0].toUpperCase()}</span>
+                        )}
+                      </div>
+                      <Link
+                        to={`/users/${blog.author_id}`}
+                        style={{
+                          color: '#64748b',
+                          textDecoration: 'none',
+                          cursor: 'pointer',
+                          maxWidth: '7em',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {blog.author}
+                      </Link>
+                      <span>·</span>
+                      <span>{new Date(blog.created_at).toLocaleDateString('zh-CN')}</span>
+                      <span>·</span>
+                      <span>{formatNumber(blog.views)} 次阅读</span>
+                    </div>
                   </div>
-                </Link>
+
+                  {/* 右侧操作按钮 */}
+                  <div
+                    style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}
+                  onClick={(e) => e.stopPropagation()}
+                  >
+                    <LikeButton blogId={blog.id} isLiked={blog.is_liked} likesCount={blog.likes_count} size="sm" />
+                    <FavoriteButton blogId={blog.id} isFavorited={blog.is_favorited} favoritesCount={blog.favorites_count} size="sm" />
+                  </div>
+                </div>
               ))}
-              {blogs.length === 0 && <p className="small-muted">暂无博客推送</p>}
             </div>
+
+            {blogs.length === 0 && <p className="small-muted">暂无博客推送</p>}
           </div>
 
           <ActivityFeed />
@@ -253,7 +402,39 @@ function Home() {
           <div className="card home-section">
             <div className="section-header">
               <h2 className="section-title">班级日历</h2>
-              <span className="section-subtitle">{monthLabel}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  onClick={handlePrevMonth}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '1.2rem',
+                    padding: '0.2rem 0.5rem',
+                    color: '#64748b',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#3b82f6')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+                >
+                  &lt;
+                </button>
+                <span className="section-subtitle">{monthLabel}</span>
+                <button
+                  onClick={handleNextMonth}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '1.2rem',
+                    padding: '0.2rem 0.5rem',
+                    color: '#64748b',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#3b82f6')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+                >
+                  &gt;
+                </button>
+              </div>
             </div>
             <div className="calendar">
               <div className="calendar-weekdays">
