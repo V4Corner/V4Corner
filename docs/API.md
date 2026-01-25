@@ -9,6 +9,7 @@
 - [基础信息](#基础信息)
 - [通用说明](#通用说明)
 - [用户认证](#用户认证)
+- [验证码管理](#验证码管理)
 - [用户管理](#用户管理)
 - [博客管理](#博客管理)
 - [点赞与收藏系统 (Likes & Favorites)](#点赞与收藏系统-likes--favorites)
@@ -42,6 +43,7 @@
 当前版本: `v2.1.2`（开发中）
 
 **版本历史：**
+<<<<<<< HEAD
 - v2.1.2 (2026-01-25): 图标系统统一（SVG 简笔线条风格替代 emoji）
 - v2.1.1 (2026-01-25): 限制系统与体验优化（每日发布限制、草稿箱上限、分页系统、通知详情页重构）
 - v2.1.0 (2026-01-25): 博客搜索与筛选系统（标题/内容搜索、日期范围筛选、多种排序方式、组合筛选）
@@ -50,6 +52,9 @@
 - v1.8.0 (2026-01-23): 草稿功能（博客状态、草稿箱、保存草稿/发布）
 - v1.7.0 (2026-01-23): 富文本编辑器与媒体管理（图片自动压缩、视频服务器端压缩、媒体自动清理）
 - v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）
+=======
+- v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）+ 邮箱验证码功能
+>>>>>>> origin/main
 - v1.5.0 (2026-01-22): 班级通知系统（完整CRUD）、签到系统（运势抽签）、统计数据 API
 - v1.4.0 (2025-01-21): 新增班级通知与日历 API
 - v1.3.0 (2025-01-20): AI 对话 BUG 修复
@@ -148,6 +153,7 @@ Content-Type: application/json
   "email": "zhangsan@example.com",
   "password": "password123",
   "password_confirm": "password123",
+  "verification_code": "123456",
   "nickname": "张三"
 }
 ```
@@ -160,18 +166,35 @@ Content-Type: application/json
 | email | string | 是 | 邮箱格式，唯一 |
 | password | string | 是 | 6-20字符 |
 | password_confirm | string | 是 | 与 password 一致 |
+| verification_code | string | 是 | 邮箱验证码（4-6位），需先调用发送验证码接口 |
 | nickname | string | 否 | 2-20字符 |
+
+**注意：注册前需要先调用发送验证码接口 (`POST /api/verification/send`) 获取邮箱验证码。**
 
 **成功响应（201）：**
 ```json
 {
-  "id": 1,
-  "username": "zhangsan",
-  "email": "zhangsan@example.com",
-  "nickname": "张三",
-  "created_at": "2025-01-10T08:30:00.000000Z"
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 604800,
+  "user": {
+    "id": 1,
+    "username": "zhangsan",
+    "email": "zhangsan@example.com",
+    "nickname": "张三",
+    "avatar_url": null
+  }
 }
 ```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| access_token | string | JWT 访问令牌（注册后自动登录） |
+| token_type | string | 固定值 "bearer" |
+| expires_in | integer | 过期时间（秒），默认 604800（7天） |
+| user | object | 当前用户信息 |
 
 **失败响应（422）：**
 ```json
@@ -231,6 +254,7 @@ Content-Type: application/json
   "user": {
     "id": 1,
     "username": "zhangsan",
+    "email": "zhangsan@example.com",
     "nickname": "张三",
     "avatar_url": null
   }
@@ -292,6 +316,103 @@ Authorization: Bearer {access_token}
   "expires_in": 604800
 }
 ```
+
+---
+
+## 验证码管理
+
+### POST /api/verification/send
+
+发送验证码到邮箱
+
+**请求头：**
+```
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "email": "zhangsan@example.com",
+  "type": "register"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 邮箱地址 |
+| type | string | 否 | 验证码类型，默认 `register`（可选值：`register`, `reset_password`） |
+
+**成功响应（200）：**
+```json
+{
+  "success": true,
+  "message": "验证码已发送",
+  "expires_in": 300
+}
+```
+
+**失败响应（200）：**
+```json
+{
+  "success": false,
+  "message": "请 45 秒后再试",
+  "expires_in": 45
+}
+```
+
+**限制：**
+- 同一邮箱发送验证码间隔至少 60 秒
+- 验证码有效期为 5 分钟
+- 验证码长度为 4-6 位随机数字
+
+---
+
+### POST /api/verification/verify
+
+验证验证码（注册时内部使用，无需单独调用）
+
+**请求头：**
+```
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "email": "zhangsan@example.com",
+  "code": "123456"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 邮箱地址 |
+| code | string | 是 | 验证码（4-6位） |
+
+**成功响应（200）：**
+```json
+{
+  "success": true,
+  "message": "验证成功",
+  "expires_in": 0
+}
+```
+
+**失败响应（200）：**
+```json
+{
+  "success": false,
+  "message": "验证码无效或已过期",
+  "expires_in": 0
+}
+```
+
+**注意：此接口通常由注册接口内部调用，注册时会自动验证验证码。**
 
 ---
 

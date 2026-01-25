@@ -11,7 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, password: string, rememberMe?: boolean) => Promise<void>;
-  register: (username: string, email: string, password: string, passwordConfirm: string, nickname?: string) => Promise<void>;
+  register: (username: string, email: string, password: string, passwordConfirm: string, verificationCode: string, nickname?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     passwordConfirm: string,
+    verificationCode: string,
     nickname?: string
   ) => {
     const response = await apiRegister({
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       password_confirm: passwordConfirm,
+      verification_code: verificationCode,
       nickname,
     });
 

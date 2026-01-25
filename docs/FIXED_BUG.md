@@ -429,6 +429,55 @@ if (isLoading || loading) {  // 同时检查两个加载状态
 - 使用语义化的颜色变量而不是硬编码颜色值
 - 复杂的条件样式应该使用函数而不是内联三元表达式
 
+## v1.6.1 相关 BUG（2026-01-23）
+
+### BUG #4: 邮件验证码冷却时间在页面刷新后丢失
+
+**问题描述：**
+- 用户发送验证码后，按钮进入 60 秒冷却倒计时
+- 当用户刷新页面时，倒计时状态丢失，用户可以立即再次发送验证码
+- 这可能导致验证码滥发，影响用户体验和系统资源
+
+**根本原因：**
+前端使用 React state `countdown` 存储倒计时状态，页面刷新时 state 被重置为初始值 0。
+
+**修复方案：**
+使用 `localStorage` 在页面刷新间持久化倒计时状态：
+1. 发送验证码成功时，将倒计时和时间戳保存到 localStorage
+2. 页面加载时检查 localStorage，恢复剩余倒计时
+3. 倒计时更新时同步更新 localStorage
+
+**修复代码：**
+```tsx
+// frontend/src/routes/Register.tsx
+useEffect(() => {
+  const savedCountdown = localStorage.getItem('verificationCountdown');
+  const savedTimestamp = localStorage.getItem('verificationTimestamp');
+
+  if (savedCountdown && savedTimestamp) {
+    const elapsed = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
+    const remaining = parseInt(savedCountdown) - elapsed;
+
+    if (remaining > 0) {
+      setCountdown(remaining);
+      // 恢复倒计时逻辑...
+    }
+  }
+}, []);
+
+// 发送验证码时保存状态
+localStorage.setItem('verificationCountdown', '60');
+localStorage.setItem('verificationTimestamp', Date.now().toString());
+```
+
+**影响范围：**
+- `frontend/src/routes/Register.tsx`
+
+**测试验证：**
+1. 发送验证码，观察倒计时开始
+2. 刷新页面，倒计时继续正确显示
+3. 倒计时结束后，localStorage 自动清理
+
 ---
 
 ## v1.3.0 相关 BUG（2025-01-20）

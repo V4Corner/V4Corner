@@ -10,7 +10,7 @@ from models.activity import Activity
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
 
-@router.post("/register", response_model=schemas.UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=schemas.AuthResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: schemas.UserCreate,
     db: dependencies.DbSession
@@ -37,6 +37,22 @@ async def register(
             detail="两次密码不一致"
         )
 
+    # 验证验证码
+    verification = models.VerificationCode.get_pending_code(
+        db=db,
+        email=user_data.email,
+        code=user_data.verification_code,
+        code_type="register"
+    )
+    if not verification:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="验证码无效或已过期"
+        )
+
+    # 标记验证码为已使用
+    models.VerificationCode.mark_as_used(db, verification.id)
+
     # 创建新用户
     user = models.User(
         username=user_data.username,
@@ -61,19 +77,26 @@ async def register(
     db.add(activity)
     db.commit()
 
-    # 构造响应
-    return schemas.UserRead(
-        id=user.id,
-        username=user.username,
-        email=user.email,
-        nickname=user.nickname,
-        avatar_url=user.avatar_url,
-        class_field=user.class_field,
-        bio=user.bio,
-        stats=schemas.UserStats(blog_count=0, total_views=0),
-        created_at=user.created_at,
-        updated_at=user.updated_at
+    # 创建访问令牌（注册后自动登录）
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=access_token_expires
     )
+
+    # 构造响应
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": auth.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "nickname": user.nickname,
+            "avatar_url": user.avatar_url
+        }
+    }
 
 
 @router.post("/login")
