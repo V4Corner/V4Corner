@@ -33,7 +33,8 @@
       "Bash(done:*)",
       "Bash(start:*)",
       "Bash(uvicorn:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(rm:*)"
     ]
   }
 }

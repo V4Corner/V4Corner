@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
 
 from database import Base, engine
 from routers import blogs, auth, users, members, chat, announcements, calendar, verification, notices, stats, checkins, activities, uploads, comments, notifications, likes, favorites
@@ -53,7 +54,13 @@ async def startup_event() -> None:
 
     Add new models in backend/models and they will be included here automatically.
     """
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except OperationalError as e:
+        # Ignore errors about existing indexes (happens after branch merges)
+        if "already exists" not in str(e):
+            raise e
+        logger.warning(f"Database initialization warning: {e}")
 
     # Create uploads directory if it doesn't exist
     upload_dirs = [
