@@ -4,6 +4,73 @@
 
 ---
 
+## v2.1.1 相关 BUG（2026-01-25）
+
+### BUG #16: 未登录用户访问博客/通知详情页时 Pydantic 验证错误
+
+**问题描述：**
+- 未登录用户访问博客详情页时返回 500 错误
+- 错误信息：`1 validation error for BlogRead is_owner Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]`
+- F12 控制台显示：`XHRGET http://localhost:8000/api/blogs/42 [HTTP/1.1 500 Internal Server Error]`
+- 同样的问题出现在班级通知详情页，报错：`is_owner` 和 `can_edit` 字段验证失败
+
+**根本原因：**
+1. **Python and 运算符特性**：
+   - 在 Python 中，`None and <anything>` 的返回值是 `None`（不是 `False`）
+   - 当用户未登录时，`current_user` 为 `None`
+   - `is_owner = current_user and current_user.id == blog.author_id` 返回 `None`
+   - Pydantic schema 验证期望 `is_owner` 是布尔值，但收到的是 `None`
+
+2. **涉及的代码位置**：
+   - `backend/routers/blogs.py:180` - 博客详情接口
+   - `backend/schemas/notice.py:75` - 通知详情 schema
+
+**修复方案：**
+
+1. **博客详情接口**（`backend/routers/blogs.py`）：
+   ```python
+   # 修复前
+   is_owner = current_user and current_user.id == blog.author_id
+
+   # 修复后
+   is_owner = current_user is not None and current_user.id == blog.author_id
+   ```
+
+2. **通知详情 Schema**（`backend/schemas/notice.py`）：
+   ```python
+   # 修复前
+   is_owner = current_user and current_user.id == notice.author_id
+   can_edit = is_owner  # 只有作者可以编辑
+
+   # 修复后
+   is_owner = current_user is not None and current_user.id == notice.author_id
+   can_edit = is_owner  # 只有作者可以编辑
+   ```
+
+3. **修复原理**：
+   - 使用 `is not None` 显式检查，确保返回布尔值
+   - 当 `current_user` 为 `None` 时，表达式短路返回 `False`（不是 `None`）
+   - Pydantic 验证通过，因为接收到布尔类型
+
+**影响范围：**
+- `backend/routers/blogs.py`
+- `backend/schemas/notice.py`
+
+**测试验证：**
+1. 退出登录状态 ✅
+2. 访问博客详情页，正常显示 ✅
+3. 访问通知详情页，正常显示 ✅
+4. `is_owner` 和 `can_edit` 字段均为 `false` ✅
+5. 登录后访问，字段值正确判断 ✅
+
+**经验教训：**
+- Python 的 `and`/`or` 运算符返回操作数之一，不一定是布尔值
+- 涉及 Pydantic 验证的字段必须确保类型正确
+- 布尔字段判断应该使用显式比较：`x is not None and x.y == z`
+- 参考：`comments.py` 中已正确使用 `bool()` 转换
+
+---
+
 ## v2.0.0 相关 BUG（2026-01-25）
 
 ### BUG #12: 路由参数验证错误 - favorites 被解析为 user_id
@@ -804,4 +871,4 @@ useEffect(() => {
 
 ---
 
-**最后更新**: 2026-01-24
+**最后更新**: 2026-01-25 (v2.1.1)

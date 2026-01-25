@@ -177,7 +177,7 @@ async def get_blog(
         db.refresh(blog)
 
     # 判断是否为作者
-    is_owner = current_user and current_user.id == blog.author_id
+    is_owner = current_user is not None and current_user.id == blog.author_id
 
     # 使用自定义方法构造响应
     return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=is_owner, current_user=current_user, db=db)
