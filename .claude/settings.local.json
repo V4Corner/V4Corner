@@ -34,7 +34,8 @@
       "Bash(start:*)",
       "Bash(uvicorn:*)",
       "Bash(ping:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(if exist v4corner.db del v4corner.db)"
     ]
   }
 }

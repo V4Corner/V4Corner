@@ -25,7 +25,7 @@ class Comment(Base):
 
     # 索引
     __table_args__ = (
-        Index('idx_blog_id', 'blog_id'),
-        Index('idx_parent_id', 'parent_id'),
-        Index('idx_created_at', 'created_at'),
+        Index('idx_comments_blog_id', 'blog_id'),
+        Index('idx_comments_parent_id', 'parent_id'),
+        Index('idx_comments_created_at', 'created_at'),
     )

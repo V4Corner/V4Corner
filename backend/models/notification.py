@@ -24,8 +24,8 @@ class Notification(Base):
 
     # 索引
     __table_args__ = (
-        Index('idx_user_id', 'user_id'),
-        Index('idx_is_read', 'is_read'),
-        Index('idx_created_at', 'created_at'),
-        Index('idx_user_read', 'user_id', 'is_read'),
+        Index('idx_notifications_user_id', 'user_id'),
+        Index('idx_notifications_is_read', 'is_read'),
+        Index('idx_notifications_created_at', 'created_at'),
+        Index('idx_notifications_user_read', 'user_id', 'is_read'),
     )
