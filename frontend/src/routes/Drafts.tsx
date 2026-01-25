@@ -34,10 +34,6 @@ function Drafts() {
   };
 
   const handlePublish = async (blogId: number) => {
-    if (!confirm('确定要发布这篇草稿吗？')) {
-      return;
-    }
-
     try {
       const blog = await updateBlog(blogId, { status: 'published' });
       // 从列表中移除

@@ -3,13 +3,13 @@ import { favoriteBlog, unfavoriteBlog, getFavoriteFolders, createFavoriteFolder 
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import type { FavoriteFolder } from '../types/favorite';
+import { formatNumber } from '../utils/formatNumber';
 
 interface Props {
   blogId: number;
   isFavorited: boolean;
   favoritesCount: number;
   onToggle?: (newState: { isFavorited: boolean; favoritesCount: number }) => void;
-  showLabel?: boolean;
   size?: 'sm' | 'md';
 }
 
@@ -18,7 +18,6 @@ function FavoriteButton({
   isFavorited,
   favoritesCount,
   onToggle,
-  showLabel = true,
   size = 'md'
 }: Props) {
   const { isAuthenticated } = useAuth();
@@ -99,8 +98,25 @@ function FavoriteButton({
     }
   };
 
-  const iconSize = size === 'sm' ? '16px' : '20px';
+  const iconSize = size === 'sm' ? '18px' : '20px';
   const fontSize = size === 'sm' ? '0.85rem' : '0.95rem';
+
+  // SVG 五角星图标
+  const StarIcon = () => (
+    <svg
+      width={iconSize}
+      height={iconSize}
+      viewBox="0 0 24 24"
+      fill={localFavorited ? '#fbbf24' : 'none'}
+      stroke={localFavorited ? '#fbbf24' : '#94a3b8'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </svg>
+  );
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -109,25 +125,34 @@ function FavoriteButton({
         disabled={loading}
         className="btn"
         style={{
-          padding: size === 'sm' ? '0.4rem 0.8rem' : '0.5rem 1rem',
+          padding: size === 'sm' ? '0.4rem' : '0.5rem',
           fontSize,
-          backgroundColor: localFavorited ? '#fef3c7' : 'transparent',
-          color: localFavorited ? '#d97706' : '#475569',
-          border: localFavorited ? '1px solid #fde68a' : '1px solid #e2e8f0',
+          backgroundColor: 'transparent',
+          border: 'none',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '0.4rem',
+          gap: '0.3rem',
           cursor: loading ? 'not-allowed' : 'pointer',
           opacity: loading ? 0.6 : 1,
+          width: '4.5rem',
         }}
       >
-        <span style={{ fontSize: iconSize }}>⭐</span>
-        {showLabel && (
-          <span>
-            {localFavorited ? '已收藏' : '收藏'}
-            {localCount > 0 && ` (${localCount})`}
-          </span>
-        )}
+        <StarIcon />
+        <span
+          style={{
+            color: localFavorited ? '#d97706' : '#94a3b8',
+            fontFamily: localCount > 0 ? 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, monospace' : 'inherit',
+            fontSize: '0.9rem',
+            fontWeight: localFavorited ? '600' : '400',
+            flex: 1,
+            textAlign: 'left',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {localCount > 0 ? formatNumber(localCount) : '收藏'}
+        </span>
       </button>
 
       {/* 文件夹选择菜单 */}

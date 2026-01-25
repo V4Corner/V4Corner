@@ -180,11 +180,10 @@ async def update_notice(
             detail="通知不存在"
         )
 
-    # 权限检查：管理员或发布者本人
+    # 权限检查：只有发布者本人可以编辑
     is_owner = current_user.id == notice.author_id
-    is_admin = current_user.role == "admin"  # TODO: 根据实际角色字段调整
 
-    if not is_owner and not is_admin:
+    if not is_owner:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权限编辑此通知"
@@ -230,11 +229,10 @@ async def delete_notice(
             detail="通知不存在"
         )
 
-    # 权限检查：管理员或发布者本人
+    # 权限检查：只有发布者本人可以编辑
     is_owner = current_user.id == notice.author_id
-    is_admin = current_user.role == "admin"  # TODO: 根据实际角色字段调整
 
-    if not is_owner and not is_admin:
+    if not is_owner:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="无权限删除此通知"

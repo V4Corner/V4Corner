@@ -18,7 +18,7 @@ class Blog(Base):
     likes_count: int = Column(Integer, default=0)  # 点赞数（冗余）
     favorites_count: int = Column(Integer, default=0)  # 收藏数（冗余）
     created_at: datetime = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: datetime = Column(DateTime(timezone=True), onupdate=datetime.utcnow)
+    updated_at: datetime = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # 关系
     author = relationship("User", back_populates="blogs")
@@ -29,4 +29,9 @@ class Blog(Base):
     # 索引
     __table_args__ = (
         Index('idx_author_status', 'author_id', 'status'),
+        Index('idx_blog_title', 'title'),  # 标题搜索索引
+        Index('idx_blog_created_at', 'created_at'),  # 日期筛选和排序索引
+        Index('idx_blog_views', 'views'),  # 按浏览量排序索引
+        Index('idx_blog_likes', 'likes_count'),  # 按点赞数排序索引
+        Index('idx_blog_favorites', 'favorites_count'),  # 按收藏数排序索引
     )

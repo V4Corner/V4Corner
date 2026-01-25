@@ -130,7 +130,7 @@ function CheckInCard() {
         </div>
 
         <div className="checkin-advice">
-          <div className="advice-section good">
+          <div className="advice-section good" style={{ flex: 1 }}>
             <div className="advice-section-label" style={{ color: '#dc2626' }}>宜</div>
             {result.good.map((item, index) => (
               <div key={index} className="advice-card">
@@ -139,7 +139,7 @@ function CheckInCard() {
               </div>
             ))}
           </div>
-          <div className="advice-section bad">
+          <div className="advice-section bad" style={{ flex: 1 }}>
             <div className="advice-section-label" style={{ color: '#1f2937' }}>忌</div>
             {result.bad.map((item, index) => (
               <div key={index} className="advice-card bad">

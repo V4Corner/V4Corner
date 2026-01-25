@@ -300,8 +300,8 @@ function EditBlog() {
       // 删除未使用的媒体文件
       await cleanupMedia(deletedUrls);
 
-      // 跳转到博客详情页
-      navigate(`/blogs/${blogId}`);
+      // 跳转到草稿箱
+      navigate('/blogs/drafts');
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存草稿失败');
     } finally {
@@ -351,7 +351,10 @@ function EditBlog() {
   };
 
   const handleCancel = () => {
-    if (blogId) {
+    // 如果是草稿，返回草稿箱；否则返回博客详情页
+    if (blog && blog.status === 'draft') {
+      navigate('/blogs/drafts');
+    } else if (blogId) {
       navigate(`/blogs/${blogId}`);
     } else {
       navigate('/blogs');
@@ -399,11 +402,23 @@ function EditBlog() {
           博客首页
         </Link>
         {' > '}
-        <Link to={`/blogs/${blogId}`} style={{ color: '#0f172a', textDecoration: 'none' }}>
-          {title}
-        </Link>
-        {' > '}
-        <span>编辑</span>
+        {blog.status === 'draft' ? (
+          <>
+            <Link to="/blogs/drafts" style={{ color: '#0f172a', textDecoration: 'none' }}>
+              草稿箱
+            </Link>
+            {' > '}
+            <span>编辑草稿</span>
+          </>
+        ) : (
+          <>
+            <Link to={`/blogs/${blogId}`} style={{ color: '#0f172a', textDecoration: 'none' }}>
+              {title}
+            </Link>
+            {' > '}
+            <span>编辑</span>
+          </>
+        )}
       </div>
 
       <div style={{ marginBottom: '1.5rem' }}>

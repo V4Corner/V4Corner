@@ -284,7 +284,7 @@ export default function Comments({ blogId, blogAuthorId }: CommentsProps) {
                     borderRadius: '8px',
                     fontSize: '1rem',
                     fontFamily: 'inherit',
-                    resize: 'vertical',
+                    resize: 'none',
                     minHeight: '60px',
                     maxHeight: '200px',
                     boxSizing: 'border-box'
@@ -375,7 +375,7 @@ export default function Comments({ blogId, blogAuthorId }: CommentsProps) {
                     borderRadius: '8px',
                     fontSize: '1rem',
                     fontFamily: 'inherit',
-                    resize: 'vertical',
+                    resize: 'none',
                     minHeight: '60px',
                     maxHeight: '200px',
                     boxSizing: 'border-box'
@@ -478,7 +478,7 @@ export default function Comments({ blogId, blogAuthorId }: CommentsProps) {
               borderRadius: '8px',
               fontSize: '1rem',
               fontFamily: 'inherit',
-              resize: 'vertical',
+              resize: 'none',
               minHeight: '80px',
               maxHeight: '400px',
               boxSizing: 'border-box'

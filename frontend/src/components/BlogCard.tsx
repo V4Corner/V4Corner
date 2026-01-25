@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
-import type { Blog } from '../types/blog';
+import type { Blog, BlogListItem } from '../types/blog';
 import LikeButton from './LikeButton';
 import FavoriteButton from './FavoriteButton';
 import { useState, useEffect } from 'react';
+import { formatNumber } from '../utils/formatNumber';
 
 interface Props {
-  blog: Blog;
+  blog: Blog | BlogListItem;
 }
 
 function BlogCard({ blog }: Props) {
@@ -17,18 +18,36 @@ function BlogCard({ blog }: Props) {
   return (
     <article className="card" style={{ cursor: 'pointer' }}>
       <Link to={`/blogs/${blog.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <h3 style={{ marginBottom: '0.5rem' }}>{blog.title}</h3>
+        <p
+          style={{
+            color: '#475569',
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'pre-line',
+            minHeight: '3.2rem',  // 固定两行高度
+            marginBottom: '0.75rem',
+          }}
+        >
+          {blog.excerpt}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
           <div
             style={{
-              width: '32px',
-              height: '32px',
+              width: '24px',
+              height: '24px',
               borderRadius: '50%',
               backgroundColor: '#0f172a',
               color: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '0.85rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               overflow: 'hidden',
               flexShrink: 0
@@ -44,29 +63,18 @@ function BlogCard({ blog }: Props) {
               <span>{blog.author[0].toUpperCase()}</span>
             )}
           </div>
-          <p className="small-muted" style={{ margin: 0 }}>
+          <p className="small-muted" style={{ margin: 0, fontSize: '0.85rem', maxWidth: '7em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {blog.author}
           </p>
+          <span className="small-muted" style={{ margin: '0 0.15rem', fontSize: '0.85rem' }}>·</span>
+          <p className="small-muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            {new Date(blog.created_at).toLocaleDateString()}
+          </p>
+          <span className="small-muted" style={{ margin: '0 0.15rem', fontSize: '0.85rem' }}>·</span>
+          <p className="small-muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            {formatNumber(blog.views)} 次阅读
+          </p>
         </div>
-        <h3 style={{ marginBottom: '0.5rem' }}>{blog.title}</h3>
-        <p className="small-muted" style={{ marginBottom: '0.75rem' }}>
-          {new Date(blog.created_at).toLocaleDateString()} · {blog.views} 次阅读
-        </p>
-        <p
-          style={{
-            color: '#475569',
-            fontSize: '0.95rem',
-            lineHeight: 1.6,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'pre-line',
-          }}
-        >
-          {blog.excerpt}
-        </p>
       </Link>
 
       {/* 点赞和收藏数 */}
@@ -85,17 +93,11 @@ function BlogCard({ blog }: Props) {
             isLiked={isLiked}
             likesCount={likesCount}
             size="sm"
-            showLabel={false}
             onToggle={(newState) => {
               setIsLiked(newState.isLiked);
               setLikesCount(newState.likesCount);
             }}
           />
-          {likesCount > 0 && (
-            <span className="small-muted" style={{ fontSize: '0.85rem' }}>
-              {likesCount}
-            </span>
-          )}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <FavoriteButton
@@ -103,17 +105,11 @@ function BlogCard({ blog }: Props) {
             isFavorited={isFavorited}
             favoritesCount={favoritesCount}
             size="sm"
-            showLabel={false}
             onToggle={(newState) => {
               setIsFavorited(newState.isFavorited);
               setFavoritesCount(newState.favoritesCount);
             }}
           />
-          {favoritesCount > 0 && (
-            <span className="small-muted" style={{ fontSize: '0.85rem' }}>
-              {favoritesCount}
-            </span>
-          )}
         </div>
       </div>
     </article>

@@ -2,7 +2,7 @@
 
 > 基于网页原型设计 v1.3.2
 >
-> 最后更新：2026-01-25（v2.0.0 - 点赞与收藏系统）
+> 最后更新：2026-01-25（v2.1.2 - 图标系统统一）
 
 ## 目录
 
@@ -39,9 +39,12 @@
 
 ### API 版本
 
-当前版本: `v2.0.0`（开发中）
+当前版本: `v2.1.2`（开发中）
 
 **版本历史：**
+- v2.1.2 (2026-01-25): 图标系统统一（SVG 简笔线条风格替代 emoji）
+- v2.1.1 (2026-01-25): 限制系统与体验优化（每日发布限制、草稿箱上限、分页系统、通知详情页重构）
+- v2.1.0 (2026-01-25): 博客搜索与筛选系统（标题/内容搜索、日期范围筛选、多种排序方式、组合筛选）
 - v2.0.0 (2026-01-25): 点赞与收藏系统（点赞、收藏文件夹、权限控制、作者通知）
 - v1.9.0 (2026-01-24): 评论系统（楼中楼、编辑、删除、排序、级联删除）+ 通知系统（评论通知、通知中心）
 - v1.8.0 (2026-01-23): 草稿功能（博客状态、草稿箱、保存草稿/发布）
@@ -448,7 +451,7 @@ avatar: 图片文件
 
 ### GET /api/users/:user_id/blogs
 
-获取指定用户的博客列表（仅已发布）
+获取指定用户的博客列表（仅已发布，支持搜索、筛选、排序）
 
 **路径参数：**
 
@@ -458,13 +461,26 @@ avatar: 图片文件
 
 **查询参数：**
 ```
-?page=1&size=10
+?q=机器学习&sort_by=created_at&sort_order=desc&date_from=2025-01-01&date_to=2025-01-31&page=1&size=10
 ```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| q | string | 否 | 搜索关键词（搜索标题和内容） |
+| sort_by | string | 否 | 排序字段：`created_at`（发布时间）、`views`（浏览量）、`likes_count`（点赞数）、`favorites_count`（收藏数） |
+| sort_order | string | 否 | 排序方向：`asc`（升序）、`desc`（降序，默认） |
+| date_from | date | 否 | 起始日期（格式：YYYY-MM-DD） |
+| date_to | date | 否 | 结束日期（格式：YYYY-MM-DD） |
+| page | integer | 否 | 页码（默认 1） |
+| size | integer | 否 | 每页数量（默认 10） |
 
 **说明：**
 - 此接口仅返回该用户**已发布**的博客
 - 草稿不会出现在此列表中
-- 分页参数：`page`（页码，默认1）、`size`（每页数量，默认10）
+- 支持组合查询：可以同时使用搜索、筛选和排序
+- 如果当前用户已登录，响应会包含 `is_liked` 和 `is_favorited` 字段
 
 **成功响应（200）：**
 ```json
@@ -482,10 +498,26 @@ avatar: 图片文件
       "author_avatar_url": null,
       "status": "published",
       "views": 128,
+      "likes_count": 15,
+      "favorites_count": 8,
+      "is_liked": true,
+      "is_favorited": false,
       "created_at": "2025-01-10T08:30:00.000000Z"
     }
   ]
 }
+```
+
+**使用示例：**
+```bash
+# 搜索包含"机器学习"的博客
+curl -X GET "http://localhost:8000/api/users/1/blogs?q=机器学习"
+
+# 按浏览量降序排列
+curl -X GET "http://localhost:8000/api/users/1/blogs?sort_by=views&sort_order=desc"
+
+# 查询 2025 年 1 月的博客
+curl -X GET "http://localhost:8000/api/users/1/blogs?date_from=2025-01-01&date_to=2025-01-31"
 ```
 
 ---
@@ -494,27 +526,76 @@ avatar: 图片文件
 
 ### GET /api/blogs
 
-获取博客列表
+获取博客列表（支持搜索、筛选、排序、分页）
 
 **查询参数：**
 ```
-?page=1&size=20&author=zhangsan&status=published
+?q=机器学习&search_in=title,content&author=zhangsan&status=published&date_from=2025-01-01&date_to=2025-01-31&sort_by=views&sort_order=desc&page=1&size=20
 ```
 
 **参数说明：**
+
+#### 搜索参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| q | string | 否 | 搜索关键词（在标题和/或内容中搜索） |
+| search_in | string | 否 | 搜索字段（`title` 仅标题、`content` 仅内容、`title,content` 同时搜索，默认 `title,content`） |
+
+#### 筛选参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| author | string | 否 | 按作者筛选（用户名） |
+| status | string | 否 | 状态筛选（`draft` 仅返回自己的草稿，`published` 返回已发布，默认 `published`） |
+| date_from | string | 否 | 起始日期（格式：YYYY-MM-DD） |
+| date_to | string | 否 | 结束日期（格式：YYYY-MM-DD） |
+
+#### 排序参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sort_by | string | 否 | 排序字段（`created_at` 创建时间、`views` 浏览量、`likes` 点赞数、`favorites` 收藏数，默认 `created_at`） |
+| sort_order | string | 否 | 排序方向（`asc` 升序、`desc` 降序，默认 `desc`） |
+
+#### 分页参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | integer | 否 | 页码（默认1） |
 | size | integer | 否 | 每页数量（默认20，最大100） |
-| author | string | 否 | 按作者筛选（用户名） |
-| status | string | 否 | 状态筛选（`draft` 仅返回自己的草稿，`published` 返回已发布，默认 `published`） |
+
+**功能说明：**
+
+1. **搜索功能（v2.1.0）：**
+   - 支持按标题搜索：`q=关键词&search_in=title`
+   - 支持按内容搜索：`q=关键词&search_in=content`
+   - 支持同时搜索标题和内容：`q=关键词&search_in=title,content`（默认）
+
+2. **筛选功能：**
+   - 按作者筛选：`author=zhangsan`
+   - 按状态筛选：`status=published` 或 `status=draft`
+   - 按日期范围筛选：`date_from=2025-01-01&date_to=2025-01-31`
+
+3. **排序功能（v2.1.0）：**
+   - 按创建时间排序：`sort_by=created_at`（默认）
+   - 按浏览量排序：`sort_by=views`
+   - 按点赞数排序：`sort_by=likes`
+   - 按收藏数排序：`sort_by=favorites`
+   - 升序/降序：`sort_order=asc` 或 `sort_order=desc`
+
+4. **组合筛选（v2.1.0）：**
+   - 所有参数可以组合使用，例如：搜索「机器学习」+ 按浏览量降序 + 2025年1月：
+   ```
+   ?q=机器学习&sort_by=views&sort_order=desc&date_from=2025-01-01&date_to=2025-01-31
+   ```
 
 **注意：**
 - 未登录用户：`status` 参数无效，只能查看已发布的博客
 - 已登录用户：
   - `status=published`：查看所有已发布的博客
   - `status=draft`：仅查看自己的草稿
+- 日期参数必须符合 `YYYY-MM-DD` 格式
 
 **成功响应（200）：**
 ```json
@@ -529,8 +610,13 @@ avatar: 图片文件
       "excerpt": "机器学习是人工智能的核心技术之一，本文将介绍机器学习的基本概念、常见算法和实际应用...",
       "author": "张三",
       "author_id": 1,
+      "author_avatar_url": "/uploads/avatars/avatar1.jpg",
       "status": "published",
       "views": 128,
+      "likes_count": 15,
+      "favorites_count": 8,
+      "is_liked": false,
+      "is_favorited": false,
       "created_at": "2025-01-10T08:30:00.000000Z"
     },
     {
@@ -539,8 +625,13 @@ avatar: 图片文件
       "excerpt": "学习数据结构与算法是每个程序员的必修课，本文将总结常用的数据结构和算法技巧...",
       "author": "李四",
       "author_id": 2,
+      "author_avatar_url": null,
       "status": "published",
       "views": 95,
+      "likes_count": 12,
+      "favorites_count": 5,
+      "is_liked": true,
+      "is_favorited": false,
       "created_at": "2025-01-09T15:20:00.000000Z"
     }
   ]
@@ -551,9 +642,14 @@ avatar: 图片文件
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| excerpt | string | 博客摘要（内容前150字） |
+| excerpt | string | 博客摘要（内容前150字，媒体文件替换为占位符） |
 | author_id | integer | 作者 ID（用于跳转到用户中心） |
-| status | string | 状态（`draft` 或 `published`）|
+| author_avatar_url | string \| null | 作者头像 URL |
+| status | string | 状态（`draft` 或 `published`） |
+| likes_count | integer | 点赞数 |
+| favorites_count | integer | 收藏数 |
+| is_liked | boolean | 当前用户是否已点赞（未登录为 false） |
+| is_favorited | boolean | 当前用户是否已收藏（未登录为 false） |
 
 ---
 

@@ -8,12 +8,27 @@ export async function getBlogs(params: {
   size?: number;
   author?: string;
   status?: 'draft' | 'published';
+  // 搜索参数
+  q?: string;
+  search_in?: string;
+  // 日期筛选
+  date_from?: string;
+  date_to?: string;
+  // 排序参数
+  sort_by?: 'created_at' | 'views' | 'likes' | 'favorites';
+  sort_order?: 'asc' | 'desc';
 } = {}): Promise<BlogListResponse> {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.set('page', params.page.toString());
   if (params.size) queryParams.set('size', params.size.toString());
   if (params.author) queryParams.set('author', params.author);
   if (params.status) queryParams.set('status', params.status);
+  if (params.q) queryParams.set('q', params.q);
+  if (params.search_in) queryParams.set('search_in', params.search_in);
+  if (params.date_from) queryParams.set('date_from', params.date_from);
+  if (params.date_to) queryParams.set('date_to', params.date_to);
+  if (params.sort_by) queryParams.set('sort_by', params.sort_by);
+  if (params.sort_order) queryParams.set('sort_order', params.sort_order);
 
   const queryString = queryParams.toString();
   return get<BlogListResponse>(`/api/blogs${queryString ? `?${queryString}` : ''}`);

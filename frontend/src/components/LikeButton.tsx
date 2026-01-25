@@ -2,17 +2,17 @@ import { useState } from 'react';
 import { likeBlog, unlikeBlog } from '../api/likes';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { formatNumber } from '../utils/formatNumber';
 
 interface Props {
   blogId: number;
   isLiked: boolean;
   likesCount: number;
   onToggle?: (newState: { isLiked: boolean; likesCount: number }) => void;
-  showLabel?: boolean;
   size?: 'sm' | 'md';
 }
 
-function LikeButton({ blogId, isLiked, likesCount, onToggle, showLabel = true, size = 'md' }: Props) {
+function LikeButton({ blogId, isLiked, likesCount, onToggle, size = 'md' }: Props) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -58,8 +58,25 @@ function LikeButton({ blogId, isLiked, likesCount, onToggle, showLabel = true, s
     }
   };
 
-  const iconSize = size === 'sm' ? '16px' : '20px';
+  const iconSize = size === 'sm' ? '18px' : '20px';
   const fontSize = size === 'sm' ? '0.85rem' : '0.95rem';
+
+  // SVG 爱心图标
+  const HeartIcon = () => (
+    <svg
+      width={iconSize}
+      height={iconSize}
+      viewBox="0 0 24 24"
+      fill={localLiked ? '#ef4444' : 'none'}
+      stroke={localLiked ? '#ef4444' : '#94a3b8'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+    </svg>
+  );
 
   return (
     <button
@@ -67,25 +84,34 @@ function LikeButton({ blogId, isLiked, likesCount, onToggle, showLabel = true, s
       disabled={loading}
       className="btn"
       style={{
-        padding: size === 'sm' ? '0.4rem 0.8rem' : '0.5rem 1rem',
+        padding: size === 'sm' ? '0.4rem' : '0.5rem',
         fontSize,
-        backgroundColor: localLiked ? '#fee2e2' : 'transparent',
-        color: localLiked ? '#dc2626' : '#475569',
-        border: localLiked ? '1px solid #fecaca' : '1px solid #e2e8f0',
+        backgroundColor: 'transparent',
+        border: 'none',
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.4rem',
+        gap: '0.3rem',
         cursor: loading ? 'not-allowed' : 'pointer',
         opacity: loading ? 0.6 : 1,
+        width: '4.5rem',
       }}
     >
-      <span style={{ fontSize: iconSize }}>👍</span>
-      {showLabel && (
-        <span>
-          {localLiked ? '已赞' : '点赞'}
-          {localCount > 0 && ` (${localCount})`}
-        </span>
-      )}
+      <HeartIcon />
+      <span
+        style={{
+          color: localLiked ? '#dc2626' : '#94a3b8',
+          fontFamily: localCount > 0 ? 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, monospace' : 'inherit',
+          fontSize: '0.9rem',
+          fontWeight: localLiked ? '600' : '400',
+          flex: 1,
+          textAlign: 'left',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {localCount > 0 ? formatNumber(localCount) : '点赞'}
+      </span>
     </button>
   );
 }

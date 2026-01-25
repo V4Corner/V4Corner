@@ -199,6 +199,19 @@ async def create_comment(
             detail="博客不存在"
         )
 
+    # 检查每日评论限制（500条/天）
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    daily_comment_count = db.query(models.Comment).filter(
+        models.Comment.user_id == current_user.id,
+        models.Comment.created_at >= today_start
+    ).count()
+
+    if daily_comment_count >= 500:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="每日评论数量已达上限（500条/天），请明天再试"
+        )
+
     # 检查评论频率限制（每次尝试提交后重新计时）
     now = datetime.utcnow()
     last_attempt = user_last_comment_attempt.get(current_user.id)
