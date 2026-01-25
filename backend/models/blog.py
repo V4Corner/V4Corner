@@ -15,12 +15,16 @@ class Blog(Base):
     author_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
     author_name: str = Column(String(50), nullable=False)  # 冗余字段，方便查询
     views: int = Column(Integer, default=0)  # 阅读次数
+    likes_count: int = Column(Integer, default=0)  # 点赞数（冗余）
+    favorites_count: int = Column(Integer, default=0)  # 收藏数（冗余）
     created_at: datetime = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: datetime = Column(DateTime(timezone=True), onupdate=datetime.utcnow)
 
     # 关系
     author = relationship("User", back_populates="blogs")
     comments = relationship("Comment", back_populates="blog", cascade="all, delete-orphan")
+    likes = relationship("Like", back_populates="blog", cascade="all, delete-orphan")
+    favorites = relationship("Favorite", back_populates="blog", cascade="all, delete-orphan")
 
     # 索引
     __table_args__ = (

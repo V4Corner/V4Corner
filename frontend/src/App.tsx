@@ -17,6 +17,7 @@ import ChatList from './routes/ChatList';
 import ChatDetail from './routes/ChatDetail';
 import NoticeList from './routes/NoticeList';
 import NoticeDetail from './routes/NoticeDetail';
+import Favorites from './routes/Favorites';
 
 // Main layout wires shared navigation + footer around routed pages.
 // Add new pages by registering a new <Route> entry.
@@ -32,6 +33,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/blogs" element={<Blogs />} />
           <Route path="/blogs/drafts" element={<Drafts />} />
+          <Route path="/favorites" element={<Favorites />} />
           <Route path="/blogs/new" element={<CreateBlog />} />
           <Route path="/blogs/:blogId/edit" element={<EditBlog />} />
           <Route path="/blogs/:blogId" element={<BlogDetail />} />

@@ -84,6 +84,23 @@ from .notification import (
     NotificationDeleteResponse,
     NotificationUnreadCountResponse,
 )
+from .like import (
+    LikeResponse,
+    LikeStatusResponse,
+)
+from .favorite_folder import (
+    FavoriteFolderCreate,
+    FavoriteFolderUpdate,
+    FavoriteFolderRead,
+    FavoriteFolderListResponse,
+)
+from .favorite import (
+    FavoriteCreate,
+    FavoriteDelete,
+    FavoriteResponse,
+    FavoriteFolderInfo,
+    FavoriteStatusResponse,
+)
 
 __all__ = [
     "BlogCreate",
@@ -152,4 +169,15 @@ __all__ = [
     "NotificationMarkReadResponse",
     "NotificationDeleteResponse",
     "NotificationUnreadCountResponse",
+    "LikeResponse",
+    "LikeStatusResponse",
+    "FavoriteFolderCreate",
+    "FavoriteFolderUpdate",
+    "FavoriteFolderRead",
+    "FavoriteFolderListResponse",
+    "FavoriteCreate",
+    "FavoriteDelete",
+    "FavoriteResponse",
+    "FavoriteFolderInfo",
+    "FavoriteStatusResponse",
 ]

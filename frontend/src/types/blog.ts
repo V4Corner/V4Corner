@@ -8,6 +8,10 @@ export interface Blog {
   author_avatar_url: string | null;
   status: 'draft' | 'published';
   views: number;
+  likes_count: number;
+  favorites_count: number;
+  is_liked: boolean;
+  is_favorited: boolean;
   is_owner: boolean;
   created_at: string;
   updated_at?: string;
@@ -41,5 +45,11 @@ export interface BlogListItem {
   author_avatar_url: string | null;
   status: 'draft' | 'published';
   views: number;
+  likes_count: number;
+  favorites_count: number;
+  is_liked: boolean;
+  is_favorited: boolean;
   created_at: string;
+  favorited_at?: string;
+  folders?: { id: number; name: string }[];
 }

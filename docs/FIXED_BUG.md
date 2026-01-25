@@ -4,6 +4,190 @@
 
 ---
 
+## v2.0.0 相关 BUG（2026-01-25）
+
+### BUG #12: 路由参数验证错误 - favorites 被解析为 user_id
+
+**问题描述：**
+- 访问 `/api/users/favorites` 时返回 422 错误
+- 错误信息：`Input should be a valid integer, unable to parse string as an integer`
+- F12 控制台显示：`XHRGET http://localhost:8000/api/users/favorites?page=1&size=20 [HTTP/1.1 422 Unprocessable Entity]`
+
+**根本原因：**
+1. **路由注册顺序错误**：
+   - `users.router` 在 `favorites.router` 之前注册
+   - `users.py` 有路由 `GET /api/users/{user_id}`
+   - `favorites.py` 有路由 `GET /api/users/favorites`
+   - FastAPI 按注册顺序匹配，`/api/users/favorites` 被 `/api/users/{user_id}` 匹配
+   - FastAPI 尝试将 "favorites" 解析为整数 `user_id`，导致验证失败
+
+2. **路由设计问题**：
+   - 两个路由器都有 `/api/users/` 前缀下的路由
+   - `users.router` 使用 `prefix="/api/users"`，路由为 `/{user_id}`
+   - `favorites.router` 使用 `prefix="/api"`，路由为 `/users/favorites`
+   - 最终完整路径都是 `/api/users/...`，容易冲突
+
+**修复方案：**
+
+1. **调整路由注册顺序**（`backend/main.py`）：
+   ```python
+   # 修复前
+   app.include_router(users.router)      # 先注册
+   app.include_router(favorites.router)  # 后注册
+
+   # 修复后
+   app.include_router(favorites.router)  # 先注册（特定路由）
+   app.include_router(users.router)      # 后注册（参数化路由）
+   ```
+
+2. **原理**：
+   - FastAPI 按路由注册顺序匹配请求
+   - 先注册特定路由（`/users/favorites`），后注册参数化路由（`/users/{user_id}`）
+   - 确保 `/users/favorites` 不会被 `/users/{user_id}` 抢先匹配
+
+**验证方法：**
+```bash
+curl "http://localhost:8000/api/users/favorites?page=1&size=20"
+# 预期结果：{"detail":"Not authenticated"} （需要认证，而非参数验证错误）
+```
+
+**经验教训：**
+- FastAPI 路由匹配顺序很重要
+- 特定路由必须在参数化路由之前注册
+- 当多个路由器共享前缀时，注意路由注册顺序
+
+---
+
+### BUG #13: 重复函数定义导致代码冗余
+
+**问题描述：**
+- `backend/routers/favorites.py` 文件末尾有重复代码
+- `get_folder_favorites` 函数定义了两次
+- 第一次在 line 382，第二次在 line 574（缺少装饰器）
+
+**根本原因：**
+- 之前编辑文件时，移动了函数位置但未删除原函数
+- 导致同一个功能有两份代码实现
+- 文件长度异常（662 行，正常应为约 570 行）
+
+**修复方案：**
+删除 line 574-661 的重复函数定义，保留 line 382-469 的原始函数
+
+**影响：**
+- 代码冗余，增加维护成本
+- 如果两份代码逻辑不一致，会导致不可预测的行为
+- 不会影响功能运行（因为第二个定义缺少装饰器，不会被注册为路由）
+
+---
+
+### BUG #14: 收藏页面刷新后重定向到登录页
+
+**问题描述：**
+- 已登录用户访问"我的收藏"页面（`/favorites`）正常
+- 刷新页面后重定向到 `/login`
+- 即使已经登录，仍然要求重新登录
+
+**根本原因：**
+- `Favorites.tsx` 组件在 `useEffect` 中检查 `isAuthenticated`
+- `AuthContext` 的 `isLoading` 状态为 `true` 时，`isAuthenticated` 暂时为 `false`
+- 组件在认证状态加载完成前就执行了导航逻辑
+- 时序问题：
+  1. 页面加载，`isLoading=true`, `isAuthenticated=false`
+  2. `useEffect` 立即执行，检测到 `!isAuthenticated`，导航到 `/login`
+  3. `AuthContext` 加载完成，`isLoading=false`, `isAuthenticated=true`
+  4. 但已经重定向到登录页
+
+**修复方案：**
+
+修改 `frontend/src/routes/Favorites.tsx`：
+```typescript
+// 修复前
+useEffect(() => {
+  if (!isAuthenticated) {
+    navigate('/login');
+    return;
+  }
+  // fetch favorites...
+}, [isAuthenticated, page, navigate]);
+
+if (loading) {
+  return <div>Loading...</div>;
+}
+
+// 修复后
+const { isAuthenticated, isLoading } = useAuth();
+
+useEffect(() => {
+  if (isLoading) {
+    return;  // 等待认证状态加载完成
+  }
+
+  if (!isAuthenticated) {
+    navigate('/login');
+    return;
+  }
+  // fetch favorites...
+}, [isAuthenticated, isLoading, page, navigate]);
+
+if (isLoading || loading) {  // 同时检查两个加载状态
+  return <div>Loading...</div>;
+}
+```
+
+**关键点：**
+1. 从 `useAuth()` 解构出 `isLoading` 状态
+2. `useEffect` 中先检查 `isLoading`，如果正在加载则直接返回
+3. 渲染时同时检查 `isLoading || loading`
+4. `useEffect` 依赖项添加 `isLoading`
+
+**经验教训：**
+- 所有需要认证的页面都应该检查 `isLoading` 状态
+- 使用 `AuthContext` 时，始终按 `isLoading` → `isAuthenticated` 顺序检查
+- 导航逻辑应该在认证状态完全加载后执行
+
+---
+
+### BUG #15: 数据库索引名称冲突
+
+**问题描述：**
+- 运行数据库迁移脚本时报错：`sqlite3.OperationalError: index idx_user_id already exists`
+- 多个表都有名为 `idx_user_id` 的索引
+- SQLite 要求索引名称在同一数据库中唯一
+
+**根本原因：**
+- 不同表使用了相同的索引名称
+- `favorite_folders` 表有索引 `idx_user_id`
+- `favorites` 表也想创建索引 `idx_user_id`
+- 索引名称没有表前缀，导致冲突
+
+**涉及的索引：**
+- `favorite_folders.user_id` → `idx_user_id` ❌
+- `favorites.user_id` → `idx_user_id` ❌
+- `favorites(folder_id)` → `idx_folder_id` ❌（可能与未来的表冲突）
+
+**修复方案：**
+
+1. **修改模型定义**，添加表前缀：
+   ```python
+   # favorite_folders.py
+   Index('idx_favorite_folders_user_id', 'user_id'),
+
+   # favorites.py
+   Index('idx_favorites_user_blog_folder', 'user_id', 'blog_id', 'folder_id', unique=True),
+   Index('idx_favorites_folder_id', 'folder_id'),
+   ```
+
+2. **创建清理脚本** `backend/fix_duplicate_indexes.py`：
+   - 删除旧的冲突索引
+   - 重新创建带前缀的索引
+
+**经验教训：**
+- 数据库索引名称应该包含表前缀
+- 命名格式：`idx_{table_name}_{column_name(s)}`
+- 避免使用通用名称（如 `idx_user_id`）
+
+---
+
 ## v1.8.0 相关 BUG（2026-01-24）
 
 ### BUG #8: 数据库缺少 status 列导致查询失败

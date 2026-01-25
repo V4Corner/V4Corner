@@ -53,6 +53,24 @@ async def list_blogs(
     for blog in blogs:
         # 生成摘要
         excerpt = schemas.generate_excerpt(blog.content)
+
+        # 检查点赞和收藏状态
+        is_liked = False
+        is_favorited = False
+
+        if current_user:
+            like = db.query(models.Like).filter(
+                models.Like.user_id == current_user.id,
+                models.Like.blog_id == blog.id
+            ).first()
+            is_liked = like is not None
+
+            favorite = db.query(models.Favorite).filter(
+                models.Favorite.user_id == current_user.id,
+                models.Favorite.blog_id == blog.id
+            ).first()
+            is_favorited = favorite is not None
+
         items.append(schemas.BlogListItem(
             id=blog.id,
             title=blog.title,
@@ -62,6 +80,10 @@ async def list_blogs(
             author_avatar_url=blog.author.avatar_url if blog.author else None,
             status=blog.status,
             views=blog.views,
+            likes_count=blog.likes_count,
+            favorites_count=blog.favorites_count,
+            is_liked=is_liked,
+            is_favorited=is_favorited,
             created_at=blog.created_at
         ))
 
@@ -106,7 +128,7 @@ async def get_blog(
     is_owner = current_user and current_user.id == blog.author_id
 
     # 使用自定义方法构造响应
-    return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=is_owner)
+    return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=is_owner, current_user=current_user, db=db)
 
 
 @router.post("", response_model=schemas.BlogRead, status_code=status.HTTP_201_CREATED)
@@ -160,7 +182,7 @@ async def create_blog(
         db.add(activity)
         db.commit()
 
-    return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=True)
+    return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=True, current_user=current_user, db=db)
 
 
 @router.put("/{blog_id}", response_model=schemas.BlogRead)
@@ -216,7 +238,7 @@ async def update_blog(
     db.commit()
     db.refresh(blog)
 
-    return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=True)
+    return schemas.BlogRead.from_orm_with_excerpt(blog, is_owner=True, current_user=current_user, db=db)
 
 
 @router.delete("/{blog_id}", status_code=status.HTTP_204_NO_CONTENT)

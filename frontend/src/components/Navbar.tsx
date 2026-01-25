@@ -142,6 +142,21 @@ function Navbar() {
                     编辑资料
                   </div>
                   <div
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate('/favorites');
+                    }}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    我的收藏
+                  </div>
+                  <div
                     onClick={handleLogout}
                     style={{
                       padding: '0.75rem 1rem',

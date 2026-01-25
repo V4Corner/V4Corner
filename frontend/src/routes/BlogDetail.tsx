@@ -4,6 +4,8 @@ import { getBlog, deleteBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
 import type { Blog } from '../types/blog';
 import Comments from '../components/Comments';
+import LikeButton from '../components/LikeButton';
+import FavoriteButton from '../components/FavoriteButton';
 
 function BlogDetail() {
   const { blogId } = useParams<{ blogId: string }>();
@@ -169,7 +171,7 @@ function BlogDetail() {
             {blog.is_owner && (
               <>
                 <div style={{ flex: 1 }}></div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <button
                     onClick={handleEdit}
                     className="btn btn-outline"
@@ -216,7 +218,77 @@ function BlogDetail() {
                     </div>
                   )}
                 </div>
+
+                {/* 点赞和收藏按钮 */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
+                  <LikeButton
+                    blogId={blog.id}
+                    isLiked={blog.is_liked}
+                    likesCount={blog.likes_count}
+                    onToggle={(newState) => {
+                      if (blog) {
+                        setBlog({
+                          ...blog,
+                          is_liked: newState.isLiked,
+                          likes_count: newState.likesCount,
+                        });
+                      }
+                    }}
+                  />
+                  <FavoriteButton
+                    blogId={blog.id}
+                    isFavorited={blog.is_favorited}
+                    favoritesCount={blog.favorites_count}
+                    onToggle={(newState) => {
+                      if (blog) {
+                        setBlog({
+                          ...blog,
+                          is_favorited: newState.isFavorited,
+                          favorites_count: newState.favoritesCount,
+                        });
+                      }
+                    }}
+                  />
+                </div>
               </>
+            )}
+
+            {!blog.is_owner && (
+              <div style={{ flex: 1 }}></div>
+            )}
+
+            {/* 非作者也显示点赞和收藏按钮 */}
+            {!blog.is_owner && (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <LikeButton
+                  blogId={blog.id}
+                  isLiked={blog.is_liked}
+                  likesCount={blog.likes_count}
+                  onToggle={(newState) => {
+                    if (blog) {
+                      setBlog({
+                        ...blog,
+                        is_liked: newState.isLiked,
+                        likes_count: newState.likesCount,
+                      });
+                    }
+                  }}
+                />
+                <FavoriteButton
+                  blogId={blog.id}
+                  isFavorited={blog.is_favorited}
+                  favoritesCount={blog.favorites_count}
+                  onToggle={(newState) => {
+                    if (blog) {
+                      setBlog({
+                        ...blog,
+                        is_favorited: newState.isFavorited,
+                        favorites_count: newState.favoritesCount,
+                      });
+                    }
+                  }}
+                />
+              </div>
             )}
           </div>
         </header>

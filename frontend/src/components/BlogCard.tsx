@@ -1,11 +1,19 @@
 import { Link } from 'react-router-dom';
 import type { Blog } from '../types/blog';
+import LikeButton from './LikeButton';
+import FavoriteButton from './FavoriteButton';
+import { useState, useEffect } from 'react';
 
 interface Props {
   blog: Blog;
 }
 
 function BlogCard({ blog }: Props) {
+  const [isLiked, setIsLiked] = useState(blog.is_liked);
+  const [likesCount, setLikesCount] = useState(blog.likes_count);
+  const [isFavorited, setIsFavorited] = useState(blog.is_favorited);
+  const [favoritesCount, setFavoritesCount] = useState(blog.favorites_count);
+
   return (
     <article className="card" style={{ cursor: 'pointer' }}>
       <Link to={`/blogs/${blog.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -60,6 +68,54 @@ function BlogCard({ blog }: Props) {
           {blog.excerpt}
         </p>
       </Link>
+
+      {/* 点赞和收藏数 */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.75rem',
+          marginTop: '0.75rem',
+          paddingTop: '0.75rem',
+          borderTop: '1px solid #f1f5f9',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <LikeButton
+            blogId={blog.id}
+            isLiked={isLiked}
+            likesCount={likesCount}
+            size="sm"
+            showLabel={false}
+            onToggle={(newState) => {
+              setIsLiked(newState.isLiked);
+              setLikesCount(newState.likesCount);
+            }}
+          />
+          {likesCount > 0 && (
+            <span className="small-muted" style={{ fontSize: '0.85rem' }}>
+              {likesCount}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <FavoriteButton
+            blogId={blog.id}
+            isFavorited={isFavorited}
+            favoritesCount={favoritesCount}
+            size="sm"
+            showLabel={false}
+            onToggle={(newState) => {
+              setIsFavorited(newState.isFavorited);
+              setFavoritesCount(newState.favoritesCount);
+            }}
+          />
+          {favoritesCount > 0 && (
+            <span className="small-muted" style={{ fontSize: '0.85rem' }}>
+              {favoritesCount}
+            </span>
+          )}
+        </div>
+      </div>
     </article>
   );
 }

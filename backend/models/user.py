@@ -26,3 +26,6 @@ class User(Base):
     checkins = relationship("CheckIn", back_populates="user", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    likes = relationship("Like", back_populates="user", cascade="all, delete-orphan")
+    favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
+    favorite_folders = relationship("FavoriteFolder", back_populates="user", cascade="all, delete-orphan")

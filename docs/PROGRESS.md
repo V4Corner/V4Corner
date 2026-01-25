@@ -6,6 +6,86 @@
 
 ## 版本历史
 
+### v2.0.0 (2026-01-25) - 点赞收藏系统 ⭐📁
+
+#### ✨ 新增功能
+
+**点赞功能**
+- 用户可为博客点赞/取消点赞
+- 博客列表显示点赞数
+- 博客详情页显示点赞按钮
+- 点赞后通知作者（非自己点赞时）
+- 乐观更新 UI，失败自动回滚
+
+**收藏功能**
+- 用户可收藏博客到文件夹
+- 创建收藏文件夹（名称、公开/私有权限）
+- 默认文件夹：公开的"我的收藏"
+- 一个博客可收藏到多个文件夹
+- 收藏后通知作者（非自己收藏时）
+- 文件夹管理：创建、编辑、删除
+- 查看所有收藏（去重，分页）
+- 查看特定文件夹的收藏
+- 乐观更新 UI，失败自动回滚
+
+**我的收藏页面**
+- 新增路由：`/favorites`
+- 显示所有收藏的博客（按收藏时间倒序）
+- 分页显示（每页 20 篇）
+- 显示收藏所在的文件夹列表
+- 快速跳转到文件夹管理
+
+**数据库设计**
+- `likes` 表：用户点赞记录
+- `favorite_folders` 表：收藏文件夹
+- `favorites` 表：博客收藏记录（支持多文件夹）
+- `blogs` 表新增：`likes_count`, `favorites_count` 字段
+- 级联删除：删除博客时自动删除点赞/收藏
+
+#### 🔧 技术改进
+
+**后端 API (11 个接口)**
+- `POST /api/blogs/{blog_id}/like` - 点赞博客
+- `DELETE /api/blogs/{blog_id}/like` - 取消点赞
+- `GET /api/blogs/{blog_id}/like/status` - 查询点赞状态
+
+- `POST /api/users/favorites/folders` - 创建收藏文件夹
+- `GET /api/users/favorites/folders` - 获取文件夹列表
+- `PUT /api/users/favorites/folders/{folder_id}` - 更新文件夹
+- `DELETE /api/users/favorites/folders/{folder_id}` - 删除文件夹
+- `POST /api/blogs/{blog_id}/favorite` - 收藏博客
+- `DELETE /api/blogs/{blog_id}/favorite` - 取消收藏
+- `GET /api/blogs/{blog_id}/favorite/status` - 查询收藏状态
+- `GET /api/users/favorites` - 获取所有收藏
+- `GET /api/users/favorites/folders/{folder_id}` - 获取文件夹收藏
+
+**前端组件**
+- `LikeButton.tsx` - 点赞按钮（支持 sm/md 尺寸）
+- `FavoriteButton.tsx` - 收藏按钮（文件夹选择菜单）
+- `Favorites.tsx` - 我的收藏页面
+
+**类型定义**
+- `types/like.ts` - 点赞相关类型
+- `types/favorite.ts` - 收藏相关类型
+- `types/blog.ts` - 新增字段
+
+#### 🐛 已修复问题
+
+1. **路由顺序问题** - `favorites.router` 必须在 `users.router` 之前注册，避免 `/api/users/favorites` 被 `/api/users/{user_id}` 匹配
+2. **重复函数定义** - 移除 `favorites.py` 中的重复 `get_folder_favorites` 函数
+3. **认证加载时序** - `Favorites.tsx` 等待 `isLoading` 完成后再检查 `isAuthenticated`
+4. **索引名称冲突** - 数据库索引添加表前缀避免冲突
+
+#### 📝 设计决策
+
+- **允许自赞/自藏** - 用户可以点赞和收藏自己的博客
+- **默认公开** - 收藏文件夹默认为公开，便于分享
+- **文件夹组织** - 支持将博客收藏到多个文件夹，方便分类管理
+- **无确认对话框** - 取消点赞/收藏直接执行，提升操作效率
+- **乐观更新** - UI 立即响应，失败时自动回滚状态
+
+---
+
 ### v1.9.1 (2026-01-25) - 博客媒体系统优化 🎬
 
 #### ✨ 新增功能

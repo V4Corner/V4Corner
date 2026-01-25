@@ -30,7 +30,10 @@
       "Bash(find:*)",
       "Bash(for:*)",
       "Bash(do taskkill /F /PID $pid)",
-      "Bash(done:*)"
+      "Bash(done:*)",
+      "Bash(start:*)",
+      "Bash(uvicorn:*)",
+      "Bash(ping:*)"
     ]
   }
 }

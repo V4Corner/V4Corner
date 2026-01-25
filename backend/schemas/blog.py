@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Literal
 import re
 import os
+import models
 
 
 # 博客内容摘要（移除HTML标签，媒体文件替换为占位符）
@@ -131,7 +132,13 @@ class BlogListItem(BaseModel):
     author_avatar_url: str | None = None
     status: str
     views: int
+    likes_count: int = 0
+    favorites_count: int = 0
+    is_liked: bool = False
+    is_favorited: bool = False
     created_at: datetime
+    favorited_at: datetime | None = None  # 收藏时间（用于收藏列表排序）
+    folders: list | None = None  # 收藏所在的文件夹列表（仅"我的收藏"接口返回）
 
 
 class BlogRead(BaseModel):
@@ -145,6 +152,10 @@ class BlogRead(BaseModel):
     author_avatar_url: str | None = None
     status: str
     views: int
+    likes_count: int = 0
+    favorites_count: int = 0
+    is_liked: bool = False
+    is_favorited: bool = False
     is_owner: bool = False  # 当前用户是否为作者
     created_at: datetime
     updated_at: datetime | None = None
@@ -153,9 +164,27 @@ class BlogRead(BaseModel):
         from_attributes = True
 
     @classmethod
-    def from_orm_with_excerpt(cls, blog, is_owner: bool = False):
+    def from_orm_with_excerpt(cls, blog, is_owner: bool = False, current_user=None, db=None):
         """从 ORM 对象创建，自动生成摘要"""
         excerpt = generate_excerpt(blog.content)
+
+        # 检查点赞和收藏状态
+        is_liked = False
+        is_favorited = False
+
+        if current_user and db:
+            like = db.query(models.Like).filter(
+                models.Like.user_id == current_user.id,
+                models.Like.blog_id == blog.id
+            ).first()
+            is_liked = like is not None
+
+            favorite = db.query(models.Favorite).filter(
+                models.Favorite.user_id == current_user.id,
+                models.Favorite.blog_id == blog.id
+            ).first()
+            is_favorited = favorite is not None
+
         return cls(
             id=blog.id,
             title=blog.title,
@@ -166,6 +195,10 @@ class BlogRead(BaseModel):
             author_avatar_url=blog.author.avatar_url if blog.author else None,
             status=blog.status,
             views=blog.views,
+            likes_count=blog.likes_count,
+            favorites_count=blog.favorites_count,
+            is_liked=is_liked,
+            is_favorited=is_favorited,
             is_owner=is_owner,
             created_at=blog.created_at,
             updated_at=blog.updated_at
