@@ -32,6 +32,10 @@ class Settings(BaseSettings):
 
     # ========== 邮件配置 ==========
 
+    # 开发模式配置
+    SKIP_EMAIL_VERIFICATION: bool = False  # 开发模式：跳过邮箱验证（生产环境必须为 False）
+    DEV_VERIFICATION_CODE: str = "123456"  # 开发模式：通用验证码
+
     # 网易邮箱 SMTP 配置（推荐）
     NETEASE_MAIL_PASSWORD: Optional[str] = None  # 网易邮箱授权码（非登录密码）
     ALIYUN_ACCOUNT_NAME: str = "your-email@163.com"  # 发件人邮箱地址（网易邮箱）

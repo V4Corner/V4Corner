@@ -60,7 +60,17 @@ async def send_verification_code(
         expire_minutes=5
     )
 
-    # 添加后台任务：异步发送邮件
+    # 开发模式：直接在响应中返回验证码
+    if settings.SKIP_EMAIL_VERIFICATION:
+        logger.info(f"[开发模式] 验证码生成成功: {request.email} -> {code}")
+        return schemas.VerificationResponse(
+            success=True,
+            message=f"[开发模式] 验证码: {code}",
+            expires_in=300,
+            dev_code=code  # 开发模式直接返回验证码
+        )
+
+    # 生产模式：添加后台任务异步发送邮件
     background_tasks.add_task(
         send_verification_code_background,
         email=request.email,
