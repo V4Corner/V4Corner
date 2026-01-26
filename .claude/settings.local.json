@@ -35,7 +35,14 @@
       "Bash(uvicorn:*)",
       "Bash(ping:*)",
       "Bash(rm:*)",
-      "Bash(if exist v4corner.db del v4corner.db)"
+      "Bash(if exist v4corner.db del v4corner.db)",
+      "Bash(npm --version:*)",
+      "Bash(node:*)",
+      "Bash(if:*)",
+      "Bash(then cat .env)",
+      "Bash(else echo \".env file not found\")",
+      "Bash(fi:*)",
+      "Bash(move:*)"
     ]
   }
 }

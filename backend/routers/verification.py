@@ -2,13 +2,14 @@
 
 import random
 import string
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import logging
 
 import dependencies, models, schemas
 from config import settings
+from services.email_background import send_verification_code_background
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +19,10 @@ router = APIRouter(prefix="/api/verification", tags=["验证码"])
 @router.post("/send", response_model=schemas.VerificationResponse)
 async def send_verification_code(
     request: schemas.VerificationRequest,
+    background_tasks: BackgroundTasks,
     db: dependencies.DbSession
 ):
-    """发送验证码（支持短信和邮件）"""
+    """发送验证码（支持短信和邮件）- 使用后台任务异步发送"""
 
     # 生成随机验证码（6位数字）
     code = ''.join(random.choices(string.digits, k=6))
@@ -42,10 +44,11 @@ async def send_verification_code(
                 expires_in=remaining_seconds
             )
 
-    # 删除该邮箱的旧验证码（保留最近一条）
+    # 删除该邮箱的旧未使用验证码
     db.query(models.VerificationCode).filter(
         models.VerificationCode.email == request.email,
-        models.VerificationCode.type == request.type
+        models.VerificationCode.type == request.type,
+        models.VerificationCode.is_used == 0  # 只删除未使用的
     ).delete()
 
     # 创建新验证码（有效期5分钟）
@@ -57,29 +60,16 @@ async def send_verification_code(
         expire_minutes=5
     )
 
-    # 发送验证码（使用邮件服务）
-    try:
-        from services.email_service import send_verification_code_email
+    # 添加后台任务：异步发送邮件
+    background_tasks.add_task(
+        send_verification_code_background,
+        email=request.email,
+        code=code,
+        code_type=request.type
+    )
 
-        success = send_verification_code_email(
-            email=request.email,
-            code=code,
-            code_type=request.type
-        )
-
-        if not success:
-            # 邮件发送失败，使用模拟模式
-            _send_mock(request.email, code, request.type)
-
-    except Exception as e:
-        logger.error(f"发送验证码失败: {e}")
-        # 发送失败，回滚验证码
-        db.delete(code_obj)
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"发送验证码失败: {str(e)}"
-        )
+    # 立即返回响应，不等待邮件发送完成
+    logger.info(f"[验证码] 已生成验证码: {request.email}, 后台发送中...")
 
     return schemas.VerificationResponse(
         success=True,

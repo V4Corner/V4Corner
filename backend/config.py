@@ -32,9 +32,9 @@ class Settings(BaseSettings):
 
     # ========== 邮件配置 ==========
 
-    # QQ 邮箱 SMTP 配置（推荐，简单快速）
-    QQ_MAIL_PASSWORD: Optional[str] = None  # QQ 邮箱授权码（非登录密码）
-    ALIYUN_ACCOUNT_NAME: str = "noreply@v4corner.com"  # 发件人邮箱地址（建议使用 QQ 邮箱）
+    # 网易邮箱 SMTP 配置（推荐）
+    NETEASE_MAIL_PASSWORD: Optional[str] = None  # 网易邮箱授权码（非登录密码）
+    ALIYUN_ACCOUNT_NAME: str = "your-email@163.com"  # 发件人邮箱地址（网易邮箱）
     ALIYUN_FROM_ALIAS: str = "V4Corner"  # 发件人昵称
 
     # ========== 短信配置 ==========

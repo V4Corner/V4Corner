@@ -2,6 +2,8 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { sendVerificationCode } from '../api/verification';
+import { checkUsername, checkEmail } from '../api/auth';
+import { validatePasswordStrength } from '../utils/passwordValidator';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -16,6 +18,11 @@ function Register() {
   const [countdown, setCountdown] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+
+  // 实时验证状态
+  const [usernameStatus, setUsernameStatus] = useState<'checking' | 'available' | 'taken' | null>(null);
+  const [emailStatus, setEmailStatus] = useState<'checking' | 'available' | 'taken' | null>(null);
+  const [passwordStrength, setPasswordStrength] = useState<ReturnType<typeof validatePasswordStrength> | null>(null);
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -34,7 +41,6 @@ function Register() {
           setCountdown((prev) => {
             if (prev <= 1) {
               clearInterval(timer);
-              localStorage.removeItem('verificationCountdown');
               localStorage.removeItem('verificationTimestamp');
               return 0;
             }
@@ -49,6 +55,69 @@ function Register() {
       }
     }
   }, []);
+
+  // 用户名实时验证
+  useEffect(() => {
+    const checkUsernameAvailability = async () => {
+      if (!username) {
+        setUsernameStatus(null);
+        return;
+      }
+
+      // 用户名格式验证
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+        setUsernameStatus(null);
+        return;
+      }
+
+      try {
+        setUsernameStatus('checking');
+        const result = await checkUsername(username);
+        setUsernameStatus(result.available ? 'available' : 'taken');
+      } catch (err) {
+        setUsernameStatus(null);
+      }
+    };
+
+    const timeoutId = setTimeout(checkUsernameAvailability, 500);
+    return () => clearTimeout(timeoutId);
+  }, [username]);
+
+  // 邮箱实时验证
+  useEffect(() => {
+    const checkEmailAvailability = async () => {
+      if (!email) {
+        setEmailStatus(null);
+        return;
+      }
+
+      // 邮箱格式验证
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setEmailStatus(null);
+        return;
+      }
+
+      try {
+        setEmailStatus('checking');
+        const result = await checkEmail(email);
+        setEmailStatus(result.available ? 'available' : 'taken');
+      } catch (err) {
+        setEmailStatus(null);
+      }
+    };
+
+    const timeoutId = setTimeout(checkEmailAvailability, 500);
+    return () => clearTimeout(timeoutId);
+  }, [email]);
+
+  // 密码强度实时验证
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength(null);
+      return;
+    }
+    setPasswordStrength(validatePasswordStrength(password));
+  }, [password]);
 
   // 发送验证码
   const handleSendCode = async () => {
@@ -71,7 +140,6 @@ function Register() {
           setCountdown((prev) => {
             if (prev <= 1) {
               clearInterval(timer);
-              localStorage.removeItem('verificationCountdown');
               localStorage.removeItem('verificationTimestamp');
               return 0;
             }
@@ -100,6 +168,12 @@ function Register() {
 
     if (!verificationCode) {
       setError('请输入验证码');
+      return;
+    }
+
+    // 验证密码强度
+    if (passwordStrength && !passwordStrength.isValid) {
+      setError(passwordStrength.message);
       return;
     }
 
@@ -135,6 +209,15 @@ function Register() {
               pattern="^[a-zA-Z0-9_]+$"
             />
             <div className="form-help">3-20个字符，字母数字下划线</div>
+            {usernameStatus === 'checking' && (
+              <div className="validation-message checking">检查中...</div>
+            )}
+            {usernameStatus === 'available' && (
+              <div className="validation-message success">✓ 用户名可用</div>
+            )}
+            {usernameStatus === 'taken' && (
+              <div className="validation-message error">✗ 用户名已被注册</div>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">邮箱</label>
@@ -146,6 +229,15 @@ function Register() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+            {emailStatus === 'checking' && (
+              <div className="validation-message checking">检查中...</div>
+            )}
+            {emailStatus === 'available' && (
+              <div className="validation-message success">✓ 邮箱可以使用</div>
+            )}
+            {emailStatus === 'taken' && (
+              <div className="validation-message error">✗ 邮箱已被注册</div>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">验证码</label>
@@ -178,7 +270,7 @@ function Register() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 className="form-input"
-                placeholder="至少6个字符"
+                placeholder="6-20个字符，至少包含两类字符"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -215,7 +307,44 @@ function Register() {
                 )}
               </button>
             </div>
-            <div className="form-help">至少6个字符</div>
+            {passwordStrength && (
+              <div className="password-strength">
+                <div className="password-strength-header">
+                  <span className="password-strength-label">密码强度：</span>
+                  <span className={`password-strength-indicator ${passwordStrength.strength}`}>
+                    {passwordStrength.strength === 'strong' && '强'}
+                    {passwordStrength.strength === 'medium' && '中'}
+                    {passwordStrength.strength === 'weak' && '弱'}
+                  </span>
+                </div>
+                {!passwordStrength.isValid && passwordStrength.message && (
+                  <div className="validation-message error">{passwordStrength.message}</div>
+                )}
+                {passwordStrength.isValid && (
+                  <div className="validation-message success">✓ 密码强度符合要求</div>
+                )}
+                <div className="password-requirements">
+                  <div className={passwordStrength.requirements.length ? 'requirement-met' : 'requirement-unmet'}>
+                    {passwordStrength.requirements.length ? '✓' : '○'} 长度6-20个字符
+                  </div>
+                  <div className={passwordStrength.requirements.hasLowercase ? 'requirement-met' : 'requirement-unmet'}>
+                    {passwordStrength.requirements.hasLowercase ? '✓' : '○'} 小写字母
+                  </div>
+                  <div className={passwordStrength.requirements.hasUppercase ? 'requirement-met' : 'requirement-unmet'}>
+                    {passwordStrength.requirements.hasUppercase ? '✓' : '○'} 大写字母
+                  </div>
+                  <div className={passwordStrength.requirements.hasDigit ? 'requirement-met' : 'requirement-unmet'}>
+                    {passwordStrength.requirements.hasDigit ? '✓' : '○'} 数字
+                  </div>
+                  <div className={passwordStrength.requirements.hasSpecial ? 'requirement-met' : 'requirement-unmet'}>
+                    {passwordStrength.requirements.hasSpecial ? '✓' : '○'} 特殊符号
+                  </div>
+                  <div className={passwordStrength.requirements.minTypes ? 'requirement-met' : 'requirement-unmet'}>
+                    {passwordStrength.requirements.minTypes ? '✓' : '○'} 至少两类字符
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">确认密码</label>

@@ -278,195 +278,79 @@ SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost/v4corner"
    - 悬浮在消息上可复制或反馈
    - 点击删除按钮删除对话
 
-### 🧪 AI 对话测试（模拟模式）
+### 🤖 AI 服务配置
 
-系统默认使用**模拟 AI 回复**，无需配置任何 API Key 即可测试对话功能。
+系统默认使用**模拟 AI 回复**（无需配置），支持 **8 种主流 AI 服务商**。
 
-#### 模拟模式特点
-- ✅ **无需 API Key**：开箱即用，无需注册或配置任何 AI 服务
-- ✅ **完整流程测试**：支持创建对话、发送消息、流式输出等所有功能
-- ✅ **快速验证**：用于验证前后端集成和 UI 交互
-- ⚠️ **仅供开发测试**：AI 回复为预设的模拟内容，非真实 AI 生成
+#### 快速开始
 
-#### 测试步骤
+**模拟模式（默认，无需配置）**
+```bash
+# 直接启动服务即可测试 AI 对话功能
+cd backend && uvicorn main:app --reload
+cd frontend && npm run dev
+```
 
-1. **启动服务**
-   ```bash
-   # 后端（模拟模式会自动启用）
-   cd backend
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-   # 前端
-   cd frontend
-   npm run dev
-   ```
-
-2. **登录并创建对话**
-   - 访问 http://localhost:3000
-   - 注册/登录账号
-   - 点击"AI对话 💬"
-   - 点击"+ 新对话"
-
-3. **发送测试消息**
-   - 在输入框输入任意问题（如："你好，介绍一下自己"）
-   - 按 Enter 发送
-   - **预期结果**：
-     - 消息立即显示在对话右侧（用户消息）
-     - AI 开始以"打字机效果"逐字显示回复（左侧）
-     - 回复内容根据输入关键词智能生成
-
-4. **验证功能**
-   - ✅ 消息流式输出（逐字显示）
-   - ✅ 自动滚动到底部
-   - ✅ 对话列表更新标题
-   - ✅ 消息计数增加
-   - ✅ 复制按钮可用
-   - ✅ 反馈按钮可用
-
-### 🚀 启用真实 AI 服务
-
-系统支持 **8 种主流 AI 服务商**，可根据需求选择使用。
-
-#### 快速配置
-
+**启用真实 AI（3 步配置）**
 ```bash
 cd backend
 
-# 1. 复制环境变量模板
-cp .env.example .env
-
-# 2. 编辑 .env 文件，配置 API Key（选择一个或多个）
-# 例如使用 OpenAI：
+# 1. 编辑 .env 文件，添加 API Key
 OPENAI_API_KEY=sk-your-key-here
 OPENAI_MODEL=gpt-3.5-turbo
 
-# 3. 安装对应的 AI SDK（如果还没安装）
+# 2. 安装对应的 AI SDK
 pip install openai
-
-# 4. 重启后端服务
-uvicorn main:app --reload
-```
-
-#### 支持的 AI 服务商
-
-| 服务商 | 特点 | 推荐场景 | 获取 API Key | 安装命令 |
-|--------|------|----------|--------------|----------|
-| **OpenAI** | 质量、稳定性最好 | 生产环境首选 | [platform.openai.com](https://platform.openai.com/api-keys) | `pip install openai` |
-| **DeepSeek** | 性价比极高，中文友好 | 个人/小团队 | [platform.deepseek.com](https://platform.deepseek.com/) | `pip install openai` |
-| **Ollama** | 完全免费，本地运行 | 隐私敏感、离线 | [ollama.ai](https://ollama.ai/) | `pip install openai` |
-| **Anthropic** | 长文本能力强 | 复杂任务 | [console.anthropic.com](https://console.anthropic.com/) | `pip install anthropic` |
-| **Google Gemini** | 免费额度大 | 测试/学习 | [makersuite.google.com](https://makersuite.google.com/app/apikey) | `pip install google-generativeai` |
-| **智谱 GLM** | 有免费额度，中文好 | 个人开发 | [open.bigmodel.cn](https://open.bigmodel.cn/) | `pip install zhipuai` |
-| **通义千问** | 国产稳定 | 企业应用 | [dashscope.aliyun.com](https://dashscope.aliyun.com/) | `pip install dashscope` |
-| **文心一言** | 百度生态 | 特定需求 | [cloud.baidu.com](https://cloud.baidu.com/) | 需单独配置 |
-
-#### 配置示例
-
-**使用 OpenAI（推荐）**
-```bash
-# .env 文件
-OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxx
-OPENAI_MODEL=gpt-3.5-turbo
-```
-
-**使用 DeepSeek（性价比高）**
-```bash
-# .env 文件
-DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxx
-DEEPSEEK_MODEL=deepseek-chat
-```
-
-**使用 Ollama（完全免费，本地运行）**
-```bash
-# 1. 安装 Ollama: https://ollama.ai/
-# 2. 下载模型: ollama pull llama3.1
-# 3. 启动服务: ollama serve
-# 4. 配置 .env 文件
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
-ENABLE_OLLAMA=True  # 重要：需要显式启用
-```
-
-**同时配置多个（自动切换）**
-```bash
-# .env 文件
-OPENAI_API_KEY=sk-xxxx
-DEEPSEEK_API_KEY=sk-xxxx
-OLLAMA_MODEL=llama3.1
-
-# 系统会按优先级自动尝试，前面的失败后使用后面的
-```
-
-#### 高级配置
-
-```bash
-# 指定 AI 服务商（可选，不指定则自动选择）
-AI_PROVIDER=openai
-
-# 调整生成参数
-AI_MAX_TOKENS=2000      # 最大生成 Token 数
-AI_TEMPERATURE=0.7      # 创造性（0-2，越高越随机）
-AI_TIMEOUT=30           # API 超时时间（秒）
-```
-
-详细配置说明：参考 `backend/.env.example` 文件中的注释
-
-### 📧 启用邮件验证码功能
-
-系统使用 **QQ 邮箱 SMTP** 发送验证码邮件。
-
-#### 快速配置
-
-```bash
-cd backend
-
-# 1. 编辑 .env 文件
-ALIYUN_ACCOUNT_NAME=your-email@qq.com
-ALIYUN_FROM_ALIAS=V4Corner
-QQ_MAIL_PASSWORD=your-authorization-code
-
-# 2. 获取 QQ 邮箱授权码
-# 登录 QQ 邮箱 -> 设置 -> 账户 -> 开启 IMAP/SMTP
-# 手机验证后会显示授权码（不是登录密码！）
 
 # 3. 重启后端服务
 uvicorn main:app --reload
 ```
 
-#### 🔧 Bug 修复（v1.4.1）
+#### 支持的 AI 服务商
 
-- **验证码冷却倒计时优化** - 修复倒计时显示异常（2秒1跳问题）
-- **页面刷新冷却保持** - 优化冷却时间计算逻辑，确保刷新后时间准确
+| 服务商 | 特点 | 推荐场景 | 快速配置 |
+|--------|------|----------|----------|
+| **OpenAI** | 质量、稳定性最好 | 生产环境首选 | `OPENAI_API_KEY=sk-xxx` |
+| **DeepSeek** | 性价比极高，中文友好 | 个人/小团队 | `DEEPSEEK_API_KEY=sk-xxx` |
+| **Ollama** | 完全免费，本地运行 | 隐私敏感、离线 | `ENABLE_OLLAMA=True` |
+| **Anthropic** | 长文本能力强 | 复杂任务 | `ANTHROPIC_API_KEY=sk-xxx` |
+| **Google Gemini** | 免费额度大 | 测试/学习 | `GEMINI_API_KEY=xxx` |
+| **智谱 GLM** | 有免费额度，中文好 | 个人开发 | `ZHIPUAI_API_KEY=xxx` |
+| **通义千问** | 国产稳定 | 企业应用 | `DASHSCOPE_API_KEY=sk-xxx` |
+| **文心一言** | 百度生态 | 特定需求 | `QIANFAN_API_KEY=xxx` |
 
-#### 配置步骤详解
+**完整配置指南**：[docs/develop/AI_SETUP.md](docs/develop/AI_SETUP.md)
+- 详细的配置步骤
+- 故障排除指南
+- 成本优化建议
+- 高级参数说明
 
-1. **获取 QQ 邮箱授权码**
-   - 访问 https://mail.qq.com 登录 QQ 邮箱
-   - 点击顶部"设置"
-   - 选择"账户"标签
-   - 找到"POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务"
-   - 点击"开启 IMAP/SMTP 服务"
-   - 按提示发送短信验证
-   - 验证成功后，系统会显示**16位授权码**
-   - 复制授权码并填入 `.env` 的 `QQ_MAIL_PASSWORD`
+### 📧 启用邮件验证码功能
 
-2. **配置环境变量**
-   ```bash
-   # backend/.env
-   ALIYUN_ACCOUNT_NAME=your-email@qq.com    # 你的 QQ 邮箱
-   QQ_MAIL_PASSWORD=xxxxxxxxxxxx            # 16位授权码（不是密码！）
-   ```
+系统使用 **网易邮箱 SMTP**（163邮箱、126邮箱、yeah邮箱）发送验证码邮件。
 
-3. **测试邮件发送**
-   ```bash
-   cd backend
-   python test_email.py
-   ```
+#### 快速开始
 
-4. **使用模拟模式（开发测试）**
-   - 不配置 `QQ_MAIL_PASSWORD` 时，系统自动使用模拟模式
-   - 验证码会输出到后端控制台
-   - 适合快速开发测试
+```bash
+cd backend
+
+# 1. 编辑 .env 文件，添加网易邮箱配置
+ALIYUN_ACCOUNT_NAME=your-email@163.com
+ALIYUN_FROM_ALIAS=V4Corner
+NETEASE_MAIL_PASSWORD=your-16-digit-authorization-code
+
+# 2. 重启后端服务
+uvicorn main:app --reload
+```
+
+> **📖 详细配置指南**（获取授权码、常见问题、安全建议）：
+> 查看 [docs/develop/NETEASE_EMAIL_SETUP.md](docs/develop/NETEASE_EMAIL_SETUP.md)
+
+#### 模拟模式（开发测试）
+
+- 不配置 `NETEASE_MAIL_PASSWORD` 时，系统自动使用模拟模式
+- 验证码会输出到后端控制台，便于开发测试
+- 无需配置即可快速启动项目
 
 #### 邮件模板特点
 
@@ -474,26 +358,6 @@ uvicorn main:app --reload
 - **验证码高亮显示**：大字体、醒目样式
 - **有效期提醒**：明确标注 5 分钟有效期
 - **安全提示**：提醒用户注意账号安全
-
-#### 测试验证码功能
-
-1. **启动服务**
-   ```bash
-   # 后端
-   cd backend
-   uvicorn main:app --reload
-
-   # 前端
-   cd frontend
-   npm run dev
-   ```
-
-2. **测试注册流程**
-   - 访问 http://localhost:3000/register
-   - 输入邮箱
-   - 点击"发送验证码"
-   - 检查邮箱收件箱（或查看控制台模拟输出）
-   - 输入验证码完成注册
 
 #### 后端测试脚本
 

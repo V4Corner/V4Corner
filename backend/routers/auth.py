@@ -10,6 +10,26 @@ from models.activity import Activity
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
 
+@router.get("/check-username")
+async def check_username(username: str, db: dependencies.DbSession):
+    """检查用户名是否可用"""
+    user = auth.get_user_by_username(db, username)
+    return {
+        "available": user is None,
+        "message": "用户名可用" if user is None else "用户名已被注册"
+    }
+
+
+@router.get("/check-email")
+async def check_email(email: str, db: dependencies.DbSession):
+    """检查邮箱是否可用"""
+    user = auth.get_user_by_email(db, email)
+    return {
+        "available": user is None,
+        "message": "邮箱可以使用" if user is None else "邮箱已被注册"
+    }
+
+
 @router.post("/register", response_model=schemas.AuthResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: schemas.UserCreate,
@@ -37,6 +57,14 @@ async def register(
             detail="两次密码不一致"
         )
 
+    # 验证密码强度
+    is_valid, error_msg = auth.validate_password_strength(user_data.password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=error_msg
+        )
+
     # 验证验证码
     verification = models.VerificationCode.get_pending_code(
         db=db,
@@ -45,9 +73,54 @@ async def register(
         code_type="register"
     )
     if not verification:
+        # 检查是否因为尝试次数过多而失效
+        exceeded = models.VerificationCode.is_attempts_exceeded(
+            db=db,
+            email=user_data.email,
+            code=user_data.verification_code,
+            code_type="register"
+        )
+        if exceeded:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="验证码尝试次数过多，请重新获取验证码"
+            )
+        else:
+            # 检查是否过期
+            from datetime import datetime
+            from database import SessionLocal
+            temp_db = SessionLocal()
+            expired_code = temp_db.query(models.VerificationCode).filter(
+                models.VerificationCode.email == user_data.email,
+                models.VerificationCode.code == user_data.verification_code,
+                models.VerificationCode.type == "register"
+            ).first()
+
+            if expired_code and expired_code.expires_at < datetime.utcnow():
+                temp_db.close()
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="验证码已过期，请重新获取"
+                )
+            temp_db.close()
+
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="验证码错误，请检查后重新输入"
+            )
+
+    # 增加尝试次数（在验证成功前）
+    is_exceeded = models.VerificationCode.increment_attempts(
+        db=db,
+        email=user_data.email,
+        code=user_data.verification_code,
+        code_type="register"
+    )
+
+    if is_exceeded:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="验证码无效或已过期"
+            detail="验证码尝试次数过多，请重新获取验证码"
         )
 
     # 标记验证码为已使用
