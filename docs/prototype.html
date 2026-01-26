@@ -107,6 +107,134 @@
             background-color: var(--bg-start);
         }
 
+        .role-switcher {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 999px;
+            background-color: var(--bg-start);
+            border: 1px solid var(--border);
+            color: var(--secondary);
+            font-size: 0.85rem;
+        }
+
+        .role-switcher select {
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .role-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.15rem 0.6rem;
+            border-radius: 999px;
+            background: var(--primary);
+            color: white;
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .role-hint {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background-color: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .action-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .notice-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .notice-editor-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+
+        .role-board {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .role-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            background-color: var(--bg-start);
+        }
+
+        .role-chip {
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-chip.student {
+            background-color: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .role-chip.committee {
+            background-color: #fde68a;
+            color: #92400e;
+        }
+
+        .role-chip.admin {
+            background-color: #fecaca;
+            color: #991b1b;
+        }
+
+        .calendar-manage {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 1rem;
+        }
+
+        .calendar-event-card {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background-color: var(--bg-start);
+            margin-bottom: 0.75rem;
+        }
+
+        @media (max-width: 900px) {
+            .calendar-manage {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* User dropdown */
         .user-dropdown {
             position: relative;
@@ -1932,7 +2060,17 @@
         <a href="#" class="nav-link" onclick="navigate('members')">成员</a>
         <a href="#" class="nav-link" onclick="navigate('chat-list')">AI对话</a>
         <a href="#" class="nav-link" onclick="navigate('notice-list')">班级通知</a>
+        <a href="#" class="nav-link requires-committee" onclick="navigate('calendar-admin')">日历管理</a>
+        <a href="#" class="nav-link requires-admin" onclick="navigate('role-admin')">角色管理</a>
         <div class="nav-spacer"></div>
+        <div class="role-switcher" id="roleSwitcher">
+            <span>角色</span>
+            <select id="roleSelect" onchange="handleRoleChange(event)">
+                <option value="student">student</option>
+                <option value="committee">committee</option>
+                <option value="admin">admin</option>
+            </select>
+        </div>
         <div class="nav-auth" id="navAuth">
             <!-- Will be populated by JS -->
         </div>
@@ -2248,8 +2386,18 @@
 
         <!-- Notice List Page -->
         <div class="page" id="page-notice-list">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h1>班级通知</h1>
+            <div class="action-toolbar">
+                <div>
+                    <h1>班级通知</h1>
+                    <div class="calendar-note">仅班委/管理员可发布与管理通知</div>
+                </div>
+                <div class="notice-actions">
+                    <button class="btn btn-primary requires-committee" onclick="navigate('notice-editor')">发布通知</button>
+                </div>
+            </div>
+            <div class="role-hint role-hint-student">
+                <div>当前角色为 <span class="role-pill" data-role-pill>student</span>，仅可浏览通知。</div>
+                <button class="btn btn-outline" onclick="showToast('已提交申请', 'success')">申请成为班委</button>
             </div>
             <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
             <div class="card" onclick="navigate('notice-detail')" style="cursor: pointer; transition: all 0.2s;">
@@ -2312,6 +2460,10 @@
                             <span style="background-color: #ef4444; color: white; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-right: 0.5rem;">重要</span>
                             <h1 class="blog-title" style="display: inline;">期中答辩时间调整至本周四下午</h1>
                         </div>
+                        <div class="notice-actions requires-committee">
+                            <button class="btn btn-outline" onclick="navigate('notice-editor')">编辑</button>
+                            <button class="btn btn-outline" onclick="showToast('通知已删除', 'success')">删除</button>
+                        </div>
                     </div>
                     <div class="blog-header-info">
                         <div>发布者：辅导员</div>
@@ -2343,6 +2495,193 @@
                         <p>请各位同学认真准备，预祝答辩顺利！</p>
                     </div>
                 </article>
+            </div>
+        </div>
+
+        <!-- Notice Editor Page -->
+        <div class="page" id="page-notice-editor">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                <a href="#" onclick="navigate('notice-list')" style="font-size: 1.5rem; text-decoration: none;">←</a>
+                <h1 style="margin: 0;">发布通知</h1>
+            </div>
+            <div class="role-hint role-hint-student">
+                <div>当前角色为 <span class="role-pill" data-role-pill>student</span>，需要班委权限才能发布。</div>
+                <button class="btn btn-outline" onclick="navigate('notice-list')">返回列表</button>
+            </div>
+            <hr style="border: none; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;">
+            <div class="card">
+                <form onsubmit="handlePublishNotice(event)">
+                    <div class="form-group">
+                        <label class="form-label">标题</label>
+                        <input type="text" class="form-input" placeholder="例如：本周五晚自习取消" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">重要程度</label>
+                        <select class="form-input">
+                            <option value="normal">普通</option>
+                            <option value="important">重要</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">内容（支持 Markdown）</label>
+                        <textarea class="form-textarea" placeholder="通知正文，支持 Markdown" style="min-height: 260px;"></textarea>
+                        <div class="form-help">支持：# 标题、**加粗**、`代码`、- 列表等</div>
+                    </div>
+                    <div class="notice-editor-actions">
+                        <button type="button" class="btn btn-outline" onclick="navigate('notice-list')">取消</button>
+                        <button type="button" class="btn btn-outline">保存草稿</button>
+                        <button type="submit" class="btn btn-primary requires-committee">发布通知</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Calendar Admin Page -->
+        <div class="page" id="page-calendar-admin">
+            <div class="action-toolbar">
+                <div>
+                    <h1>班级日历管理</h1>
+                    <div class="calendar-note">仅班委/管理员可新增或编辑日历事件</div>
+                </div>
+                <div class="notice-actions">
+                    <button class="btn btn-primary requires-committee" onclick="document.getElementById('calendarEventTitle').focus()">新增事件</button>
+                </div>
+            </div>
+            <div class="role-hint role-hint-student">
+                <div>当前角色为 <span class="role-pill" data-role-pill>student</span>，仅可查看日历。</div>
+                <button class="btn btn-outline" onclick="navigate('home')">返回首页</button>
+            </div>
+            <div class="calendar-manage">
+                <div class="card">
+                    <div class="calendar-header">
+                        <span>2025年1月</span>
+                        <span>活动标记</span>
+                    </div>
+                    <div class="calendar-grid" style="margin-top: 0.75rem;">
+                        <div class="calendar-weekday">一</div>
+                        <div class="calendar-weekday">二</div>
+                        <div class="calendar-weekday">三</div>
+                        <div class="calendar-weekday">四</div>
+                        <div class="calendar-weekday">五</div>
+                        <div class="calendar-weekday">六</div>
+                        <div class="calendar-weekday">日</div>
+
+                        <div class="calendar-day muted">30</div>
+                        <div class="calendar-day muted">31</div>
+                        <div class="calendar-day">1</div>
+                        <div class="calendar-day">2</div>
+                        <div class="calendar-day event">3<div class="event-dot"></div></div>
+                        <div class="calendar-day">4</div>
+                        <div class="calendar-day">5</div>
+                        <div class="calendar-day">6</div>
+                        <div class="calendar-day event">7<div class="event-dot"></div></div>
+                        <div class="calendar-day">8</div>
+                        <div class="calendar-day">9</div>
+                        <div class="calendar-day">10</div>
+                        <div class="calendar-day event">11<div class="event-dot"></div></div>
+                        <div class="calendar-day">12</div>
+                        <div class="calendar-day">13</div>
+                        <div class="calendar-day">14</div>
+                        <div class="calendar-day event">15<div class="event-dot"></div></div>
+                        <div class="calendar-day">16</div>
+                        <div class="calendar-day">17</div>
+                        <div class="calendar-day">18</div>
+                        <div class="calendar-day">19</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom: 0.75rem;">新增日历事件</h3>
+                    <form onsubmit="handleCalendarEventCreate(event)">
+                        <div class="form-group">
+                            <label class="form-label">事件名称</label>
+                            <input type="text" class="form-input" id="calendarEventTitle" placeholder="例如：专业课答疑" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">日期</label>
+                            <input type="date" class="form-input" value="2025-01-03">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">优先级</label>
+                            <select class="form-input">
+                                <option>低</option>
+                                <option selected>普通</option>
+                                <option>高</option>
+                            </select>
+                        </div>
+                        <div class="notice-editor-actions">
+                            <button type="submit" class="btn btn-primary requires-committee">保存事件</button>
+                        </div>
+                    </form>
+                    <h3 style="margin: 1.5rem 0 0.75rem;">当日事件</h3>
+                    <div class="calendar-event-card">
+                        <div style="font-weight: 600;">期中答辩</div>
+                        <div class="calendar-note">14:00-17:00 · 主楼 A301</div>
+                        <div class="notice-actions requires-committee" style="margin-top: 0.5rem;">
+                            <button class="btn btn-outline">编辑</button>
+                            <button class="btn btn-outline" onclick="showToast('事件已删除', 'success')">删除</button>
+                        </div>
+                    </div>
+                    <div class="calendar-event-card">
+                        <div style="font-weight: 600;">班级会议</div>
+                        <div class="calendar-note">16:00 · 线上</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Admin Page -->
+        <div class="page requires-admin" id="page-role-admin">
+            <div class="action-toolbar">
+                <div>
+                    <h1>角色管理</h1>
+                    <div class="calendar-note">仅管理员可查看与调整角色</div>
+                </div>
+                <div class="role-pill">admin</div>
+            </div>
+            <div class="card">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <button class="filter-btn active">全部</button>
+                        <button class="filter-btn">student</button>
+                        <button class="filter-btn">committee</button>
+                        <button class="filter-btn">admin</button>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" class="search-input" placeholder="搜索成员...">
+                    </div>
+                </div>
+                <div class="role-board">
+                    <div class="role-row">
+                        <div>
+                            <div style="font-weight: 600;">张同学</div>
+                            <div class="calendar-note">车辆4班 · 最近登录 1 天前</div>
+                        </div>
+                        <div class="notice-actions">
+                            <span class="role-chip student">student</span>
+                            <button class="btn btn-outline" onclick="setUserRole('张同学', 'committee')">提升为班委</button>
+                        </div>
+                    </div>
+                    <div class="role-row">
+                        <div>
+                            <div style="font-weight: 600;">陈同学</div>
+                            <div class="calendar-note">车辆4班 · 最近登录 3 小时前</div>
+                        </div>
+                        <div class="notice-actions">
+                            <span class="role-chip committee">committee</span>
+                            <button class="btn btn-outline" onclick="setUserRole('陈同学', 'student')">移除班委</button>
+                        </div>
+                    </div>
+                    <div class="role-row">
+                        <div>
+                            <div style="font-weight: 600;">刘老师</div>
+                            <div class="calendar-note">辅导员 · 最近登录 5 分钟前</div>
+                        </div>
+                        <div class="notice-actions">
+                            <span class="role-chip admin">admin</span>
+                            <button class="btn btn-outline" onclick="setUserRole('刘老师', 'committee')">降为班委</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2887,6 +3226,7 @@ print(f"最小值点: {result}")</code></pre>
         // State
         let isLoggedIn = false;
         let currentUser = null;
+        let currentRole = 'student';
         let checkinStreak = 1;
         let hasCheckedInToday = false;
 
@@ -3087,6 +3427,45 @@ print(f"最小值点: {result}")</code></pre>
                     <button class="btn btn-primary" onclick="navigate('register')">注册</button>
                 `;
             }
+
+            updateRoleUI();
+        }
+
+        function handleRoleChange(event) {
+            currentRole = event.target.value;
+            updateRoleUI();
+            showToast(`已切换为 ${currentRole}`, 'success');
+        }
+
+        function updateRoleUI() {
+            const roleSwitcher = document.getElementById('roleSwitcher');
+            const isAdmin = currentRole === 'admin';
+            const isCommittee = currentRole === 'committee' || isAdmin;
+
+            if (roleSwitcher) {
+                roleSwitcher.style.display = isLoggedIn ? 'flex' : 'none';
+            }
+
+            const roleSelect = document.getElementById('roleSelect');
+            if (roleSelect) {
+                roleSelect.value = currentRole;
+            }
+
+            document.querySelectorAll('.requires-committee').forEach(el => {
+                el.style.display = isLoggedIn && isCommittee ? '' : 'none';
+            });
+
+            document.querySelectorAll('.requires-admin').forEach(el => {
+                el.style.display = isLoggedIn && isAdmin ? '' : 'none';
+            });
+
+            document.querySelectorAll('.role-hint-student').forEach(el => {
+                el.style.display = isLoggedIn && !isCommittee ? 'flex' : 'none';
+            });
+
+            document.querySelectorAll('[data-role-pill]').forEach(el => {
+                el.textContent = currentRole;
+            });
         }
 
         // Toggle user menu
@@ -3109,6 +3488,7 @@ print(f"最小值点: {result}")</code></pre>
             event.preventDefault();
             isLoggedIn = true;
             currentUser = { username: 'zhangsan', name: '张三' };
+            currentRole = 'student';
             renderNav();
             updateCheckinUsername(currentUser.name);
             showToast('登录成功！', 'success');
@@ -3120,6 +3500,7 @@ print(f"最小值点: {result}")</code></pre>
             event.preventDefault();
             isLoggedIn = true;
             currentUser = { username: 'newuser', name: '新用户' };
+            currentRole = 'student';
             renderNav();
             updateCheckinUsername(currentUser.name);
             showToast('注册成功！', 'success');
@@ -3130,9 +3511,25 @@ print(f"最小值点: {result}")</code></pre>
         function handleLogout() {
             isLoggedIn = false;
             currentUser = null;
+            currentRole = 'student';
             renderNav();
             showToast('已退出登录', 'success');
             setTimeout(() => navigate('home'), 500);
+        }
+
+        function handlePublishNotice(event) {
+            event.preventDefault();
+            showToast('通知发布成功！', 'success');
+            setTimeout(() => navigate('notice-list'), 1000);
+        }
+
+        function handleCalendarEventCreate(event) {
+            event.preventDefault();
+            showToast('日历事件已创建', 'success');
+        }
+
+        function setUserRole(name, role) {
+            showToast(`已将 ${name} 设为 ${role}`, 'success');
         }
 
         // Handle create blog
