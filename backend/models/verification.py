@@ -14,6 +14,7 @@ class VerificationCode(Base):
     code = Column(String(10), nullable=False, comment="验证码")
     type = Column(String(20), nullable=False, default="register", comment="验证码类型: register, reset_password")
     is_used = Column(Integer, default=0, nullable=False, comment="是否已使用")
+    attempts = Column(Integer, default=0, nullable=False, comment="尝试次数")
     expires_at = Column(DateTime(timezone=True), nullable=False, comment="过期时间")
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False, comment="创建时间")
 
@@ -31,6 +32,7 @@ class VerificationCode(Base):
             code=code,
             type=code_type,
             is_used=0,
+            attempts=0,  # 初始化尝试次数为0
             expires_at=expires_at
         )
         db.add(verification)
@@ -57,3 +59,42 @@ class VerificationCode(Base):
             verification.is_used = 1
             db.commit()
         return verification
+
+    @classmethod
+    def increment_attempts(cls, db, email: str, code: str, code_type: str = "register"):
+        """增加验证码尝试次数，返回是否超过限制"""
+        verification = db.query(cls).filter(
+            cls.email == email,
+            cls.code == code,
+            cls.type == code_type,
+            cls.is_used == 0
+        ).first()
+
+        if verification:
+            verification.attempts += 1
+            db.commit()
+            db.refresh(verification)
+            # 最多允许3次尝试
+            return verification.attempts >= 3
+        return False
+
+    @classmethod
+    def is_attempts_exceeded(cls, db, email: str, code: str, code_type: str = "register", max_attempts: int = 3):
+        """检查验证码是否超过最大尝试次数"""
+        verification = db.query(cls).filter(
+            cls.email == email,
+            cls.code == code,
+            cls.type == code_type,
+            cls.is_used == 0
+        ).first()
+
+        if not verification:
+            return False
+
+        if verification.attempts >= max_attempts:
+            # 超过尝试次数，标记为已使用
+            verification.is_used = 1
+            db.commit()
+            return True
+
+        return False

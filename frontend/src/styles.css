@@ -1238,3 +1238,96 @@ nav {
 .rich-text-content [style*="text-align: right"] {
   text-align: right;
 }
+
+/* ============================================
+   验证提示样式
+   ============================================ */
+
+/* 验证消息 */
+.validation-message {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.validation-message.checking {
+  color: #6b7280;
+}
+
+.validation-message.success {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.validation-message.error {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* 密码强度指示器 */
+.password-strength {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.password-strength-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.password-strength-label {
+  font-weight: 500;
+  color: #475569;
+}
+
+.password-strength-indicator {
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.password-strength-indicator.weak {
+  color: #ef4444;
+}
+
+.password-strength-indicator.medium {
+  color: #f59e0b;
+}
+
+.password-strength-indicator.strong {
+  color: #10b981;
+}
+
+/* 密码要求列表 */
+.password-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.requirement-met {
+  color: #10b981;
+  font-size: 0.8125rem;
+}
+
+.requirement-unmet {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+}
+
+/* 表单输入框焦点时的验证状态 */
+.form-input:valid {
+  border-color: #d1d5db;
+}
+
+.form-input:invalid:not(:placeholder-shown) {
+  border-color: #ef4444;
+}

@@ -13,15 +13,16 @@ logger = logging.getLogger(__name__)
 
 class EmailConfig:
     """邮件配置"""
-    # SMTP 服务器配置
-    SMTP_HOST: str = "smtp.qq.com"  # QQ 邮箱 SMTP
-    SMTP_PORT: int = 587  # TLS 端口
-    SMTP_USE_TLS: bool = True
+    # SMTP 服务器配置（网易邮箱）
+    SMTP_HOST: str = "smtp.163.com"  # 网易 163 邮箱 SMTP
+    # 如需使用 126 邮箱，改为: smtp.126.com
+    SMTP_PORT: int = 465  # SSL 端口
+    SMTP_USE_SSL: bool = True  # 使用 SSL
 
     # 发件人配置
     SENDER_EMAIL: str = settings.ALIYUN_ACCOUNT_NAME  # 使用 .env 中的配置
     SENDER_NAME: str = settings.ALIYUN_FROM_ALIAS  # 使用 .env 中的配置
-    SENDER_PASSWORD: Optional[str] = None  # 需要在 .env 中配置 QQ 邮箱授权码
+    SENDER_PASSWORD: Optional[str] = None  # 需要在 .env 中配置网易邮箱授权码
 
 
 def send_email(
@@ -42,10 +43,10 @@ def send_email(
     Returns:
         bool: 是否发送成功
     """
-    sender_password = getattr(settings, 'QQ_MAIL_PASSWORD', None)
+    sender_password = getattr(settings, 'NETEASE_MAIL_PASSWORD', None)
 
     if not sender_password:
-        logger.warning("未配置 QQ 邮箱授权码，无法发送真实邮件")
+        logger.warning("未配置网易邮箱授权码，无法发送真实邮件")
         logger.info(f"模拟发送邮件到 {to_email}")
         logger.info(f"主题: {subject}")
         return False
@@ -67,15 +68,21 @@ def send_email(
         msg.attach(part_html)
 
         # 连接 SMTP 服务器
-        with smtplib.SMTP(EmailConfig.SMTP_HOST, EmailConfig.SMTP_PORT) as server:
-            if EmailConfig.SMTP_USE_TLS:
+        if EmailConfig.SMTP_USE_SSL:
+            # 使用 SSL 连接（端口 465）
+            with smtplib.SMTP_SSL(EmailConfig.SMTP_HOST, EmailConfig.SMTP_PORT) as server:
+                # 登录
+                server.login(EmailConfig.SENDER_EMAIL, sender_password)
+                # 发送邮件
+                server.send_message(msg)
+        else:
+            # 使用 TLS 连接（端口 587 或 25）
+            with smtplib.SMTP(EmailConfig.SMTP_HOST, EmailConfig.SMTP_PORT) as server:
                 server.starttls()
-
-            # 登录
-            server.login(EmailConfig.SENDER_EMAIL, sender_password)
-
-            # 发送邮件
-            server.send_message(msg)
+                # 登录
+                server.login(EmailConfig.SENDER_EMAIL, sender_password)
+                # 发送邮件
+                server.send_message(msg)
 
         logger.info(f"邮件已成功发送到 {to_email}")
         return True
