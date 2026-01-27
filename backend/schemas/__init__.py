@@ -16,6 +16,9 @@ from .user import (
     UserRead,
     UserPublic,
     AvatarUploadResponse,
+    UserRoleUpdate,
+    UserRoleItem,
+    UserRoleListResponse,
 )
 from .auth import (
     AuthResponse,
@@ -127,6 +130,9 @@ __all__ = [
     "UserRead",
     "UserPublic",
     "AvatarUploadResponse",
+    "UserRoleUpdate",
+    "UserRoleItem",
+    "UserRoleListResponse",
     "AuthResponse",
     "RefreshTokenResponse",
     "ConversationCreate",

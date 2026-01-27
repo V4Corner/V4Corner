@@ -57,6 +57,7 @@ async def create_calendar_event(
     db: dependencies.DbSession,
 ):
     """创建班级日历活动"""
+    dependencies.require_role(current_user, {"committee", "admin"})
     event = models.CalendarEvent(
         title=payload.title,
         date=payload.date,
@@ -83,6 +84,7 @@ async def update_calendar_event(
     db: dependencies.DbSession,
 ):
     """更新班级日历活动"""
+    dependencies.require_role(current_user, {"committee", "admin"})
     event = db.query(models.CalendarEvent).filter(models.CalendarEvent.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="活动不存在")
@@ -117,6 +119,7 @@ async def delete_calendar_event(
     db: dependencies.DbSession,
 ):
     """删除班级日历活动"""
+    dependencies.require_role(current_user, {"committee", "admin"})
     event = db.query(models.CalendarEvent).filter(models.CalendarEvent.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="活动不存在")

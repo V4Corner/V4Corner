@@ -32,6 +32,7 @@ async def get_current_user_info(
         email=current_user.email,
         nickname=current_user.nickname,
         avatar_url=current_user.avatar_url,
+        role=current_user.role,
         class_field=current_user.class_field,
         bio=current_user.bio,
         stats=schemas.UserStats(blog_count=blog_count, total_views=total_views),
@@ -70,6 +71,7 @@ async def update_current_user(
         email=current_user.email,
         nickname=current_user.nickname,
         avatar_url=current_user.avatar_url,
+        role=current_user.role,
         class_field=current_user.class_field,
         bio=current_user.bio,
         stats=schemas.UserStats(blog_count=blog_count, total_views=total_views),
@@ -123,6 +125,80 @@ async def upload_avatar(
     return schemas.AvatarUploadResponse(avatar_url=avatar_url)
 
 
+@router.patch("/{user_id}/role", response_model=schemas.UserRoleItem)
+async def update_user_role(
+    user_id: int,
+    payload: schemas.UserRoleUpdate,
+    current_user: dependencies.CurrentUser,
+    db: dependencies.DbSession
+):
+    """更新用户角色（仅管理员）"""
+    dependencies.require_role(current_user, {"admin"})
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+
+    user.role = payload.role
+    db.commit()
+    db.refresh(user)
+
+    return schemas.UserRoleItem(
+        id=user.id,
+        username=user.username,
+        nickname=user.nickname,
+        role=user.role
+    )
+
+
+@router.get("/roles/{role}", response_model=schemas.UserRoleListResponse)
+async def list_users_by_role(
+    role: str,
+    current_user: dependencies.CurrentUser,
+    db: dependencies.DbSession,
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页数量")
+):
+    """按角色获取用户列表（仅管理员）"""
+    dependencies.require_role(current_user, {"admin"})
+
+    if role not in {"student", "committee", "admin"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="角色参数不合法"
+        )
+
+    total = db.query(models.User).filter(models.User.role == role).count()
+    users = (
+        db.query(models.User)
+        .filter(models.User.role == role)
+        .order_by(models.User.id.asc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    items = [
+        schemas.UserRoleItem(
+            id=user.id,
+            username=user.username,
+            nickname=user.nickname,
+            role=user.role
+        )
+        for user in users
+    ]
+
+    return schemas.UserRoleListResponse(
+        total=total,
+        page=page,
+        size=size,
+        items=items
+    )
+
+
 @router.get("/{user_id}", response_model=schemas.UserPublic)
 async def get_user_public_info(
     user_id: int,
@@ -148,6 +224,7 @@ async def get_user_public_info(
         username=user.username,
         nickname=user.nickname,
         avatar_url=user.avatar_url,
+        role=user.role,
         class_field=user.class_field,
         bio=user.bio,
         stats=schemas.UserStats(blog_count=blog_count, total_views=total_views),

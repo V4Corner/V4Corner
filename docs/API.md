@@ -182,7 +182,8 @@ Content-Type: application/json
     "username": "zhangsan",
     "email": "zhangsan@example.com",
     "nickname": "张三",
-    "avatar_url": null
+    "avatar_url": null,
+    "role": "student"
   }
 }
 ```
@@ -256,7 +257,8 @@ Content-Type: application/json
     "username": "zhangsan",
     "email": "zhangsan@example.com",
     "nickname": "张三",
-    "avatar_url": null
+    "avatar_url": null,
+    "role": "student"
   }
 }
 ```
@@ -435,6 +437,7 @@ Authorization: Bearer {access_token}
   "email": "zhangsan@example.com",
   "nickname": "张三",
   "avatar_url": null,
+  "role": "student",
   "class": "车辆4班 · 清华大学",
   "bio": "热爱编程，专注于机器学习和深度学习领域。",
   "stats": {
@@ -489,6 +492,7 @@ Content-Type: application/json
   "email": "zhangsan@example.com",
   "nickname": "张三丰",
   "avatar_url": null,
+  "role": "student",
   "class": "车辆4班 · 清华大学",
   "bio": "热爱编程和机器学习。",
   "stats": {
@@ -496,6 +500,89 @@ Content-Type: application/json
     "total_views": 1280
   },
   "updated_at": "2025-01-11T10:00:00.000000Z"
+}
+```
+
+---
+
+### PATCH /api/users/:user_id/role
+
+更新用户角色（需要认证，仅管理员）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| user_id | integer | 用户 ID |
+
+**请求体：**
+```json
+{
+  "role": "committee"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| role | string | 是 | 角色值：`student` / `committee` / `admin` |
+
+**成功响应（200）：**
+```json
+{
+  "id": 12,
+  "username": "lisi",
+  "nickname": "李四",
+  "role": "committee",
+  "updated_at": "2026-01-24T10:00:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限操作"
+}
+```
+
+---
+
+### GET /api/users/roles/:role
+
+按角色获取用户列表（需要认证，仅管理员）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| role | string | 角色值：`student` / `committee` / `admin` |
+
+**查询参数：**
+```
+?page=1&size=20
+```
+
+**成功响应（200）：**
+```json
+{
+  "total": 2,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 12,
+      "username": "lisi",
+      "nickname": "李四",
+      "role": "committee"
+    }
+  ]
 }
 ```
 
@@ -2202,7 +2289,7 @@ await fetch('/api/uploads/media', {
 
 ## 班级通知与日历
 
-班级通知与日历用于首页展示最新通知和本月活动提醒，支持管理员发布与维护内容。
+班级通知与日历用于首页展示最新通知和本月活动提醒，支持班委/管理员发布与维护内容。
 
 ### GET /api/announcements
 
@@ -2617,7 +2704,7 @@ Authorization: Bearer {access_token}
 | author_id | integer | 发布者 ID |
 | updated_at | string | 最后更新时间（null 表示未更新过） |
 | is_owner | boolean | 当前用户是否为发布者（未登录为 false） |
-| can_edit | boolean | 当前用户是否可编辑（管理员或发布者） |
+| can_edit | boolean | 当前用户是否可编辑（班委/管理员） |
 
 **注意：** 每次调用此接口，通知的 `views` 字段会自动 +1。
 
@@ -2625,7 +2712,7 @@ Authorization: Bearer {access_token}
 
 ### POST /api/notices
 
-创建通知（需要认证）
+创建通知（需要认证，班委/管理员）
 
 **请求头：**
 ```
@@ -2669,7 +2756,7 @@ Content-Type: application/json
 
 ### PUT /api/notices/:notice_id
 
-更新通知（需要认证，仅发布者或管理员）
+更新通知（需要认证，班委/管理员）
 
 **请求头：**
 ```
@@ -2712,7 +2799,7 @@ Content-Type: application/json
 
 ### DELETE /api/notices/:notice_id
 
-删除通知（需要认证，仅发布者或管理员）
+删除通知（需要认证，班委/管理员）
 
 **请求头：**
 ```
@@ -4289,6 +4376,7 @@ Content-Type: application/json
 | avatar_url | String(255) | 头像URL | |
 | class | String(100) | 班级/学校 | |
 | bio | String(200) | 个人简介 | |
+| role | String(20) | 角色 | DEFAULT 'student', values: 'student'/'committee'/'admin' |
 | created_at | DateTime | 注册时间 | DEFAULT utcnow() |
 | updated_at | DateTime | 更新时间 | |
 

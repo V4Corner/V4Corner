@@ -1,24 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAnnouncements } from '../api/announcements';
-import { getCalendarEvents } from '../api/calendar';
+import { createCalendarEvent, deleteCalendarEvent, getCalendarEvents, updateCalendarEvent } from '../api/calendar';
 import { getBlogs } from '../api/blogs';
-import { getLatestNotices } from '../api/notice';
+import { createNotice, deleteNotice, getNotice, getNotices, updateNotice } from '../api/notice';
 import { getClassStats } from '../api/stats';
 import CheckInCard from '../components/CheckInCard';
 import ActivityFeed from '../components/ActivityFeed';
 import LikeButton from '../components/LikeButton';
 import FavoriteButton from '../components/FavoriteButton';
 import { formatNumber } from '../utils/formatNumber';
-import type { Announcement } from '../types/announcement';
 import type { CalendarEvent } from '../types/calendar';
 import type { BlogListItem } from '../types/blog';
-import type { NoticeMini } from '../types/notice';
+import type { NoticeListItem } from '../types/notice';
 import type { ClassStats } from '../types/stats';
-
-function formatDate(value: string): string {
-  return value.split('T')[0];
-}
+import { useAuth } from '../contexts/AuthContext';
 
 function toDateKey(value: Date): string {
   const year = value.getFullYear();
@@ -44,18 +39,38 @@ function getEventDetail(event: CalendarEvent): string {
 }
 
 function Home() {
+  const { user } = useAuth();
+  const canManage = user?.role === 'committee' || user?.role === 'admin';
   const today = new Date();
   const todayKey = toDateKey(today);
 
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [blogs, setBlogs] = useState<BlogListItem[]>([]);
-  const [notices, setNotices] = useState<NoticeMini[]>([]);
+  const [notices, setNotices] = useState<NoticeListItem[]>([]);
   const [stats, setStats] = useState<ClassStats | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(todayKey);
+  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noticesError, setNoticesError] = useState<string | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [editingNoticeId, setEditingNoticeId] = useState<number | null>(null);
+  const [noticeForm, setNoticeForm] = useState({
+    title: '',
+    content: '',
+    is_important: false,
+  });
+  const [editingEventId, setEditingEventId] = useState<number | null>(null);
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    date: todayKey,
+    start_time: '',
+    end_time: '',
+    location: '',
+    description: '',
+    is_all_day: false,
+    importance: 'normal' as 'low' | 'normal' | 'high',
+  });
 
   const monthStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
   const monthLabel = `${currentMonth.getFullYear()} 年 ${currentMonth.getMonth() + 1} 月`;
@@ -64,14 +79,16 @@ function Home() {
     const newMonth = new Date(currentMonth);
     newMonth.setMonth(newMonth.getMonth() - 1);
     setCurrentMonth(newMonth);
-    setSelectedDate(null);
+    setSelectedDate(toDateKey(newMonth));
+    setEventForm((prev) => ({ ...prev, date: toDateKey(newMonth) }));
   };
 
   const handleNextMonth = () => {
     const newMonth = new Date(currentMonth);
     newMonth.setMonth(newMonth.getMonth() + 1);
     setCurrentMonth(newMonth);
-    setSelectedDate(null);
+    setSelectedDate(toDateKey(newMonth));
+    setEventForm((prev) => ({ ...prev, date: toDateKey(newMonth) }));
   };
 
   // 加载其他数据（通知、博客、统计）- 只在组件挂载时加载一次
@@ -81,20 +98,13 @@ function Home() {
     setError(null);
 
     Promise.allSettled([
-      getAnnouncements({ page: 1, size: 5 }),
       getBlogs({ page: 1, size: 6 }),
-      getLatestNotices(3),
+      getNotices({ page: 1, size: 6 }),
       getClassStats(),
     ]).then((results) => {
       if (!isMounted) return;
 
-      const [announcementsResult, blogsResult, noticesResult, statsResult] = results;
-
-      if (announcementsResult.status === 'fulfilled') {
-        setAnnouncements(announcementsResult.value.items);
-      } else {
-        setError(announcementsResult.reason?.message ?? '通知加载失败');
-      }
+      const [blogsResult, noticesResult, statsResult] = results;
 
       if (blogsResult.status === 'fulfilled') {
         setBlogs(blogsResult.value.items);
@@ -105,7 +115,7 @@ function Home() {
       if (noticesResult.status === 'fulfilled') {
         setNotices(noticesResult.value.items);
       } else {
-        setError(noticesResult.reason?.message ?? '最新通知加载失败');
+        setNoticesError(noticesResult.reason?.message ?? '通知加载失败');
       }
 
       if (statsResult.status === 'fulfilled') {
@@ -135,7 +145,7 @@ function Home() {
       .catch((err) => {
         console.error('Failed to fetch calendar events:', err);
         if (isMounted) {
-          setError(err.message ?? '日历加载失败');
+          setCalendarError(err.message ?? '日历加载失败');
         }
       });
 
@@ -180,6 +190,137 @@ function Home() {
     });
   }, [currentMonth]);
 
+  const refreshNotices = async () => {
+    try {
+      const data = await getNotices({ page: 1, size: 6 });
+      setNotices(data.items);
+    } catch (err) {
+      setNoticesError(err instanceof Error ? err.message : '通知加载失败');
+    }
+  };
+
+  const resetNoticeForm = () => {
+    setEditingNoticeId(null);
+    setNoticeForm({ title: '', content: '', is_important: false });
+  };
+
+  const handleNoticeSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canManage) return;
+
+    try {
+      if (editingNoticeId) {
+        await updateNotice(editingNoticeId, {
+          title: noticeForm.title,
+          content: noticeForm.content,
+          is_important: noticeForm.is_important,
+        });
+      } else {
+        await createNotice({
+          title: noticeForm.title,
+          content: noticeForm.content,
+          is_important: noticeForm.is_important,
+        });
+      }
+      await refreshNotices();
+      resetNoticeForm();
+    } catch (err) {
+      setNoticesError(err instanceof Error ? err.message : '通知提交失败');
+    }
+  };
+
+  const handleNoticeEdit = async (notice: NoticeListItem) => {
+    try {
+      const detail = await getNotice(notice.id);
+      setEditingNoticeId(notice.id);
+      setNoticeForm({
+        title: detail.title,
+        content: detail.content,
+        is_important: detail.is_important,
+      });
+    } catch (err) {
+      setNoticesError(err instanceof Error ? err.message : '加载通知失败');
+    }
+  };
+
+  const handleNoticeDelete = async (noticeId: number) => {
+    if (!confirm('确定要删除这条通知吗？')) return;
+    try {
+      await deleteNotice(noticeId);
+      await refreshNotices();
+    } catch (err) {
+      setNoticesError(err instanceof Error ? err.message : '删除失败');
+    }
+  };
+
+  const handleEventSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canManage) return;
+
+    const payload = {
+      title: eventForm.title,
+      date: eventForm.date,
+      start_time: eventForm.start_time || null,
+      end_time: eventForm.end_time || null,
+      location: eventForm.location || null,
+      description: eventForm.description || null,
+      is_all_day: eventForm.is_all_day,
+      importance: eventForm.importance,
+    };
+
+    try {
+      if (editingEventId) {
+        await updateCalendarEvent(editingEventId, payload);
+      } else {
+        await createCalendarEvent(payload);
+      }
+      const targetDate = new Date(`${eventForm.date}T00:00:00`);
+      const targetMonthStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+      setSelectedDate(eventForm.date);
+      setCurrentMonth(targetDate);
+      const data = await getCalendarEvents(targetMonthStr);
+      setEvents(data.items);
+      setEditingEventId(null);
+      setEventForm((prev) => ({
+        ...prev,
+        title: '',
+        start_time: '',
+        end_time: '',
+        location: '',
+        description: '',
+        is_all_day: false,
+        importance: 'normal',
+      }));
+    } catch (err) {
+      setCalendarError(err instanceof Error ? err.message : '日历提交失败');
+    }
+  };
+
+  const handleEventEdit = (event: CalendarEvent) => {
+    setEditingEventId(event.id);
+    setEventForm({
+      title: event.title,
+      date: event.date,
+      start_time: event.start_time ?? '',
+      end_time: event.end_time ?? '',
+      location: event.location ?? '',
+      description: event.description ?? '',
+      is_all_day: event.is_all_day,
+      importance: event.importance ?? 'normal',
+    });
+  };
+
+  const handleEventDelete = async (eventId: number) => {
+    if (!confirm('确定要删除该事件吗？')) return;
+    try {
+      await deleteCalendarEvent(eventId);
+      const data = await getCalendarEvents(monthStr);
+      setEvents(data.items);
+    } catch (err) {
+      setCalendarError(err instanceof Error ? err.message : '删除失败');
+    }
+  };
+
   if (loading) {
     return <p>加载中...</p>;
   }
@@ -199,37 +340,80 @@ function Home() {
           <div className="card home-section">
             <div className="section-header">
               <h2 className="section-title">班级通知</h2>
-              <Link to="/notices" className="link-inline">查看更多</Link>
+              {canManage && (
+                <button className="btn btn-outline" onClick={resetNoticeForm}>
+                  新建通知
+                </button>
+              )}
             </div>
-            <ul className="notice-list">
+            {noticesError && <p className="small-muted" style={{ color: 'var(--error)' }}>{noticesError}</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {notices.map((notice) => (
-                <li key={notice.id} className="notice-item">
-                  <div>
-                    <Link to={`/notices/${notice.id}`} className="notice-title">
+                <div key={notice.id} className="card" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'start' }}>
+                    <div style={{ fontWeight: 600 }}>
                       {notice.is_important && (
-                        <span style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: '#ef4444',
-                          marginRight: '0.5rem',
-                          verticalAlign: 'middle',
-                          marginTop: '-0.1rem'
-                        }}>
-                        </span>
+                        <span style={{ color: '#ef4444', marginRight: '0.25rem' }}>●</span>
                       )}
                       {notice.title}
-                    </Link>
-                    <div className="notice-content">{notice.title}</div>
+                    </div>
+                    <span className="small-muted">{notice.date_display}</span>
                   </div>
-                  <span className="notice-date">{notice.date_display}</span>
-                </li>
+                  <p className="small-muted" style={{ margin: '0.4rem 0 0' }}>{notice.excerpt}</p>
+                  {canManage && (
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <button className="btn btn-outline" onClick={() => handleNoticeEdit(notice)}>编辑</button>
+                      <button className="btn btn-outline" onClick={() => handleNoticeDelete(notice.id)}>删除</button>
+                    </div>
+                  )}
+                </div>
               ))}
-              {notices.length === 0 && (
-                <li className="notice-empty">暂无通知</li>
-              )}
-            </ul>
+              {notices.length === 0 && <p className="small-muted">暂无通知</p>}
+            </div>
+
+            {canManage && (
+              <form onSubmit={handleNoticeSubmit} style={{ marginTop: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">标题</label>
+                  <input
+                    className="form-input"
+                    value={noticeForm.title}
+                    onChange={(event) => setNoticeForm((prev) => ({ ...prev, title: event.target.value }))}
+                    placeholder="例如：本周五晚自习取消"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">重要程度</label>
+                  <select
+                    className="form-input"
+                    value={noticeForm.is_important ? 'important' : 'normal'}
+                    onChange={(event) => setNoticeForm((prev) => ({ ...prev, is_important: event.target.value === 'important' }))}
+                  >
+                    <option value="normal">普通</option>
+                    <option value="important">重要</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">内容（支持 Markdown）</label>
+                  <textarea
+                    className="form-textarea"
+                    value={noticeForm.content}
+                    onChange={(event) => setNoticeForm((prev) => ({ ...prev, content: event.target.value }))}
+                    placeholder="请输入通知内容"
+                    required
+                  />
+                </div>
+                <div className="form-actions">
+                  {editingNoticeId && (
+                    <button type="button" className="btn btn-outline" onClick={resetNoticeForm}>取消编辑</button>
+                  )}
+                  <button type="submit" className="btn btn-primary">
+                    {editingNoticeId ? '更新通知' : '发布通知'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           {/* Class statistics card */}
@@ -436,6 +620,7 @@ function Home() {
                 </button>
               </div>
             </div>
+            {calendarError && <p className="small-muted" style={{ color: 'var(--error)' }}>{calendarError}</p>}
             <div className="calendar">
               <div className="calendar-weekdays">
                 <span>一</span>
@@ -471,7 +656,8 @@ function Home() {
                       <div
                         className={`calendar-cell${cell.inCurrentMonth ? '' : ' muted'}${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}`}
                         onClick={() => {
-                          setSelectedDate(isSelected ? null : dateKey);
+                          setSelectedDate(dateKey);
+                          setEventForm((prev) => ({ ...prev, date: dateKey }));
                         }}
                       >
                         <span className="calendar-date">{cell.date.getDate()}</span>
@@ -484,34 +670,129 @@ function Home() {
                 })}
               </div>
 
-              {/* Event details below calendar */}
-              {selectedDate && (() => {
-                const cellEvents = eventMap.get(selectedDate) ?? [];
-                if (cellEvents.length === 0) return null;
-                return (
-                  <div className="calendar-event-details">
-                    <div className="event-details-header">
-                      <h4>{selectedDate}</h4>
-                    </div>
-                    <div className="event-details-list">
-                      {cellEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className={`event-details-item ${event.importance ?? 'low'}`}
-                        >
-                          <div className="event-details-title">{event.title}</div>
-                          <div className="event-details-detail">
-                            {getEventDetail(event)}
-                          </div>
+              <div className="calendar-event-details">
+                <div className="event-details-header">
+                  <h4>{selectedDate}</h4>
+                </div>
+                <div className="event-details-list">
+                  {(eventMap.get(selectedDate) ?? []).map((event) => (
+                    <div key={event.id} className={`event-details-item ${event.importance ?? 'low'}`}>
+                      <div className="event-details-title">{event.title}</div>
+                      <div className="event-details-detail">{getEventDetail(event)}</div>
+                      {canManage && (
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <button className="btn btn-outline" onClick={() => handleEventEdit(event)}>编辑</button>
+                          <button className="btn btn-outline" onClick={() => handleEventDelete(event.id)}>删除</button>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                );
-              })()}
+                  ))}
+                  {(eventMap.get(selectedDate) ?? []).length === 0 && (
+                    <p className="small-muted">该日期暂无事件</p>
+                  )}
+                </div>
+              </div>
 
               {events.length === 0 && <p className="small-muted">本月暂无活动安排</p>}
             </div>
+
+            {canManage && (
+              <form onSubmit={handleEventSubmit} style={{ marginTop: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">事件名称</label>
+                  <input
+                    className="form-input"
+                    value={eventForm.title}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, title: event.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">日期</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={eventForm.date}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, date: event.target.value }))}
+                    required
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">开始时间</label>
+                    <input
+                      className="form-input"
+                      type="time"
+                      value={eventForm.start_time}
+                      onChange={(event) => setEventForm((prev) => ({ ...prev, start_time: event.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">结束时间</label>
+                    <input
+                      className="form-input"
+                      type="time"
+                      value={eventForm.end_time}
+                      onChange={(event) => setEventForm((prev) => ({ ...prev, end_time: event.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">地点</label>
+                  <input
+                    className="form-input"
+                    value={eventForm.location}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, location: event.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">备注</label>
+                  <textarea
+                    className="form-textarea"
+                    value={eventForm.description}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, description: event.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">优先级</label>
+                  <select
+                    className="form-input"
+                    value={eventForm.importance}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, importance: event.target.value as 'low' | 'normal' | 'high' }))}
+                  >
+                    <option value="low">低</option>
+                    <option value="normal">普通</option>
+                    <option value="high">高</option>
+                  </select>
+                </div>
+                <div className="form-actions">
+                  {editingEventId && (
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => {
+                        setEditingEventId(null);
+                        setEventForm((prev) => ({
+                          ...prev,
+                          title: '',
+                          start_time: '',
+                          end_time: '',
+                          location: '',
+                          description: '',
+                          is_all_day: false,
+                          importance: 'normal',
+                        }));
+                      }}
+                    >
+                      取消编辑
+                    </button>
+                  )}
+                  <button type="submit" className="btn btn-primary">
+                    {editingEventId ? '更新事件' : '新增事件'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </div>

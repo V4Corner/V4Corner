@@ -94,6 +94,15 @@ export function put<T>(url: string, data: unknown, signal?: AbortSignal): Promis
   });
 }
 
+// PATCH 请求
+export function patch<T>(url: string, data: unknown, signal?: AbortSignal): Promise<T> {
+  return apiRequest<T>(url, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+    signal,
+  });
+}
+
 // DELETE 请求
 export function del<T>(url: string, signal?: AbortSignal): Promise<T> {
   return apiRequest<T>(url, { method: 'DELETE', signal });

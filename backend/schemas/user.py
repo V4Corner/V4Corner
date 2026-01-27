@@ -42,6 +42,7 @@ class UserRead(BaseModel):
     email: EmailStr
     nickname: str | None
     avatar_url: str | None
+    role: str
     class_field: str | None
     bio: str | None
     stats: UserStats
@@ -58,6 +59,7 @@ class UserPublic(BaseModel):
     username: str
     nickname: str | None
     avatar_url: str | None
+    role: str
     class_field: str | None
     bio: str | None
     stats: UserStats
@@ -70,3 +72,24 @@ class UserPublic(BaseModel):
 class AvatarUploadResponse(BaseModel):
     """头像上传响应"""
     avatar_url: str
+
+
+class UserRoleUpdate(BaseModel):
+    """更新用户角色"""
+    role: str = Field(..., pattern="^(student|committee|admin)$")
+
+
+class UserRoleItem(BaseModel):
+    """用户角色列表项"""
+    id: int
+    username: str
+    nickname: str | None
+    role: str
+
+
+class UserRoleListResponse(BaseModel):
+    """用户角色列表响应"""
+    total: int
+    page: int
+    size: int
+    items: list[UserRoleItem]
