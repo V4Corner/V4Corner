@@ -1,7 +1,14 @@
 // 用户相关 API
 
-import { get, put, uploadFile } from './client';
-import type { User, UserPublic, UpdateUserRequest, AvatarUploadResponse } from '../types/user';
+import { get, put, patch, uploadFile } from './client';
+import type {
+  User,
+  UserPublic,
+  UpdateUserRequest,
+  AvatarUploadResponse,
+  UserRoleItem,
+  UserRoleListResponse
+} from '../types/user';
 import type { BlogListResponse } from '../types/blog';
 
 export async function getCurrentUser(): Promise<User> {
@@ -18,6 +25,21 @@ export async function uploadAvatar(file: File): Promise<AvatarUploadResponse> {
 
 export async function getUserById(userId: number): Promise<UserPublic> {
   return get<UserPublic>(`/api/users/${userId}`);
+}
+
+export async function getUsersByRole(role: 'student' | 'committee' | 'admin', params?: {
+  page?: number;
+  size?: number;
+}): Promise<UserRoleListResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.size) queryParams.append('size', params.size.toString());
+  const queryString = queryParams.toString();
+  return get<UserRoleListResponse>(`/api/users/roles/${role}${queryString ? `?${queryString}` : ''}`);
+}
+
+export async function updateUserRole(userId: number, role: 'student' | 'committee' | 'admin'): Promise<UserRoleItem> {
+  return patch<UserRoleItem>(`/api/users/${userId}/role`, { role });
 }
 
 export async function getUserBlogs(

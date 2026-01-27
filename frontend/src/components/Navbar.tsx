@@ -42,9 +42,16 @@ function Navbar() {
       <NavLink to="/chat" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
         AI对话
       </NavLink>
-      <NavLink to="/notices" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
-        班级通知
-      </NavLink>
+      {user && (user.role === 'committee' || user.role === 'admin') && (
+        <NavLink to="/class/manage" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
+          班级管理
+        </NavLink>
+      )}
+      {user && user.role === 'admin' && (
+        <NavLink to="/admin/roles" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
+          角色管理
+        </NavLink>
+      )}
 
       <div style={{ flex: 1 }}></div>
 

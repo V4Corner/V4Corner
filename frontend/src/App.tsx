@@ -15,8 +15,7 @@ import UserProfile from './routes/UserProfile';
 import EditProfile from './routes/EditProfile';
 import ChatList from './routes/ChatList';
 import ChatDetail from './routes/ChatDetail';
-import NoticeList from './routes/NoticeList';
-import NoticeDetail from './routes/NoticeDetail';
+import RoleAdmin from './routes/RoleAdmin';
 import Favorites from './routes/Favorites';
 
 // Main layout wires shared navigation + footer around routed pages.
@@ -37,8 +36,7 @@ function App() {
           <Route path="/blogs/new" element={<CreateBlog />} />
           <Route path="/blogs/:blogId/edit" element={<EditBlog />} />
           <Route path="/blogs/:blogId" element={<BlogDetail />} />
-          <Route path="/notices" element={<NoticeList />} />
-          <Route path="/notices/:noticeId" element={<NoticeDetail />} />
+          <Route path="/admin/roles" element={<RoleAdmin />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

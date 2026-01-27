@@ -167,7 +167,8 @@ async def register(
             "username": user.username,
             "email": user.email,
             "nickname": user.nickname,
-            "avatar_url": user.avatar_url
+            "avatar_url": user.avatar_url,
+            "role": user.role
         }
     }
 
@@ -201,7 +202,8 @@ async def login(
             "id": user.id,
             "username": user.username,
             "nickname": user.nickname,
-            "avatar_url": user.avatar_url
+            "avatar_url": user.avatar_url,
+            "role": user.role
         }
     }
 

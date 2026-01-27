@@ -16,6 +16,7 @@ class User(Base):
     avatar_url: str = Column(String(255), nullable=True)
     class_field: str = Column(String(100), nullable=True)  # 班级/学校（class 是 Python 关键字）
     bio: str = Column(String(200), nullable=True)
+    role: str = Column(String(20), nullable=False, default="student")
     created_at: datetime = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: datetime = Column(DateTime(timezone=True), onupdate=datetime.utcnow)
 
