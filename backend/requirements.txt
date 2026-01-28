@@ -14,7 +14,7 @@ email-validator==2.1.0
 # ============================================
 
 # 核心依赖（必需，支持 OpenAI、DeepSeek、Ollama）
-openai==1.12.0
+openai>=1.30.0,<3.0.0
 
 # 可选依赖（根据使用的 AI 服务商选择安装）
 # pip install anthropic  # Anthropic Claude
