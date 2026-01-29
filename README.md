@@ -128,10 +128,43 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # 安装依赖，只第一次启动时
 pip install -r requirements.txt
 
+# 测试环境配置（推荐）
+python test_environment.py
+
 # 启动开发服务器
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+<<<<<<< HEAD
+> **注意**: 如果启动时报错，请检查以下常见问题：
+> 
+> 1. **虚拟环境问题**:
+>    ```bash
+>    # 确保激活虚拟环境
+>    source venv/bin/activate  # Windows: venv\Scripts\activate
+>    # 或直接使用完整路径
+>    ./venv/Scripts/python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+>    ```
+> 
+> 2. **依赖缺失**:
+>    ```bash
+>    pip install -r requirements.txt
+>    ```
+> 
+> 3. **OpenAI 版本问题**:
+>    如果遇到 `proxies` 参数错误，运行：
+>    ```bash
+>    pip install --upgrade "openai>=1.30.0,<3.0.0"
+>    ```
+> 
+> 4. **端口占用**:
+>    如果 8000 端口被占用，修改为其他端口：
+>    ```bash
+>    uvicorn main:app --reload --host 0.0.0.0 --port 8001
+>    ```
+
+=======
+>>>>>>> eb67af720e07d068cda27d5385e9cdf9ad09af0a
 后端 API 服务运行在 http://localhost:8000
 
 #### 3. 启动前端

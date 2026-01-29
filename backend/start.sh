@@ -8,7 +8,7 @@ echo ""
 # 检查虚拟环境是否存在
 if [ ! -d "venv" ]; then
     echo "[1/4] 创建虚拟环境..."
-    python3 -m venv venv
+    python3 -m venv venv || python -m venv venv
     echo ""
 else
     echo "[1/4] 虚拟环境已存在"
