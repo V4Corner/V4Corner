@@ -6,7 +6,12 @@ export interface Blog {
   author: string;
   author_id: number;
   author_avatar_url: string | null;
+  status: 'draft' | 'published';
   views: number;
+  likes_count: number;
+  favorites_count: number;
+  is_liked: boolean;
+  is_favorited: boolean;
   is_owner: boolean;
   created_at: string;
   updated_at?: string;
@@ -15,18 +20,20 @@ export interface Blog {
 export interface BlogCreate {
   title: string;
   content: string;
+  status?: 'draft' | 'published';
 }
 
 export interface BlogUpdate {
-  title: string;
-  content: string;
+  title?: string;
+  content?: string;
+  status?: 'draft' | 'published';
 }
 
 export interface BlogListResponse {
   total: number;
   page: number;
   size: number;
-  items: Blog[];
+  items: BlogListItem[];
 }
 
 export interface BlogListItem {
@@ -36,6 +43,13 @@ export interface BlogListItem {
   author: string;
   author_id: number;
   author_avatar_url: string | null;
+  status: 'draft' | 'published';
   views: number;
+  likes_count: number;
+  favorites_count: number;
+  is_liked: boolean;
+  is_favorited: boolean;
   created_at: string;
+  favorited_at?: string;
+  folders?: { id: number; name: string }[];
 }

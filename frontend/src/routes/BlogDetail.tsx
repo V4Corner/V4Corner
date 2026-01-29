@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBlog, deleteBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
-import { formatMarkdown } from '../utils/markdown';
 import type { Blog } from '../types/blog';
+import Comments from '../components/Comments';
+import LikeButton from '../components/LikeButton';
+import FavoriteButton from '../components/FavoriteButton';
 
 function BlogDetail() {
   const { blogId } = useParams<{ blogId: string }>();
@@ -104,10 +106,10 @@ function BlogDetail() {
         <span>{blog.title}</span>
       </div>
 
-      {/* 博客内容卡片 */}
+      {/* 博客内容 */}
       <div className="card" style={{ padding: '2rem' }}>
-        {/* 博客头部 */}
-        <header style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid #e2e8f0' }}>
+        {/* 第一部分：标题、作者、日期 */}
+        <div style={{ marginBottom: '1.5rem' }}>
           <h1 style={{ fontSize: '2rem', marginBottom: '1rem', lineHeight: 1.3 }}>{blog.title}</h1>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -154,22 +156,11 @@ function BlogDetail() {
               {formatDate(blog.created_at)}
             </span>
 
-            <span className="small-muted">·</span>
-
-            <span className="small-muted">{blog.views} 次阅读</span>
-
-            {blog.updated_at && blog.updated_at !== blog.created_at && (
-              <>
-                <span className="small-muted">·</span>
-                <span className="small-muted">已编辑</span>
-              </>
-            )}
-
             {/* 编辑/删除按钮 */}
             {blog.is_owner && (
               <>
                 <div style={{ flex: 1 }}></div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <button
                     onClick={handleEdit}
                     className="btn btn-outline"
@@ -219,7 +210,62 @@ function BlogDetail() {
               </>
             )}
           </div>
-        </header>
+        </div>
+
+        {/* 分隔线 */}
+        <div style={{ borderTop: '1px solid #e2e8f0', marginBottom: '2rem' }}></div>
+
+        {/* 正文 */}
+        <div
+          className="rich-text-content"
+          style={{
+            lineHeight: 1.8,
+            fontSize: '1.05rem',
+            marginBottom: '2rem'
+          }}
+          dangerouslySetInnerHTML={{ __html: blog.content }}
+        />
+
+        {/* 分隔线 */}
+        <div style={{ borderTop: '1px solid #e2e8f0', marginBottom: '1.5rem' }}></div>
+
+        {/* 阅读量、点赞、收藏 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <span className="small-muted" style={{ fontSize: '1rem' }}>
+            {blog.views} 次阅读
+          </span>
+
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <LikeButton
+              blogId={blog.id}
+              isLiked={blog.is_liked}
+              likesCount={blog.likes_count}
+              onToggle={(newState) => {
+                if (blog) {
+                  setBlog({
+                    ...blog,
+                    is_liked: newState.isLiked,
+                    likes_count: newState.likesCount,
+                  });
+                }
+              }}
+            />
+            <FavoriteButton
+              blogId={blog.id}
+              isFavorited={blog.is_favorited}
+              favoritesCount={blog.favorites_count}
+              onToggle={(newState) => {
+                if (blog) {
+                  setBlog({
+                    ...blog,
+                    is_favorited: newState.isFavorited,
+                    favorites_count: newState.favoritesCount,
+                  });
+                }
+              }}
+            />
+          </div>
+        </div>
 
         {/* 错误提示 */}
         {error && (
@@ -229,23 +275,16 @@ function BlogDetail() {
               backgroundColor: '#fee2e2',
               color: '#991b1b',
               borderRadius: '8px',
-              marginBottom: '1.5rem'
+              marginTop: '1.5rem'
             }}
           >
             {error}
           </div>
         )}
-
-        {/* Markdown 内容 */}
-        <div
-          className="markdown-content"
-          style={{
-            lineHeight: 1.8,
-            fontSize: '1.05rem'
-          }}
-          dangerouslySetInnerHTML={{ __html: formatMarkdown(blog.content) }}
-        />
       </div>
+
+      {/* 评论区 */}
+      <Comments blogId={blog.id} blogAuthorId={blog.author_id} />
     </article>
   );
 }

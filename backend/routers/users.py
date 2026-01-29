@@ -3,9 +3,11 @@
 import os
 import uuid
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from typing import Optional
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 import dependencies, models, schemas
 
@@ -30,6 +32,7 @@ async def get_current_user_info(
         email=current_user.email,
         nickname=current_user.nickname,
         avatar_url=current_user.avatar_url,
+        role=current_user.role,
         class_field=current_user.class_field,
         bio=current_user.bio,
         stats=schemas.UserStats(blog_count=blog_count, total_views=total_views),
@@ -68,6 +71,7 @@ async def update_current_user(
         email=current_user.email,
         nickname=current_user.nickname,
         avatar_url=current_user.avatar_url,
+        role=current_user.role,
         class_field=current_user.class_field,
         bio=current_user.bio,
         stats=schemas.UserStats(blog_count=blog_count, total_views=total_views),
@@ -121,6 +125,80 @@ async def upload_avatar(
     return schemas.AvatarUploadResponse(avatar_url=avatar_url)
 
 
+@router.patch("/{user_id}/role", response_model=schemas.UserRoleItem)
+async def update_user_role(
+    user_id: int,
+    payload: schemas.UserRoleUpdate,
+    current_user: dependencies.CurrentUser,
+    db: dependencies.DbSession
+):
+    """更新用户角色（仅管理员）"""
+    dependencies.require_role(current_user, {"admin"})
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+
+    user.role = payload.role
+    db.commit()
+    db.refresh(user)
+
+    return schemas.UserRoleItem(
+        id=user.id,
+        username=user.username,
+        nickname=user.nickname,
+        role=user.role
+    )
+
+
+@router.get("/roles/{role}", response_model=schemas.UserRoleListResponse)
+async def list_users_by_role(
+    role: str,
+    current_user: dependencies.CurrentUser,
+    db: dependencies.DbSession,
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页数量")
+):
+    """按角色获取用户列表（仅管理员）"""
+    dependencies.require_role(current_user, {"admin"})
+
+    if role not in {"student", "committee", "admin"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="角色参数不合法"
+        )
+
+    total = db.query(models.User).filter(models.User.role == role).count()
+    users = (
+        db.query(models.User)
+        .filter(models.User.role == role)
+        .order_by(models.User.id.asc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
+    items = [
+        schemas.UserRoleItem(
+            id=user.id,
+            username=user.username,
+            nickname=user.nickname,
+            role=user.role
+        )
+        for user in users
+    ]
+
+    return schemas.UserRoleListResponse(
+        total=total,
+        page=page,
+        size=size,
+        items=items
+    )
+
+
 @router.get("/{user_id}", response_model=schemas.UserPublic)
 async def get_user_public_info(
     user_id: int,
@@ -146,6 +224,7 @@ async def get_user_public_info(
         username=user.username,
         nickname=user.nickname,
         avatar_url=user.avatar_url,
+        role=user.role,
         class_field=user.class_field,
         bio=user.bio,
         stats=schemas.UserStats(blog_count=blog_count, total_views=total_views),
@@ -157,10 +236,16 @@ async def get_user_public_info(
 async def get_user_blogs(
     user_id: int,
     db: dependencies.DbSession,
+    current_user: dependencies.CurrentUserOptional = None,
     page: int = 1,
-    size: int = 10
+    size: int = 10,
+    q: Optional[str] = Query(None, description="搜索关键词（标题/内容）"),
+    sort_by: Optional[str] = Query("created_at", description="排序字段"),
+    sort_order: Optional[str] = Query("desc", description="排序方向"),
+    date_from: Optional[datetime] = Query(None, description="起始日期"),
+    date_to: Optional[datetime] = Query(None, description="结束日期")
 ):
-    """获取指定用户的博客列表"""
+    """获取指定用户的博客列表（仅已发布）"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
 
     if not user:
@@ -169,16 +254,57 @@ async def get_user_blogs(
             detail="用户不存在"
         )
 
+    # 构建查询条件
+    conditions = [
+        models.Blog.author_id == user_id,
+        models.Blog.status == "published"
+    ]
+
+    # 搜索条件
+    if q:
+        search_condition = or_(
+            models.Blog.title.contains(q),
+            models.Blog.content.contains(q)
+        )
+        conditions.append(search_condition)
+
+    # 日期范围筛选
+    if date_from:
+        conditions.append(models.Blog.created_at >= date_from)
+    if date_to:
+        conditions.append(models.Blog.created_at <= date_to)
+
     # 统计总数
-    total = db.query(models.Blog).filter(models.Blog.author_id == user_id).count()
+    total = db.query(models.Blog).filter(*conditions).count()
+
+    # 构建排序
+    sort_column = getattr(models.Blog, sort_by, models.Blog.created_at)
+    if sort_order == "desc":
+        order_by = sort_column.desc()
+    else:
+        order_by = sort_column.asc()
 
     # 查询博客
     from sqlalchemy.orm import joinedload
     blogs = db.query(models.Blog).options(joinedload(models.Blog.author)).filter(
-        models.Blog.author_id == user_id
+        *conditions
     ).order_by(
-        models.Blog.created_at.desc()
+        order_by
     ).offset((page - 1) * size).limit(size).all()
+
+    # 获取当前用户的点赞和收藏信息
+    liked_blog_ids = set()
+    favorited_blog_ids = set()
+    if current_user:
+        liked_blogs = db.query(models.Like.blog_id).filter(
+            models.Like.user_id == current_user.id
+        ).all()
+        liked_blog_ids = {blog_id for (blog_id,) in liked_blogs}
+
+        favorited_blogs = db.query(models.Favorite.blog_id).filter(
+            models.Favorite.user_id == current_user.id
+        ).all()
+        favorited_blog_ids = {blog_id for (blog_id,) in favorited_blogs}
 
     # 构造响应
     items = []
@@ -191,7 +317,12 @@ async def get_user_blogs(
             author=blog.author_name,
             author_id=blog.author_id,
             author_avatar_url=blog.author.avatar_url if blog.author else None,
+            status=blog.status,
             views=blog.views,
+            likes_count=blog.likes_count,
+            favorites_count=blog.favorites_count,
+            is_liked=blog.id in liked_blog_ids,
+            is_favorited=blog.id in favorited_blog_ids,
             created_at=blog.created_at
         ))
 

@@ -72,8 +72,11 @@ class NoticeDetail(BaseModel):
     @classmethod
     def from_orm_with_permission(cls, notice, current_user=None):
         """从 ORM 对象创建，包含权限信息"""
-        is_owner = current_user and current_user.id == notice.author_id
-        can_edit = is_owner or (current_user and current_user.role == "admin")
+        is_owner = current_user is not None and current_user.id == notice.author_id
+        can_edit = (
+            current_user is not None
+            and current_user.role in {"committee", "admin"}
+        )
 
         return cls(
             id=notice.id,

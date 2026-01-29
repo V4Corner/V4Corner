@@ -6,6 +6,7 @@ export interface User {
   email: string;
   nickname: string | null;
   avatar_url: string | null;
+  role: 'student' | 'committee' | 'admin';
   class: string | null;
   bio: string | null;
   stats: UserStats;
@@ -18,6 +19,7 @@ export interface UserPublic {
   username: string;
   nickname: string | null;
   avatar_url: string | null;
+  role: 'student' | 'committee' | 'admin';
   class: string | null;
   bio: string | null;
   stats: UserStats;
@@ -37,4 +39,18 @@ export interface UpdateUserRequest {
 
 export interface AvatarUploadResponse {
   avatar_url: string;
+}
+
+export interface UserRoleItem {
+  id: number;
+  username: string;
+  nickname: string | null;
+  role: 'student' | 'committee' | 'admin';
+}
+
+export interface UserRoleListResponse {
+  total: number;
+  page: number;
+  size: number;
+  items: UserRoleItem[];
 }

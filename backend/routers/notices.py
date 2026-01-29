@@ -121,8 +121,7 @@ async def create_notice(
     - **content**: 内容（Markdown，1-10000字符）
     - **is_important**: 是否重要（可选，默认false）
     """
-    # TODO: 添加权限检查，限制管理员和班委
-    # 目前所有登录用户都可以发布通知，后续可以根据需要添加角色检查
+    dependencies.require_role(current_user, {"committee", "admin"})
 
     # 创建通知
     notice = models.Notice(
@@ -166,7 +165,7 @@ async def update_notice(
     db: dependencies.DbSession
 ):
     """
-    更新通知（需要认证，管理员或发布者本人）
+    更新通知（需要认证，管理员/班委）
 
     - **notice_id**: 通知 ID
     - 所有字段均为可选
@@ -180,15 +179,7 @@ async def update_notice(
             detail="通知不存在"
         )
 
-    # 权限检查：管理员或发布者本人
-    is_owner = current_user.id == notice.author_id
-    is_admin = current_user.role == "admin"  # TODO: 根据实际角色字段调整
-
-    if not is_owner and not is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="无权限编辑此通知"
-        )
+    dependencies.require_role(current_user, {"committee", "admin"})
 
     # 更新字段
     if notice_data.title is not None:
@@ -217,7 +208,7 @@ async def delete_notice(
     db: dependencies.DbSession
 ):
     """
-    删除通知（需要认证，管理员或发布者本人）
+    删除通知（需要认证，管理员/班委）
 
     - **notice_id**: 通知 ID
     """
@@ -230,15 +221,7 @@ async def delete_notice(
             detail="通知不存在"
         )
 
-    # 权限检查：管理员或发布者本人
-    is_owner = current_user.id == notice.author_id
-    is_admin = current_user.role == "admin"  # TODO: 根据实际角色字段调整
-
-    if not is_owner and not is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="无权限删除此通知"
-        )
+    dependencies.require_role(current_user, {"committee", "admin"})
 
     # 删除通知
     db.delete(notice)

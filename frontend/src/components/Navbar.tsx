@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationCenter from './NotificationCenter';
 
 const linkStyle: React.CSSProperties = {
   textDecoration: 'none',
@@ -41,16 +42,27 @@ function Navbar() {
       <NavLink to="/chat" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
         AI对话
       </NavLink>
-      <NavLink to="/notices" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
-        班级通知
-      </NavLink>
+      {user && (user.role === 'committee' || user.role === 'admin') && (
+        <NavLink to="/class/manage" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
+          班级管理
+        </NavLink>
+      )}
+      {user && user.role === 'admin' && (
+        <NavLink to="/admin/roles" style={({ isActive }) => (isActive ? { ...linkStyle, ...activeStyle } : linkStyle)}>
+          角色管理
+        </NavLink>
+      )}
 
       <div style={{ flex: 1 }}></div>
 
       {!isLoading && (
         <>
           {isAuthenticated && user ? (
-            <div style={{ position: 'relative' }}>
+            <>
+              {/* 通知中心 */}
+              <NotificationCenter />
+
+              <div style={{ position: 'relative' }}>
               <div
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 style={{
@@ -137,6 +149,21 @@ function Navbar() {
                     编辑资料
                   </div>
                   <div
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate('/favorites');
+                    }}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    我的收藏
+                  </div>
+                  <div
                     onClick={handleLogout}
                     style={{
                       padding: '0.75rem 1rem',
@@ -150,7 +177,8 @@ function Navbar() {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </>
           ) : (
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <Link to="/login" className="btn btn-outline" style={{ textDecoration: 'none' }}>

@@ -2,21 +2,26 @@
 
 > 基于网页原型设计 v1.3.2
 >
-> 最后更新：2026-01-22（v1.6.0 - 最新动态系统）
+> 最后更新：2026-01-25（v2.1.2 - 图标系统统一）
 
 ## 目录
 
 - [基础信息](#基础信息)
 - [通用说明](#通用说明)
 - [用户认证](#用户认证)
+- [验证码管理](#验证码管理)
 - [用户管理](#用户管理)
 - [博客管理](#博客管理)
+- [点赞与收藏系统 (Likes & Favorites)](#点赞与收藏系统-likes--favorites)
+- [文件上传 (Uploads)](#文件上传-uploads)
 - [成员管理](#成员管理)
 - [班级通知与日历](#班级通知与日历)
 - [班级通知系统 (Notices)](#班级通知系统-notices)
 - [签到系统 (CheckIn)](#签到系统-checkin)
 - [统计数据 (Stats)](#统计数据-stats)
 - [最新动态系统 (Activity)](#最新动态系统-activity)
+- [评论系统 (Comments)](#评论系统-comments)
+- [用户通知 (Notifications)](#用户通知-notifications)
 - [AI对话管理](#ai对话管理)
 - [数据模型](#数据模型)
 - [错误码说明](#错误码说明)
@@ -35,10 +40,21 @@
 
 ### API 版本
 
-当前版本: `v1.6.0`
+当前版本: `v2.1.2`（开发中）
 
 **版本历史：**
+<<<<<<< HEAD
+- v2.1.2 (2026-01-25): 图标系统统一（SVG 简笔线条风格替代 emoji）
+- v2.1.1 (2026-01-25): 限制系统与体验优化（每日发布限制、草稿箱上限、分页系统、通知详情页重构）
+- v2.1.0 (2026-01-25): 博客搜索与筛选系统（标题/内容搜索、日期范围筛选、多种排序方式、组合筛选）
+- v2.0.0 (2026-01-25): 点赞与收藏系统（点赞、收藏文件夹、权限控制、作者通知）
+- v1.9.0 (2026-01-24): 评论系统（楼中楼、编辑、删除、排序、级联删除）+ 通知系统（评论通知、通知中心）
+- v1.8.0 (2026-01-23): 草稿功能（博客状态、草稿箱、保存草稿/发布）
+- v1.7.0 (2026-01-23): 富文本编辑器与媒体管理（图片自动压缩、视频服务器端压缩、媒体自动清理）
 - v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）
+=======
+- v1.6.0 (2026-01-22): 最新动态系统（活动流、自动记录、时间显示）+ 邮箱验证码功能
+>>>>>>> origin/main
 - v1.5.0 (2026-01-22): 班级通知系统（完整CRUD）、签到系统（运势抽签）、统计数据 API
 - v1.4.0 (2025-01-21): 新增班级通知与日历 API
 - v1.3.0 (2025-01-20): AI 对话 BUG 修复
@@ -58,7 +74,8 @@ Authorization: Bearer {access_token}
 - 用户管理（查看/更新个人信息）
 - 创建博客
 - 编辑/删除博客
-- 评论功能（计划中）
+- 点赞/收藏功能
+- 评论功能
 
 **公开接口：**
 - 注册/登录
@@ -136,6 +153,7 @@ Content-Type: application/json
   "email": "zhangsan@example.com",
   "password": "password123",
   "password_confirm": "password123",
+  "verification_code": "123456",
   "nickname": "张三"
 }
 ```
@@ -148,18 +166,36 @@ Content-Type: application/json
 | email | string | 是 | 邮箱格式，唯一 |
 | password | string | 是 | 6-20字符 |
 | password_confirm | string | 是 | 与 password 一致 |
+| verification_code | string | 是 | 邮箱验证码（4-6位），需先调用发送验证码接口 |
 | nickname | string | 否 | 2-20字符 |
+
+**注意：注册前需要先调用发送验证码接口 (`POST /api/verification/send`) 获取邮箱验证码。**
 
 **成功响应（201）：**
 ```json
 {
-  "id": 1,
-  "username": "zhangsan",
-  "email": "zhangsan@example.com",
-  "nickname": "张三",
-  "created_at": "2025-01-10T08:30:00.000000Z"
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 604800,
+  "user": {
+    "id": 1,
+    "username": "zhangsan",
+    "email": "zhangsan@example.com",
+    "nickname": "张三",
+    "avatar_url": null,
+    "role": "student"
+  }
 }
 ```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| access_token | string | JWT 访问令牌（注册后自动登录） |
+| token_type | string | 固定值 "bearer" |
+| expires_in | integer | 过期时间（秒），默认 604800（7天） |
+| user | object | 当前用户信息 |
 
 **失败响应（422）：**
 ```json
@@ -219,8 +255,10 @@ Content-Type: application/json
   "user": {
     "id": 1,
     "username": "zhangsan",
+    "email": "zhangsan@example.com",
     "nickname": "张三",
-    "avatar_url": null
+    "avatar_url": null,
+    "role": "student"
   }
 }
 ```
@@ -283,6 +321,103 @@ Authorization: Bearer {access_token}
 
 ---
 
+## 验证码管理
+
+### POST /api/verification/send
+
+发送验证码到邮箱
+
+**请求头：**
+```
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "email": "zhangsan@example.com",
+  "type": "register"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 邮箱地址 |
+| type | string | 否 | 验证码类型，默认 `register`（可选值：`register`, `reset_password`） |
+
+**成功响应（200）：**
+```json
+{
+  "success": true,
+  "message": "验证码已发送",
+  "expires_in": 300
+}
+```
+
+**失败响应（200）：**
+```json
+{
+  "success": false,
+  "message": "请 45 秒后再试",
+  "expires_in": 45
+}
+```
+
+**限制：**
+- 同一邮箱发送验证码间隔至少 60 秒
+- 验证码有效期为 5 分钟
+- 验证码长度为 4-6 位随机数字
+
+---
+
+### POST /api/verification/verify
+
+验证验证码（注册时内部使用，无需单独调用）
+
+**请求头：**
+```
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "email": "zhangsan@example.com",
+  "code": "123456"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 邮箱地址 |
+| code | string | 是 | 验证码（4-6位） |
+
+**成功响应（200）：**
+```json
+{
+  "success": true,
+  "message": "验证成功",
+  "expires_in": 0
+}
+```
+
+**失败响应（200）：**
+```json
+{
+  "success": false,
+  "message": "验证码无效或已过期",
+  "expires_in": 0
+}
+```
+
+**注意：此接口通常由注册接口内部调用，注册时会自动验证验证码。**
+
+---
+
 ## 用户管理
 
 ### GET /api/users/me
@@ -302,6 +437,7 @@ Authorization: Bearer {access_token}
   "email": "zhangsan@example.com",
   "nickname": "张三",
   "avatar_url": null,
+  "role": "student",
   "class": "车辆4班 · 清华大学",
   "bio": "热爱编程，专注于机器学习和深度学习领域。",
   "stats": {
@@ -356,6 +492,7 @@ Content-Type: application/json
   "email": "zhangsan@example.com",
   "nickname": "张三丰",
   "avatar_url": null,
+  "role": "student",
   "class": "车辆4班 · 清华大学",
   "bio": "热爱编程和机器学习。",
   "stats": {
@@ -363,6 +500,89 @@ Content-Type: application/json
     "total_views": 1280
   },
   "updated_at": "2025-01-11T10:00:00.000000Z"
+}
+```
+
+---
+
+### PATCH /api/users/:user_id/role
+
+更新用户角色（需要认证，仅管理员）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| user_id | integer | 用户 ID |
+
+**请求体：**
+```json
+{
+  "role": "committee"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| role | string | 是 | 角色值：`student` / `committee` / `admin` |
+
+**成功响应（200）：**
+```json
+{
+  "id": 12,
+  "username": "lisi",
+  "nickname": "李四",
+  "role": "committee",
+  "updated_at": "2026-01-24T10:00:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限操作"
+}
+```
+
+---
+
+### GET /api/users/roles/:role
+
+按角色获取用户列表（需要认证，仅管理员）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| role | string | 角色值：`student` / `committee` / `admin` |
+
+**查询参数：**
+```
+?page=1&size=20
+```
+
+**成功响应（200）：**
+```json
+{
+  "total": 2,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 12,
+      "username": "lisi",
+      "nickname": "李四",
+      "role": "committee"
+    }
+  ]
 }
 ```
 
@@ -439,7 +659,7 @@ avatar: 图片文件
 
 ### GET /api/users/:user_id/blogs
 
-获取指定用户的博客列表
+获取指定用户的博客列表（仅已发布，支持搜索、筛选、排序）
 
 **路径参数：**
 
@@ -449,8 +669,26 @@ avatar: 图片文件
 
 **查询参数：**
 ```
-?page=1&size=10
+?q=机器学习&sort_by=created_at&sort_order=desc&date_from=2025-01-01&date_to=2025-01-31&page=1&size=10
 ```
+
+**参数说明：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| q | string | 否 | 搜索关键词（搜索标题和内容） |
+| sort_by | string | 否 | 排序字段：`created_at`（发布时间）、`views`（浏览量）、`likes_count`（点赞数）、`favorites_count`（收藏数） |
+| sort_order | string | 否 | 排序方向：`asc`（升序）、`desc`（降序，默认） |
+| date_from | date | 否 | 起始日期（格式：YYYY-MM-DD） |
+| date_to | date | 否 | 结束日期（格式：YYYY-MM-DD） |
+| page | integer | 否 | 页码（默认 1） |
+| size | integer | 否 | 每页数量（默认 10） |
+
+**说明：**
+- 此接口仅返回该用户**已发布**的博客
+- 草稿不会出现在此列表中
+- 支持组合查询：可以同时使用搜索、筛选和排序
+- 如果当前用户已登录，响应会包含 `is_liked` 和 `is_favorited` 字段
 
 **成功响应（200）：**
 ```json
@@ -464,11 +702,30 @@ avatar: 图片文件
       "title": "机器学习入门指南",
       "excerpt": "机器学习是人工智能的核心技术之一...",
       "author": "张三",
+      "author_id": 1,
+      "author_avatar_url": null,
+      "status": "published",
       "views": 128,
+      "likes_count": 15,
+      "favorites_count": 8,
+      "is_liked": true,
+      "is_favorited": false,
       "created_at": "2025-01-10T08:30:00.000000Z"
     }
   ]
 }
+```
+
+**使用示例：**
+```bash
+# 搜索包含"机器学习"的博客
+curl -X GET "http://localhost:8000/api/users/1/blogs?q=机器学习"
+
+# 按浏览量降序排列
+curl -X GET "http://localhost:8000/api/users/1/blogs?sort_by=views&sort_order=desc"
+
+# 查询 2025 年 1 月的博客
+curl -X GET "http://localhost:8000/api/users/1/blogs?date_from=2025-01-01&date_to=2025-01-31"
 ```
 
 ---
@@ -477,20 +734,76 @@ avatar: 图片文件
 
 ### GET /api/blogs
 
-获取博客列表
+获取博客列表（支持搜索、筛选、排序、分页）
 
 **查询参数：**
 ```
-?page=1&size=20&author=zhangsan
+?q=机器学习&search_in=title,content&author=zhangsan&status=published&date_from=2025-01-01&date_to=2025-01-31&sort_by=views&sort_order=desc&page=1&size=20
 ```
 
 **参数说明：**
+
+#### 搜索参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| q | string | 否 | 搜索关键词（在标题和/或内容中搜索） |
+| search_in | string | 否 | 搜索字段（`title` 仅标题、`content` 仅内容、`title,content` 同时搜索，默认 `title,content`） |
+
+#### 筛选参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| author | string | 否 | 按作者筛选（用户名） |
+| status | string | 否 | 状态筛选（`draft` 仅返回自己的草稿，`published` 返回已发布，默认 `published`） |
+| date_from | string | 否 | 起始日期（格式：YYYY-MM-DD） |
+| date_to | string | 否 | 结束日期（格式：YYYY-MM-DD） |
+
+#### 排序参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sort_by | string | 否 | 排序字段（`created_at` 创建时间、`views` 浏览量、`likes` 点赞数、`favorites` 收藏数，默认 `created_at`） |
+| sort_order | string | 否 | 排序方向（`asc` 升序、`desc` 降序，默认 `desc`） |
+
+#### 分页参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | integer | 否 | 页码（默认1） |
 | size | integer | 否 | 每页数量（默认20，最大100） |
-| author | string | 否 | 按作者筛选（用户名） |
+
+**功能说明：**
+
+1. **搜索功能（v2.1.0）：**
+   - 支持按标题搜索：`q=关键词&search_in=title`
+   - 支持按内容搜索：`q=关键词&search_in=content`
+   - 支持同时搜索标题和内容：`q=关键词&search_in=title,content`（默认）
+
+2. **筛选功能：**
+   - 按作者筛选：`author=zhangsan`
+   - 按状态筛选：`status=published` 或 `status=draft`
+   - 按日期范围筛选：`date_from=2025-01-01&date_to=2025-01-31`
+
+3. **排序功能（v2.1.0）：**
+   - 按创建时间排序：`sort_by=created_at`（默认）
+   - 按浏览量排序：`sort_by=views`
+   - 按点赞数排序：`sort_by=likes`
+   - 按收藏数排序：`sort_by=favorites`
+   - 升序/降序：`sort_order=asc` 或 `sort_order=desc`
+
+4. **组合筛选（v2.1.0）：**
+   - 所有参数可以组合使用，例如：搜索「机器学习」+ 按浏览量降序 + 2025年1月：
+   ```
+   ?q=机器学习&sort_by=views&sort_order=desc&date_from=2025-01-01&date_to=2025-01-31
+   ```
+
+**注意：**
+- 未登录用户：`status` 参数无效，只能查看已发布的博客
+- 已登录用户：
+  - `status=published`：查看所有已发布的博客
+  - `status=draft`：仅查看自己的草稿
+- 日期参数必须符合 `YYYY-MM-DD` 格式
 
 **成功响应（200）：**
 ```json
@@ -505,7 +818,13 @@ avatar: 图片文件
       "excerpt": "机器学习是人工智能的核心技术之一，本文将介绍机器学习的基本概念、常见算法和实际应用...",
       "author": "张三",
       "author_id": 1,
+      "author_avatar_url": "/uploads/avatars/avatar1.jpg",
+      "status": "published",
       "views": 128,
+      "likes_count": 15,
+      "favorites_count": 8,
+      "is_liked": false,
+      "is_favorited": false,
       "created_at": "2025-01-10T08:30:00.000000Z"
     },
     {
@@ -514,7 +833,13 @@ avatar: 图片文件
       "excerpt": "学习数据结构与算法是每个程序员的必修课，本文将总结常用的数据结构和算法技巧...",
       "author": "李四",
       "author_id": 2,
+      "author_avatar_url": null,
+      "status": "published",
       "views": 95,
+      "likes_count": 12,
+      "favorites_count": 5,
+      "is_liked": true,
+      "is_favorited": false,
       "created_at": "2025-01-09T15:20:00.000000Z"
     }
   ]
@@ -525,8 +850,14 @@ avatar: 图片文件
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| excerpt | string | 博客摘要（内容前150字） |
+| excerpt | string | 博客摘要（内容前150字，媒体文件替换为占位符） |
 | author_id | integer | 作者 ID（用于跳转到用户中心） |
+| author_avatar_url | string \| null | 作者头像 URL |
+| status | string | 状态（`draft` 或 `published`） |
+| likes_count | integer | 点赞数 |
+| favorites_count | integer | 收藏数 |
+| is_liked | boolean | 当前用户是否已点赞（未登录为 false） |
+| is_favorited | boolean | 当前用户是否已收藏（未登录为 false） |
 
 ---
 
@@ -548,6 +879,7 @@ avatar: 图片文件
   "content": "机器学习是人工智能的核心技术之一...\n\n## 什么是机器学习\n\n...",
   "author": "张三",
   "author_id": 1,
+  "status": "published",
   "views": 128,
   "is_owner": false,
   "created_at": "2025-01-10T08:30:00.000000Z",
@@ -559,11 +891,23 @@ avatar: 图片文件
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| content | string | Markdown 格式的完整内容 |
+| content | string | 富文本格式的完整内容 |
+| status | string | 状态（`draft` 或 `published`） |
 | is_owner | boolean | 当前用户是否为作者（未登录为 false） |
 | updated_at | string | 最后更新时间（可选） |
 
-**注意：** 每次调用此接口，博客的 `views` 字段会自动 +1。
+**注意：**
+- 每次调用此接口，博客的 `views` 字段会自动 +1（仅已发布博客）。
+- **权限控制**：
+  - 草稿博客：仅作者可查看，其他用户访问返回 404
+  - 已发布博客：所有人可查看
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限查看此草稿"
+}
+```
 
 **失败响应（404）：**
 ```json
@@ -584,11 +928,21 @@ Authorization: Bearer {access_token}
 Content-Type: application/json
 ```
 
-**请求体：**
+**请求体（发布博客）：**
 ```json
 {
   "title": "机器学习入门指南",
-  "content": "## 简介\n\n机器学习是..."
+  "content": "<p>机器学习是人工智能的核心技术之一...</p>",
+  "status": "published"
+}
+```
+
+**请求体（保存草稿）：**
+```json
+{
+  "title": "未命名草稿",
+  "content": "<p>暂未完成的内容...</p>",
+  "status": "draft"
 }
 ```
 
@@ -597,16 +951,26 @@ Content-Type: application/json
 | 字段 | 类型 | 必填 | 验证规则 |
 |------|------|------|----------|
 | title | string | 是 | 1-200字符 |
-| content | string | 是 | Markdown 格式，不能为空 |
+| content | string | 发布时是，草稿时否 | 富文本格式 |
+| status | string | 否 | `draft`（草稿）或 `published`（发布），默认 `published` |
+
+**验证规则：**
+- **发布博客** (`status=published`)：
+  - 标题：必填，1-200字符
+  - 内容：必填，不能为空
+- **保存草稿** (`status=draft`)：
+  - 标题：必填，1-200字符
+  - 内容：可选
 
 **成功响应（201）：**
 ```json
 {
   "id": 1,
   "title": "机器学习入门指南",
-  "content": "## 简介\n\n机器学习是...",
+  "content": "<p>机器学习是人工智能的核心技术之一...</p>",
   "author": "张三",
   "author_id": 1,
+  "status": "published",
   "views": 0,
   "created_at": "2025-01-11T10:00:00.000000Z"
 }
@@ -637,11 +1001,29 @@ Content-Type: application/json
 |------|------|------|
 | blog_id | integer | 博客 ID |
 
-**请求体：**
+**请求体（更新内容并保持状态）：**
 ```json
 {
   "title": "机器学习入门指南（更新版）",
-  "content": "## 简介\n\n机器学习是..."
+  "content": "<p>机器学习是...</p>"
+}
+```
+
+**请求体（草稿→发布）：**
+```json
+{
+  "title": "机器学习入门指南",
+  "content": "<p>机器学习是...</p>",
+  "status": "published"
+}
+```
+
+**请求体（已发布→草稿）：**
+```json
+{
+  "title": "机器学习入门指南",
+  "content": "<p>机器学习是...</p>",
+  "status": "draft"
 }
 ```
 
@@ -652,9 +1034,10 @@ Content-Type: application/json
 {
   "id": 1,
   "title": "机器学习入门指南（更新版）",
-  "content": "## 简介\n\n机器学习是...",
+  "content": "<p>机器学习是...</p>",
   "author": "张三",
   "author_id": 1,
+  "status": "published",
   "views": 128,
   "updated_at": "2025-01-11T14:30:00.000000Z"
 }
@@ -699,6 +1082,1150 @@ Authorization: Bearer {access_token}
 {
   "detail": "博客不存在"
 }
+```
+
+---
+
+## 点赞与收藏系统 (Likes & Favorites)
+
+点赞与收藏系统允许用户表达对博客的喜爱，并支持收藏文件夹管理、权限控制和作者通知功能。
+
+**功能特性：**
+- 点赞/收藏博客（允许作者对自己的博客点赞/收藏）
+- 收藏文件夹管理（创建、重命名、设置权限）
+- 文件夹权限：公开（其他用户可查看）/ 私有（仅自己可见）
+- 作者通知：点赞/收藏后通知博客作者
+- 一键切换：点击即可点赞/取消点赞、收藏/取消收藏（无需确认）
+
+**设计要点：**
+- 防重复：同一用户对同一博客只能点赞/收藏一次
+- 乐观更新：前端点击立即更新 UI，失败时回滚
+- 级联删除：博客或用户删除时自动清理关联数据
+- 计数冗余：Blog 表存储 `likes_count` 和 `favorites_count`，避免频繁 COUNT 查询
+
+---
+
+### 1.1 点赞博客
+
+点赞博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**成功响应（200）：**
+```json
+{
+  "liked": true,
+  "likes_count": 42
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | boolean | 是否已点赞（始终为 true） |
+| likes_count | integer | 当前点赞总数 |
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**失败响应（409）：**
+```json
+{
+  "detail": "已经点赞过了"
+}
+```
+
+**后端逻辑：**
+1. 检查博客是否存在
+2. 检查用户是否已点赞（复合唯一索引 `user_id + blog_id`）
+3. 创建 Like 记录，递增 `blogs.likes_count`
+4. 创建通知（如果点赞者不是作者）：
+   ```json
+   {
+     "type": "blog_liked",
+     "user_id": {作者ID},
+     "content": "{点赞者昵称} 点赞了你的博客《{博客标题}》",
+     "target_type": "blog",
+     "target_id": {博客ID}
+   }
+   ```
+5. 返回点赞状态和总数
+
+---
+
+### 1.2 取消点赞
+
+取消点赞博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**成功响应（200）：**
+```json
+{
+  "liked": false,
+  "likes_count": 41
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| liked | boolean | 是否已点赞（始终为 false） |
+| likes_count | integer | 当前点赞总数 |
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "未点赞过该博客"
+}
+```
+
+**后端逻辑：**
+1. 检查点赞记录是否存在
+2. 删除 Like 记录，递减 `blogs.likes_count`
+3. 返回点赞状态和总数
+
+---
+
+### 1.3 查询点赞状态
+
+查询当前用户对博客的点赞状态（可选认证）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**成功响应（200）- 已登录：**
+```json
+{
+  "is_liked": true,
+  "likes_count": 42
+}
+```
+
+**成功响应（200）- 未登录：**
+```json
+{
+  "is_liked": false,
+  "likes_count": 42
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| is_liked | boolean | 当前用户是否已点赞（未登录时为 false） |
+| likes_count | integer | 当前点赞总数 |
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**后端逻辑：**
+- 已登录：查询 Like 表判断 `is_liked`
+- 未登录：`is_liked = false`
+- 始终返回 `likes_count`（从 Blog 表）
+
+---
+
+### 2.1 创建收藏文件夹
+
+创建收藏文件夹（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "name": "前端技术",
+  "is_public": true
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 是 | 文件夹名称（1-50字符） |
+| is_public | boolean | 否 | 是否公开，默认 `true` |
+
+**成功响应（201）：**
+```json
+{
+  "id": 1,
+  "name": "前端技术",
+  "is_public": true,
+  "favorites_count": 0,
+  "created_at": "2025-01-25T10:00:00.000000Z"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | integer | 文件夹 ID |
+| name | string | 文件夹名称 |
+| is_public | boolean | 是否公开 |
+| favorites_count | integer | 收藏数量 |
+| created_at | string | 创建时间 |
+
+**失败响应（400）：**
+```json
+{
+  "detail": "文件夹名称不能为空"
+}
+```
+
+或
+
+```json
+{
+  "detail": "文件夹名称已存在"
+}
+```
+
+**后端逻辑：**
+1. 验证名称非空、长度限制
+2. 检查同名文件夹（同一用户下）
+3. 创建 FavoriteFolder 记录
+4. 返回文件夹信息
+
+---
+
+### 2.2 获取收藏文件夹列表
+
+获取当前用户的收藏文件夹列表（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "folders": [
+    {
+      "id": 1,
+      "name": "前端技术",
+      "is_public": true,
+      "favorites_count": 5,
+      "created_at": "2025-01-25T10:00:00.000000Z"
+    },
+    {
+      "id": 2,
+      "name": "算法学习",
+      "is_public": false,
+      "favorites_count": 3,
+      "created_at": "2025-01-25T11:30:00.000000Z"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| folders | array | 文件夹列表 |
+| folders[].id | integer | 文件夹 ID |
+| folders[].name | string | 文件夹名称 |
+| folders[].is_public | boolean | 是否公开 |
+| folders[].favorites_count | integer | 收藏数量 |
+| folders[].created_at | string | 创建时间 |
+
+**后端逻辑：**
+1. 查询当前用户的所有文件夹
+2. 统计每个文件夹的收藏数量（LEFT JOIN Favorite 表）
+3. 按创建时间倒序返回
+
+---
+
+### 2.3 更新收藏文件夹
+
+更新收藏文件夹名称或权限（需要认证，仅创建者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| folder_id | integer | 文件夹 ID |
+
+**请求体：**
+```json
+{
+  "name": "前端开发技术",
+  "is_public": false
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 否 | 新文件夹名称（1-50字符） |
+| is_public | boolean | 否 | 是否公开 |
+
+**成功响应（200）：**
+```json
+{
+  "id": 1,
+  "name": "前端开发技术",
+  "is_public": false,
+  "favorites_count": 5,
+  "created_at": "2025-01-25T10:00:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限修改此文件夹"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查文件夹是否存在
+2. 验证是否为创建者
+3. 更新指定字段（仅更新提供的字段）
+4. 返回更新后的文件夹信息
+
+---
+
+### 2.4 删除收藏文件夹
+
+删除收藏文件夹（需要认证，仅创建者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| folder_id | integer | 文件夹 ID |
+
+**成功响应（204）：**
+无内容
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限删除此文件夹"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查文件夹是否存在
+2. 验证是否为创建者
+3. 删除文件夹及其所有收藏记录（CASCADE）
+
+---
+
+### 2.5 收藏博客
+
+收藏博客到指定文件夹（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**请求体：**
+```json
+{
+  "folder_id": 1
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 是 | 目标文件夹 ID |
+
+**成功响应（200）：**
+```json
+{
+  "favorited": true,
+  "favorites_count": 15
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| favorited | boolean | 是否已收藏（始终为 true） |
+| favorites_count | integer | 当前收藏总数 |
+
+**失败响应（400）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+或
+
+```json
+{
+  "detail": "不能收藏到别人的私有文件夹"
+}
+```
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**失败响应（409）：**
+```json
+{
+  "detail": "该博客已在此文件夹中"
+}
+```
+
+**后端逻辑：**
+1. 检查博客和文件夹是否存在
+2. 验证文件夹权限（私有文件夹仅创建者可添加）
+3. 检查是否已收藏（复合唯一索引 `user_id + blog_id + folder_id`）
+4. 创建 Favorite 记录，递增 `blogs.favorites_count`
+5. 创建通知（如果收藏者不是作者）：
+   ```json
+   {
+     "type": "blog_favorited",
+     "user_id": {作者ID},
+     "content": "{收藏者昵称} 收藏了你的博客《{博客标题}》",
+     "target_type": "blog",
+     "target_id": {博客ID}
+   }
+   ```
+6. 返回收藏状态和总数
+
+**注意：**
+- 允许收藏博客到多个文件夹
+- 同一文件夹内不能重复收藏
+
+---
+
+### 2.6 取消收藏
+
+取消收藏博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**请求体（可选）：**
+```json
+{
+  "folder_id": 1
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 否 | 指定文件夹 ID（不提供则从所有文件夹移除） |
+
+**成功响应（200）：**
+```json
+{
+  "favorited": false,
+  "favorites_count": 14
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| favorited | boolean | 是否已收藏（如果从所有文件夹移除则为 false） |
+| favorites_count | integer | 当前收藏总数 |
+
+**失败响应（401）：**
+```json
+{
+  "detail": "请先登录"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+或
+
+```json
+{
+  "detail": "未收藏过该博客"
+}
+```
+
+**后端逻辑：**
+1. 检查收藏记录是否存在
+2. 删除 Favorite 记录，递减 `blogs.favorites_count`
+3. 如果博客在其他文件夹中仍有收藏，`favorited` 返回 `true`
+4. 返回收藏状态和总数
+
+---
+
+### 2.7 查询收藏状态
+
+查询当前用户对博客的收藏状态（可选认证）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 否 | 筛选指定文件夹的收藏状态 |
+
+**成功响应（200）- 已登录：**
+```json
+{
+  "is_favorited": true,
+  "folders": [
+    {
+      "id": 1,
+      "name": "前端技术"
+    },
+    {
+      "id": 3,
+      "name": "必读文章"
+    }
+  ],
+  "favorites_count": 15
+}
+```
+
+**成功响应（200）- 未登录：**
+```json
+{
+  "is_favorited": false,
+  "folders": [],
+  "favorites_count": 15
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| is_favorited | boolean | 当前用户是否已收藏（未登录时为 false） |
+| folders | array | 收藏所在的文件夹列表 |
+| folders[].id | integer | 文件夹 ID |
+| folders[].name | string | 文件夹名称 |
+| favorites_count | integer | 当前收藏总数 |
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+**后端逻辑：**
+- 已登录：查询 Favorite 表，返回收藏的文件夹列表
+- 未登录：`is_favorited = false`，`folders = []`
+- 始终返回 `favorites_count`（从 Blog 表）
+
+---
+
+### 2.8 获取文件夹收藏列表
+
+获取指定文件夹的收藏博客列表（需要认证，仅创建者可查看私有文件夹）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| folder_id | integer | 文件夹 ID |
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码，默认 1 |
+| size | integer | 否 | 每页数量，默认 20，最大 100 |
+
+**成功响应（200）：**
+```json
+{
+  "folder": {
+    "id": 1,
+    "name": "前端技术",
+    "is_public": true,
+    "favorites_count": 5
+  },
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 10,
+      "title": "React Hooks 完全指南",
+      "excerpt": "React Hooks 是 React 16.8 引入的新特性...",
+      "author": "张三",
+      "author_id": 2,
+      "author_avatar_url": "/static/avatars/abc123.jpg",
+      "views": 128,
+      "likes_count": 42,
+      "favorites_count": 15,
+      "is_liked": true,
+      "is_favorited": true,
+      "created_at": "2025-01-25T10:00:00.000000Z",
+      "favorited_at": "2025-01-25T12:30:00.000000Z"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| folder | object | 文件夹信息 |
+| total | integer | 总收藏数 |
+| page | integer | 当前页码 |
+| size | integer | 每页数量 |
+| items | array | 博客列表 |
+| items[].favorited_at | string | 收藏时间（按此倒序） |
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限查看此文件夹"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "文件夹不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查文件夹是否存在
+2. 验证权限（创建者或公开文件夹）
+3. 查询收藏记录，LEFT JOIN Blog 和 Author
+4. 按收藏时间倒序分页返回
+5. 附带当前用户的点赞/收藏状态
+
+---
+
+### 3.1 获取用户的所有收藏
+
+获取当前用户在所有文件夹中的收藏博客（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | integer | 否 | 页码，默认 1 |
+| size | integer | 否 | 每页数量，默认 20，最大 100 |
+
+**成功响应（200）：**
+```json
+{
+  "total": 12,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 10,
+      "title": "React Hooks 完全指南",
+      "excerpt": "React Hooks 是 React 16.8 引入的新特性...",
+      "author": "张三",
+      "author_id": 2,
+      "author_avatar_url": "/static/avatars/abc123.jpg",
+      "views": 128,
+      "likes_count": 42,
+      "favorites_count": 15,
+      "is_liked": true,
+      "is_favorited": true,
+      "created_at": "2025-01-25T10:00:00.000000Z",
+      "folders": [
+        {
+          "id": 1,
+          "name": "前端技术"
+        }
+      ],
+      "favorited_at": "2025-01-25T12:30:00.000000Z"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| items[].folders | array | 收藏所在的文件夹列表 |
+| items[].favorited_at | string | 最早收藏时间 |
+
+**后端逻辑：**
+1. 查询当前用户的所有收藏记录
+2. 使用 DISTINCT ON (blog_id) 去重（同一博客可能在多个文件夹）
+3. 按收藏时间倒序分页返回
+4. 附带文件夹列表和点赞/收藏状态
+
+---
+
+### 3.2 获取公开收藏
+
+获取指定用户的公开收藏（可选认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token} (可选)
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| user_id | integer | 用户 ID |
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| folder_id | integer | 否 | 筛选指定文件夹 |
+| page | integer | 否 | 页码，默认 1 |
+| size | integer | 否 | 每页数量，默认 20，最大 100 |
+
+**成功响应（200）：**
+```json
+{
+  "user": {
+    "id": 2,
+    "nickname": "张三",
+    "avatar_url": "/static/avatars/abc123.jpg"
+  },
+  "folder": {
+    "id": 1,
+    "name": "前端技术",
+    "favorites_count": 5
+  },
+  "total": 5,
+  "page": 1,
+  "size": 20,
+  "items": [...]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| user | object | 用户信息 |
+| folder | object | 文件夹信息（如果指定 folder_id） |
+| items | array | 博客列表 |
+
+**失败响应（403）：**
+```json
+{
+  "detail": "该文件夹未公开"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "用户不存在"
+}
+```
+
+**后端逻辑：**
+1. 检查用户是否存在
+2. 查询用户的公开文件夹（`is_public = true`）
+3. 如果指定 `folder_id`，验证是否为公开文件夹
+4. 返回收藏列表
+
+---
+
+## 文件上传 (Uploads)
+
+文件上传接口用于博客系统的富文本编辑器，支持图片和视频上传，并提供自动压缩和媒体清理功能。
+
+### POST /api/uploads/image
+
+上传博客图片（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
+
+**请求参数：**
+```
+file: 图片文件
+```
+
+**文件限制：**
+- 支持格式：jpg, jpeg, png, gif, webp
+- 最大大小：10MB
+- 前端自动压缩：最大 1MB，最大分辨率 1920px，压缩质量 80%
+
+**成功响应（200）：**
+```json
+{
+  "url": "/static/blog/images/abc123-def456.jpg",
+  "type": "image"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| url | string | 图片访问 URL（相对路径） |
+| type | string | 固定值 "image" |
+
+**失败响应（422）：**
+```json
+{
+  "detail": "不支持的图片类型，请上传 image/jpeg, image/jpg, image/png, image/gif, image/webp 格式的图片"
+}
+```
+
+或
+
+```json
+{
+  "detail": "图片大小不能超过 10MB"
+}
+```
+
+---
+
+### POST /api/uploads/video
+
+上传博客视频（需要认证，服务器端自动压缩）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
+
+**请求参数：**
+```
+file: 视频文件
+```
+
+**文件限制：**
+- 支持格式：mp4, webm, mov
+- 最大大小：2GB
+- 自动压缩：大于 20MB 时自动触发压缩（目标 50MB）
+
+**压缩配置：**
+- 最大分辨率：1920x1080
+- 视频码率：最高 2Mbps（智能计算）
+- 音频码率：128kbps
+- 流媒体优化：faststart
+
+**成功响应（200）- 已压缩：**
+```json
+{
+  "url": "/static/blog/videos/abc123-def456.mp4",
+  "type": "video",
+  "compressed": true,
+  "message": "压缩成功: 120.5MB → 45.2MB (节省 62.5%)"
+}
+```
+
+**成功响应（200）- 无需压缩：**
+```json
+{
+  "url": "/static/blog/videos/abc123-def456.mp4",
+  "type": "video",
+  "compressed": false,
+  "message": "视频无需压缩 (15.3MB)"
+}
+```
+
+**成功响应（200）- 压缩失败：**
+```json
+{
+  "url": "/static/blog/videos/abc123-def456.mp4",
+  "type": "video",
+  "compressed": false,
+  "message": "压缩失败，使用原始文件: FFmpeg 未找到，请在 ffmpeg_config.py 中配置 FFMPEG_PATH"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| url | string | 视频访问 URL（相对路径） |
+| type | string | 固定值 "video" |
+| compressed | boolean | 是否进行了压缩 |
+| message | string | 压缩结果信息或错误提示 |
+
+**失败响应（422）：**
+```json
+{
+  "detail": "不支持的视频类型，请上传 video/mp4, video/webm, video/quicktime 格式的视频"
+}
+```
+
+或
+
+```json
+{
+  "detail": "视频大小为 2.5GB，超过限制 2GB"
+}
+```
+
+**注意：**
+- FFmpeg 配置：编辑 `backend/ffmpeg_config.py` 配置 FFmpeg 路径
+- 压缩失败时自动使用原始文件，不影响上传
+- 详见 README.md 中的 FFmpeg 配置指南
+
+---
+
+### DELETE /api/uploads/media
+
+批量删除媒体文件（需要认证，用于编辑博客时清理未使用的媒体）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "urls": [
+    "/static/blog/images/abc123-def456.jpg",
+    "/static/blog/videos/xyz789-uvw012.mp4"
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| urls | array | 是 | 要删除的媒体 URL 列表 |
+
+**成功响应（204 No Content）：**
+- 无响应体，删除成功
+
+**注意：**
+- 只能删除 `/static/blog/` 路径下的文件
+- 不存在的文件会自动跳过
+- 失败不影响其他文件的删除
+
+---
+
+### POST /api/uploads/media/sizes
+
+批量获取媒体文件大小（需要认证，用于编辑博客时加载已有媒体的大小）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**请求体：**
+```json
+{
+  "urls": [
+    "/static/blog/images/abc123-def456.jpg",
+    "/static/blog/videos/xyz789-uvw012.mp4"
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| urls | array | 是 | 要查询的媒体 URL 列表 |
+
+**成功响应（200）：**
+```json
+{
+  "sizes": {
+    "/static/blog/images/abc123-def456.jpg": 524288,
+    "/static/blog/videos/xyz789-uvw012.mp4": 15728640
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| sizes | object | URL → 文件大小（字节）的映射 |
+
+**注意：**
+- 返回的是实际文件系统的字节数
+- 不存在的文件返回 0
+- 非 `/static/` 开头的 URL 返回 0
+- 用于前端实时统计媒体总大小
+
+---
+
+**成功响应（204）：**
+无内容
+
+**使用场景：**
+- 用户编辑博客时，前端对比原始内容和当前内容
+- 自动识别被删除的图片和视频
+- 保存后调用此接口清理未使用的媒体文件
+
+**示例流程：**
+```typescript
+// 1. 编辑博客时保存原始媒体 URL
+const originalMediaUrls = ["/static/blog/images/old.jpg"];
+
+// 2. 用户编辑内容，删除了某些图片
+// 3. 提取当前内容中的媒体 URL
+const currentMediaUrls = extractMediaUrls(newContent);
+
+// 4. 找出被删除的 URL
+const deletedUrls = originalMediaUrls.filter(url => !currentMediaUrls.includes(url));
+
+// 5. 调用删除接口
+await fetch('/api/uploads/media', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({ urls: deletedUrls })
+});
 ```
 
 ---
@@ -762,7 +2289,7 @@ Authorization: Bearer {access_token}
 
 ## 班级通知与日历
 
-班级通知与日历用于首页展示最新通知和本月活动提醒，支持管理员发布与维护内容。
+班级通知与日历用于首页展示最新通知和本月活动提醒，支持班委/管理员发布与维护内容。
 
 ### GET /api/announcements
 
@@ -1177,7 +2704,7 @@ Authorization: Bearer {access_token}
 | author_id | integer | 发布者 ID |
 | updated_at | string | 最后更新时间（null 表示未更新过） |
 | is_owner | boolean | 当前用户是否为发布者（未登录为 false） |
-| can_edit | boolean | 当前用户是否可编辑（管理员或发布者） |
+| can_edit | boolean | 当前用户是否可编辑（班委/管理员） |
 
 **注意：** 每次调用此接口，通知的 `views` 字段会自动 +1。
 
@@ -1185,7 +2712,7 @@ Authorization: Bearer {access_token}
 
 ### POST /api/notices
 
-创建通知（需要认证）
+创建通知（需要认证，班委/管理员）
 
 **请求头：**
 ```
@@ -1229,7 +2756,7 @@ Content-Type: application/json
 
 ### PUT /api/notices/:notice_id
 
-更新通知（需要认证，仅发布者或管理员）
+更新通知（需要认证，班委/管理员）
 
 **请求头：**
 ```
@@ -1272,7 +2799,7 @@ Content-Type: application/json
 
 ### DELETE /api/notices/:notice_id
 
-删除通知（需要认证，仅发布者或管理员）
+删除通知（需要认证，班委/管理员）
 
 **请求头：**
 ```
@@ -1768,6 +3295,601 @@ activities.items.map(activity => {
 
 ---
 
+## 评论系统 (Comments)
+
+评论系统支持楼中楼回复、编辑评论、多种排序方式，并与通知系统集成。
+
+### 功能特性
+
+| 功能 | 说明 |
+|------|------|
+| 楼中楼 | 支持最多 2 层嵌套评论（顶级评论 → 一级回复 → 二级回复） |
+| 编辑评论 | 评论作者可编辑自己的评论 |
+| 删除评论 | 软删除，显示"已删除"而非物理删除 |
+| 排序方式 | 时间正序（旧→新）/ 时间倒序（新→旧）/ 热度排序 |
+| 权限控制 | 登录用户可评论，仅作者/博主可删除 |
+
+---
+
+### GET /api/blogs/:blog_id/comments
+
+获取博客的评论列表（公开接口）
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**查询参数：**
+```
+?sort=asc&page=1&size=20
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sort | string | 否 | 排序方式：`asc`（时间正序，默认）、`desc`（时间倒序）、`hot`（热度） |
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认20，最大50） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 15,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 1,
+      "content": "这篇文章写得很好，学到了很多！",
+      "author": {
+        "id": 2,
+        "username": "lisi",
+        "nickname": "李四",
+        "avatar_url": null
+      },
+      "parent_id": null,
+      "parent_author": null,
+      "replies_count": 2,
+      "is_deleted": false,
+      "created_at": "2025-01-24T10:00:00.000000Z",
+      "updated_at": null,
+      "is_author": false,
+      "can_edit": false
+    },
+    {
+      "id": 2,
+      "content": "我同意楼上的观点，特别是关于梯度下降的部分。",
+      "author": {
+        "id": 3,
+        "username": "wangwu",
+        "nickname": "王五",
+        "avatar_url": "/uploads/avatars/user_3.jpg"
+      },
+      "parent_id": 1,
+      "parent_author": "李四",
+      "replies_count": 0,
+      "is_deleted": false,
+      "created_at": "2025-01-24T10:05:00.000000Z",
+      "updated_at": null,
+      "is_author": false,
+      "can_edit": false
+    },
+    {
+      "id": 3,
+      "content": "这篇博客很有启发，谢谢分享！",
+      "author": {
+        "id": 4,
+        "username": "zhaoliu",
+        "nickname": "赵六",
+        "avatar_url": null
+      },
+      "parent_id": null,
+      "parent_author": null,
+      "replies_count": 0,
+      "is_deleted": false,
+      "created_at": "2025-01-24T09:30:00.000000Z",
+      "updated_at": "2025-01-24T09:45:00.000000Z",
+      "is_author": false,
+      "can_edit": false
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| content | string | 评论内容（纯文本，已删除的评论显示"已删除"） |
+| author | object | 评论作者信息 |
+| author.id | integer | 作者 ID |
+| author.username | string | 用户名 |
+| author.nickname | string | 昵称 |
+| author.avatar_url | string\|null | 头像 URL |
+| parent_id | integer\|null | 父评论 ID（null 表示顶级评论） |
+| parent_author | string\|null | 父评论作者昵称（用于楼中楼显示） |
+| replies_count | integer | 子评论数量（用于热度排序） |
+| is_deleted | boolean | 是否已删除（软删除标记） |
+| updated_at | string\|null | 最后编辑时间（null 表示未编辑过） |
+| is_author | boolean | 当前用户是否为博客作者（未登录为 false） |
+| can_edit | boolean | 当前用户是否可编辑此评论（未登录为 false） |
+
+**排序规则：**
+- `asc`（默认）：按创建时间正序（旧评论在前）
+- `desc`：按创建时间倒序（新评论在前）
+- `hot`：按热度排序（回复数多的在前，同级按时间倒序）
+
+**嵌套结构说明：**
+- 前端需根据 `parent_id` 构建嵌套结构
+- 最多支持 2 层嵌套：顶级评论 → 一级回复 → 二级回复
+- `parent_id` 为 `null` 的评论是顶级评论
+- `parent_id` 指向顶级评论的评论是一级回复
+- `parent_id` 指向一级回复的评论是二级回复
+
+---
+
+### POST /api/blogs/:blog_id/comments
+
+发表评论（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| blog_id | integer | 博客 ID |
+
+**请求体（发表顶级评论）：**
+```json
+{
+  "content": "这篇文章写得很好，学到了很多！"
+}
+```
+
+**请求体（回复评论）：**
+```json
+{
+  "content": "我同意楼上的观点",
+  "parent_id": 1
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| content | string | 是 | 1-1000字符，纯文本 |
+| parent_id | integer | 否 | 父评论 ID（不填则为顶级评论） |
+
+**验证规则：**
+- 嵌套深度限制：最多回复到第 2 层
+- 如果 `parent_id` 对应的评论已经是二级回复，返回错误
+
+**成功响应（201）：**
+```json
+{
+  "id": 4,
+  "content": "这篇文章写得很好，学到了很多！",
+  "author": {
+    "id": 2,
+    "username": "lisi",
+    "nickname": "李四",
+    "avatar_url": null
+  },
+  "parent_id": null,
+  "parent_author": null,
+  "replies_count": 0,
+  "is_deleted": false,
+  "created_at": "2025-01-24T10:10:00.000000Z",
+  "updated_at": null,
+  "is_author": false,
+  "can_edit": true
+}
+```
+
+**失败响应（400）：**
+```json
+{
+  "detail": "回复层级超过限制，最多支持2层嵌套"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "博客不存在"
+}
+```
+
+或
+
+```json
+{
+  "detail": "父评论不存在或已删除"
+}
+```
+
+**注意：**
+- 发表评论成功后，自动创建通知给被回复的用户（如果是回复评论）
+- 博客作者也会收到通知（如果评论者不是作者本人）
+
+---
+
+### PUT /api/comments/:comment_id
+
+编辑评论（需要认证，仅评论作者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| comment_id | integer | 评论 ID |
+
+**请求体：**
+```json
+{
+  "content": "更新后的评论内容"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 验证规则 |
+|------|------|------|----------|
+| content | string | 是 | 1-1000字符，纯文本 |
+
+**成功响应（200）：**
+```json
+{
+  "id": 4,
+  "content": "更新后的评论内容",
+  "author": {
+    "id": 2,
+    "username": "lisi",
+    "nickname": "李四",
+    "avatar_url": null
+  },
+  "parent_id": null,
+  "parent_author": null,
+  "replies_count": 0,
+  "is_deleted": false,
+  "created_at": "2025-01-24T10:10:00.000000Z",
+  "updated_at": "2025-01-24T10:15:00.000000Z",
+  "is_author": false,
+  "can_edit": true
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限编辑此评论"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "评论不存在"
+}
+```
+
+**注意：**
+- 只能编辑自己的评论
+- 已删除的评论不能编辑
+- 编辑后 `updated_at` 字段会更新
+
+---
+
+### DELETE /api/comments/:comment_id
+
+删除评论（需要认证，仅评论作者或博客作者）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| comment_id | integer | 评论 ID |
+
+**成功响应（204）：**
+无内容
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限删除此评论"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "评论不存在"
+}
+```
+
+**权限说明：**
+- 评论作者可以删除自己的评论
+- 博客作者可以删除该博客下的任何评论
+
+**软删除机制：**
+- 删除评论为软删除，设置 `is_deleted = true`
+- 删除后评论内容显示为"已删除"
+- 子评论不会被删除，但会显示"父评论已删除"
+
+---
+
+## 用户通知 (Notifications)
+
+用户通知系统用于向用户推送各类消息，如评论回复、系统通知等。
+
+### 通知类型
+
+| 类型代码 | 说明 | 触发条件 |
+|---------|------|----------|
+| `comment_reply` | 评论回复 | 有人回复了你的评论 |
+| `blog_comment` | 博客评论 | 有人评论了你的博客 |
+| `comment_reply_blog` | 博客评论回复 | 有人回复了你博客下的评论 |
+| `system` | 系统通知 | 管理员发送的系统公告 |
+
+---
+
+### GET /api/notifications
+
+获取当前用户的通知列表（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**查询参数：**
+```
+?unread_only=true&page=1&size=20
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| unread_only | boolean | 否 | 仅显示未读通知（默认 false） |
+| type | string | 否 | 筛选通知类型（不传则返回所有类型） |
+| page | integer | 否 | 页码（默认1） |
+| size | integer | 否 | 每页数量（默认20，最大50） |
+
+**成功响应（200）：**
+```json
+{
+  "total": 25,
+  "unread_count": 5,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 1,
+      "type": "comment_reply",
+      "title": "李四 回复了你的评论",
+      "content": "我同意楼上的观点，特别是关于梯度下降的部分。",
+      "related_type": "comment",
+      "related_id": 2,
+      "related_url": "/blogs/42?comment=2",
+      "is_read": false,
+      "created_at": "2025-01-24T10:05:00.000000Z",
+      "time_display": "5分钟前"
+    },
+    {
+      "id": 2,
+      "type": "blog_comment",
+      "title": "王五 评论了你的博客《机器学习入门指南》",
+      "content": "这篇博客很有启发，谢谢分享！",
+      "related_type": "blog",
+      "related_id": 42,
+      "related_url": "/blogs/42?comment=3",
+      "is_read": false,
+      "created_at": "2025-01-24T09:30:00.000000Z",
+      "time_display": "40分钟前"
+    },
+    {
+      "id": 3,
+      "type": "system",
+      "title": "系统通知",
+      "content": "欢迎加入车辆4班班级空间！请完善您的个人信息。",
+      "related_type": null,
+      "related_id": null,
+      "related_url": null,
+      "is_read": true,
+      "created_at": "2025-01-23T08:00:00.000000Z",
+      "time_display": "昨天"
+    }
+  ]
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | integer | 通知 ID |
+| type | string | 通知类型 |
+| title | string | 通知标题（简短描述） |
+| content | string | 通知内容（评论内容或系统消息） |
+| related_type | string\|null | 关联对象类型（comment/blog/null） |
+| related_id | integer\|null | 关联对象 ID |
+| related_url | string\|null | 关联对象链接 URL |
+| is_read | boolean | 是否已读 |
+| time_display | string | 友好的时间显示 |
+
+**排序规则：**
+- 按创建时间倒序（最新的在前）
+
+---
+
+### POST /api/notifications/read-all
+
+标记所有通知为已读（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "message": "已标记所有通知为已读",
+  "marked_count": 25
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| marked_count | integer | 标记为已读的通知数量 |
+
+---
+
+### PUT /api/notifications/:notification_id/read
+
+标记单个通知为已读（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| notification_id | integer | 通知 ID |
+
+**成功响应（200）：**
+```json
+{
+  "id": 1,
+  "type": "comment_reply",
+  "title": "李四 回复了你的评论",
+  "content": "我同意楼上的观点...",
+  "related_type": "comment",
+  "related_id": 2,
+  "related_url": "/blogs/42?comment=2",
+  "is_read": true,
+  "created_at": "2025-01-24T10:05:00.000000Z"
+}
+```
+
+**失败响应（403）：**
+```json
+{
+  "detail": "无权限访问此通知"
+}
+```
+
+**失败响应（404）：**
+```json
+{
+  "detail": "通知不存在"
+}
+```
+
+---
+
+### DELETE /api/notifications
+
+清除已读通知（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**查询参数：**
+```
+?all=false
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| all | boolean | 否 | 是否清除所有通知（true），仅清除已读（false，默认） |
+
+**成功响应（200）：**
+```json
+{
+  "message": "已清除 10 条通知",
+  "deleted_count": 10
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| deleted_count | integer | 清除的通知数量 |
+
+**注意：**
+- `all=false`（默认）：仅清除已读通知
+- `all=true`：清除所有通知（包括未读）
+
+---
+
+### DELETE /api/notifications/:notification_id
+
+删除单个通知（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| notification_id | integer | 通知 ID |
+
+**成功响应（204）：**
+无内容
+
+---
+
+### GET /api/notifications/unread-count
+
+获取未读通知数量（需要认证）
+
+**请求头：**
+```
+Authorization: Bearer {access_token}
+```
+
+**成功响应（200）：**
+```json
+{
+  "unread_count": 5
+}
+```
+
+**使用场景：**
+- 导航栏显示通知铃铛的红点/数字
+- 前端可轮询此接口获取最新未读数量
+
+---
+
 ## AI对话管理
 
 AI对话功能提供与 AI 助手的实时对话能力，支持流式输出、上下文管理、消息反馈等功能。
@@ -2254,6 +4376,7 @@ Content-Type: application/json
 | avatar_url | String(255) | 头像URL | |
 | class | String(100) | 班级/学校 | |
 | bio | String(200) | 个人简介 | |
+| role | String(20) | 角色 | DEFAULT 'student', values: 'student'/'committee'/'admin' |
 | created_at | DateTime | 注册时间 | DEFAULT utcnow() |
 | updated_at | DateTime | 更新时间 | |
 
@@ -2269,19 +4392,31 @@ Content-Type: application/json
 |------|------|------|------|
 | id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
 | title | String(200) | 标题 | NOT NULL |
-| content | Text | 内容（Markdown） | NOT NULL |
+| content | Text | 内容（富文本） | NOT NULL |
+| status | String(20) | 状态 | DEFAULT 'published', values: 'draft', 'published' |
 | author_id | Integer | 作者ID | FOREIGN KEY → users.id, NOT NULL |
 | author_name | String(50) | 作者名（冗余） | NOT NULL |
 | views | Integer | 阅读次数 | DEFAULT 0 |
+| likes_count | Integer | 点赞数（冗余） | DEFAULT 0 |
+| favorites_count | Integer | 收藏数（冗余） | DEFAULT 0 |
 | created_at | DateTime | 创建时间 | DEFAULT utcnow() |
 | updated_at | DateTime | 更新时间 | |
 
 **索引：**
 - `idx_author_id`: author_id
+- `idx_status`: status
 - `idx_created_at`: created_at (DESC)
+- `idx_author_status`: (author_id, status) 复合索引
 
 **外键：**
 - `author_id` → `users.id` (ON DELETE CASCADE)
+
+**字段说明：**
+- `status`：博客状态
+  - `draft`：草稿，仅作者可见
+  - `published`：已发布，所有人可见
+- 草稿不统计浏览次数（views 始终为 0）
+- 草稿不出现在公开列表中
 
 ### Conversation（对话）
 
@@ -2335,6 +4470,170 @@ Content-Type: application/json
 **关系：**
 - 一个 Conversation 包含多个 Message（一对多）
 - 一个 User 可以创建多个 Conversation（一对多）
+
+---
+
+### Comment（评论）
+
+**数据库表名：** `comments`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| blog_id | Integer | 博客ID | FOREIGN KEY → blogs.id, NOT NULL |
+| user_id | Integer | 评论者ID | FOREIGN KEY → users.id, NOT NULL |
+| content | String(1000) | 评论内容 | NOT NULL |
+| parent_id | Integer | 父评论ID | FOREIGN KEY → comments.id, NULL |
+| is_deleted | Boolean | 是否已删除 | DEFAULT false |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+| updated_at | DateTime | 更新时间 | |
+
+**索引：**
+- `idx_blog_id`: blog_id
+- `idx_parent_id`: parent_id
+- `idx_created_at`: created_at
+
+**外键：**
+- `blog_id` → `blogs.id` (ON DELETE CASCADE)
+- `user_id` → `users.id` (ON DELETE CASCADE)
+- `parent_id` → `comments.id` (ON DELETE SET NULL)
+
+**说明：**
+- `parent_id` 用于实现楼中楼回复功能
+- `is_deleted` 实现软删除，删除后设置 `is_deleted = true`
+- 嵌套深度限制：最多 2 层（顶级评论 → 一级回复 → 二级回复）
+- 删除父评论时，子评论不删除但会显示"父评论已删除"
+
+**楼层规则：**
+- 顶级评论：`parent_id IS NULL`
+- 一级回复：`parent_id` 指向顶级评论
+- 二级回复：`parent_id` 指向一级回复
+- 禁止回复二级回复（达到 2 层限制）
+
+---
+
+### Like（点赞）
+
+**数据库表名：** `likes`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 点赞者ID | FOREIGN KEY → users.id, NOT NULL |
+| blog_id | Integer | 博客ID | FOREIGN KEY → blogs.id, NOT NULL |
+| created_at | DateTime | 点赞时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_blog`: (user_id, blog_id) 复合唯一索引（防止重复点赞）
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+- `blog_id` → `blogs.id` (ON DELETE CASCADE)
+
+**说明：**
+- 使用复合唯一索引 `(user_id, blog_id)` 防止用户重复点赞
+- 用户可以点赞自己的博客
+- 点赞后自动创建通知给博客作者（如果点赞者不是作者）
+
+---
+
+### FavoriteFolder（收藏文件夹）
+
+**数据库表名：** `favorite_folders`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 创建者ID | FOREIGN KEY → users.id, NOT NULL |
+| name | String(50) | 文件夹名称 | NOT NULL |
+| is_public | Boolean | 是否公开 | DEFAULT true |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_id`: user_id
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+
+**说明：**
+- `is_public`: 公开文件夹可被其他用户查看，私有文件夹仅创建者可见
+- 默认文件夹为公开（`is_public = true`）
+- 用户删除时，所有文件夹及收藏自动删除（CASCADE）
+
+---
+
+### Favorite（收藏）
+
+**数据库表名：** `favorites`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 收藏者ID | FOREIGN KEY → users.id, NOT NULL |
+| blog_id | Integer | 博客ID | FOREIGN KEY → blogs.id, NOT NULL |
+| folder_id | Integer | 文件夹ID | FOREIGN KEY → favorite_folders.id, NOT NULL |
+| created_at | DateTime | 收藏时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_blog_folder`: (user_id, blog_id, folder_id) 复合唯一索引（防止重复收藏）
+- `idx_folder_id`: folder_id
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+- `blog_id` → `blogs.id` (ON DELETE CASCADE)
+- `folder_id` → `favorite_folders.id` (ON DELETE CASCADE)
+
+**说明：**
+- 使用复合唯一索引 `(user_id, blog_id, folder_id)` 防止在同一文件夹重复收藏
+- 允许将同一博客收藏到多个不同文件夹
+- 用户可以收藏自己的博客
+- 收藏后自动创建通知给博客作者（如果收藏者不是作者）
+- 文件夹删除时，所有收藏自动删除（CASCADE）
+
+---
+
+### Notification（用户通知）
+
+**数据库表名：** `notifications`
+
+| 字段 | 类型 | 说明 | 约束 |
+|------|------|------|------|
+| id | Integer | 主键 | PRIMARY KEY, AUTO INCREMENT |
+| user_id | Integer | 接收者ID | FOREIGN KEY → users.id, NOT NULL |
+| type | String(50) | 通知类型 | NOT NULL |
+| title | String(200) | 通知标题 | NOT NULL |
+| content | String(1000) | 通知内容 | NOT NULL |
+| related_type | String(50) | 关联对象类型 | values: 'blog', 'comment', NULL |
+| related_id | Integer | 关联对象ID | |
+| related_url | String(500) | 关联对象URL | |
+| is_read | Boolean | 是否已读 | DEFAULT false |
+| created_at | DateTime | 创建时间 | DEFAULT utcnow() |
+
+**索引：**
+- `idx_user_id`: user_id
+- `idx_is_read`: is_read
+- `idx_created_at`: created_at (DESC)
+- `idx_user_read`: (user_id, is_read) 复合索引
+
+**外键：**
+- `user_id` → `users.id` (ON DELETE CASCADE)
+
+**说明：**
+- `type` 字段定义通知类型（comment_reply, blog_comment, system 等）
+- `related_type` 和 `related_id` 关联到具体对象（博客、评论等）
+- `related_url` 用于前端跳转到关联对象
+- 不同 `type` 值对应不同的通知场景
+
+**通知类型详解：**
+
+| type | title 模板 | 触发条件 | related_type | related_id |
+|------|-----------|----------|-------------|-----------|
+| `comment_reply` | "{nickname} 回复了你的评论" | 有人回复了你的评论 | comment | 被回复的评论 ID |
+| `blog_comment` | "{nickname} 评论了你的博客《{blog_title}》" | 有人评论了你的博客 | blog | 博客 ID |
+| `comment_reply_blog` | "{nickname} 回复了你博客下的评论" | 有人回复了你博客下的评论 | comment | 被回复的评论 ID |
+| `blog_liked` | "{nickname} 点赞了你的博客《{blog_title}》" | 有人点赞了你的博客 | blog | 博客 ID |
+| `blog_favorited` | "{nickname} 收藏了你的博客《{blog_title}》" | 有人收藏了你的博客 | blog | 博客 ID |
+| `system` | "系统通知" | 管理员发送系统通知 | NULL | NULL |
 
 ---
 
@@ -3009,6 +5308,12 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.9.0 | 2026-01-24 | 评论系统（楼中楼、编辑、排序）+ 通知系统（设计） |
+| v1.8.0 | 2026-01-23 | 草稿功能（博客状态、草稿箱、保存草稿/发布） |
+| v1.7.0 | 2026-01-23 | 富文本编辑器与媒体管理（图片/视频上传、自动压缩、媒体清理） |
+| v1.6.0 | 2026-01-22 | 最新动态系统（活动流、自动记录、时间显示） |
+| v1.5.0 | 2026-01-22 | 班级通知系统（完整CRUD）、签到系统、统计数据 API |
+| v1.4.0 | 2025-01-21 | 新增班级通知与日历 API |
 | v1.1.0 | 2025-01-19 | 新增 AI 对话管理功能（对话、消息、流式输出） |
 | v1.0.0 | 2025-01-11 | 基于网页原型的完整 API 设计 |
 | v0.1.0 | 2025-01-10 | 初始版本，基础博客 CRUD |
@@ -3019,20 +5324,16 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 
 以下功能已预留接口，将在后续版本实现：
 
-1. **评论系统**：
-   - `POST /api/blogs/:blog_id/comments` - 发表评论
-   - `GET /api/blogs/:blog_id/comments` - 获取评论列表
-   - `DELETE /api/comments/:comment_id` - 删除评论
-
-2. **文件上传**：
-   - `POST /api/upload/image` - 上传图片（用于博客内容）
-   - `POST /api/users/me/avatar` - 上传用户头像
-
-3. **搜索功能**：
+1. **搜索功能**：
    - `GET /api/search` - 全站搜索
+   - 支持搜索博客、用户、评论等
 
-4. **统计功能**：
-   - `GET /api/stats` - 获取网站统计信息
+2. **评论功能增强**（v1.9.0 已完成基础版）：
+   - ✅ 楼中楼回复
+   - ✅ 编辑评论
+   - ✅ 排序方式
+   - ⏳ 评论点赞
+   - ⏳ @提及功能
 
 ---
 

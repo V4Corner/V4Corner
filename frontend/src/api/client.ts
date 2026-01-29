@@ -2,6 +2,9 @@
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
+// 导出 API_BASE 供其他模块使用
+export { API_BASE };
+
 // 从 localStorage 获取 Token
 export function getAccessToken(): string | null {
   return localStorage.getItem('access_token');
@@ -23,9 +26,9 @@ export async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getAccessToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {
@@ -91,6 +94,15 @@ export function put<T>(url: string, data: unknown, signal?: AbortSignal): Promis
   });
 }
 
+// PATCH 请求
+export function patch<T>(url: string, data: unknown, signal?: AbortSignal): Promise<T> {
+  return apiRequest<T>(url, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+    signal,
+  });
+}
+
 // DELETE 请求
 export function del<T>(url: string, signal?: AbortSignal): Promise<T> {
   return apiRequest<T>(url, { method: 'DELETE', signal });
@@ -102,7 +114,7 @@ export async function uploadFile<T>(url: string, file: File): Promise<T> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const headers: HeadersInit = {};
+  const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
