@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getConversation, getMessages, sendMessageStream, submitFeedback } from '../api/chat';
-import type { Message, StreamChunk } from '../types/chat';
+import { createConversation, getConversation, getConversations, getMessages, sendMessageStream, submitFeedback } from '../api/chat';
+import type { ConversationListItem, Message, StreamChunk } from '../types/chat';
 
 export default function ChatDetail() {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -10,11 +10,21 @@ export default function ChatDetail() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [title, setTitle] = useState<string>('加载中...');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleCreateConversation = async () => {
+    try {
+      const newConversation = await createConversation({ title: '新对话' });
+      navigate(`/chat/${newConversation.id}`);
+    } catch (err: any) {
+      setError(err.message || '创建对话失败');
+    }
+  };
 
   // 加载对话详情和消息
   const loadConversation = async () => {
@@ -24,13 +34,15 @@ export default function ChatDetail() {
       setLoading(true);
       setError(null);
 
-      const [convData, messagesData] = await Promise.all([
+      const [convData, messagesData, conversationsData] = await Promise.all([
         getConversation(parseInt(conversationId)),
-        getMessages(parseInt(conversationId))
+        getMessages(parseInt(conversationId)),
+        getConversations({ page: 1, size: 30 })
       ]);
 
       setTitle(convData.title);
       setMessages(messagesData.items);
+      setConversations(conversationsData.items);
     } catch (err: any) {
       setError(err.message || '加载失败');
     } finally {
@@ -177,36 +189,43 @@ export default function ChatDetail() {
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* 页头 */}
-      <div style={{
-        padding: '1rem 2rem',
-        borderBottom: '2px solid #e2e8f0',
-        backgroundColor: '#ffffff'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '768px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span
-              onClick={() => navigate('/chat')}
-              style={{ fontSize: '1.5rem', cursor: 'pointer', userSelect: 'none' }}
-            >
-              ←
-            </span>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600' }}>
-              {title}
-            </h2>
-          </div>
+    <div className="chat-detail-page">
+      <aside className="chat-sidebar">
+        <div className="chat-sidebar-top">
+          <button className="chat-sidebar-primary" onClick={handleCreateConversation}>
+            新对话
+          </button>
         </div>
-      </div>
+        <div className="chat-sidebar-title">历史聊天</div>
+        <div className="chat-history-list">
+          {conversations.map((conversation) => (
+            <button
+              key={conversation.id}
+              className={`chat-history-item ${conversation.id === Number(conversationId) ? 'active' : ''}`}
+              onClick={() => navigate(`/chat/${conversation.id}`)}
+            >
+              <span className="chat-history-name">{conversation.title}</span>
+              <span className="chat-history-meta">
+                {conversation.message_count} 条消息 · {formatTime(conversation.updated_at)}
+              </span>
+            </button>
+          ))}
+          {conversations.length === 0 && (
+            <div className="chat-history-empty">还没有历史对话</div>
+          )}
+        </div>
+      </aside>
 
-      {/* 消息列表 */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '2rem 1rem',
-        backgroundColor: '#ffffff'
-      }}>
-        <div style={{ maxWidth: '768px', margin: '0 auto', paddingBottom: '120px' }}>
+      <section className="chat-panel">
+        <div className="chat-panel-header">
+          <button className="chat-back-button" onClick={() => navigate('/chat')}>
+            ←
+          </button>
+          <h2>{title}</h2>
+        </div>
+
+        <div className="chat-message-scroll">
+        <div className="chat-message-inner">
           {/* 欢迎消息 */}
           {messages.length === 0 && (
             <div style={{
@@ -235,7 +254,10 @@ export default function ChatDetail() {
           )}
 
           {/* 消息列表 */}
-          {messages.map((msg) => (
+          {messages.map((msg) => {
+            const isAssistantThinking = msg.role === 'assistant' && sending && !msg.content;
+
+            return (
             <div
               key={msg.id}
               style={{
@@ -274,17 +296,27 @@ export default function ChatDetail() {
                   marginLeft: msg.role === 'user' ? 'auto' : '0'
                 }}
               >
-                {/* 简单的 Markdown 渲染 */}
-                <div dangerouslySetInnerHTML={{
-                  __html: msg.content
-                    .replace(/\n/g, '<br>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/`([^`]+)`/g, '<code style="background: rgba(15, 23, 42, 0.1); padding: 0.2rem 0.4rem; border-radius: 4px;">$1</code>')
-                }} />
+                {isAssistantThinking ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#64748b' }}>
+                    <span>正在思考</span>
+                    <span style={{ display: 'inline-flex', gap: '0.25rem' }}>
+                      <span className="typing-dot" />
+                      <span className="typing-dot" style={{ animationDelay: '0.2s' }} />
+                      <span className="typing-dot" style={{ animationDelay: '0.4s' }} />
+                    </span>
+                  </div>
+                ) : (
+                  <div dangerouslySetInnerHTML={{
+                    __html: msg.content
+                      .replace(/\n/g, '<br>')
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/`([^`]+)`/g, '<code style="background: rgba(15, 23, 42, 0.1); padding: 0.2rem 0.4rem; border-radius: 4px;">$1</code>')
+                  }} />
+                )}
               </div>
 
               {/* AI 消息操作按钮 */}
-              {msg.role === 'assistant' && (
+              {msg.role === 'assistant' && msg.content && (
                 <div
                   style={{
                     display: 'none',
@@ -343,48 +375,8 @@ export default function ChatDetail() {
                 </div>
               )}
             </div>
-          ))}
-
-          {/* 正在生成指示器 */}
-          {sending && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>
-                <span>🤖 AI</span>
-                <span>·</span>
-                <span>刚刚</span>
-              </div>
-              <div style={{
-                display: 'flex',
-                gap: '0.25rem',
-                padding: '1rem 1.25rem',
-                backgroundColor: '#f1f5f9',
-                borderRadius: '12px',
-                width: 'fit-content'
-              }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#64748b',
-                  borderRadius: '50%',
-                  animation: 'typingBounce 1.4s infinite'
-                }} />
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#64748b',
-                  borderRadius: '50%',
-                  animation: 'typingBounce 1.4s infinite 0.2s'
-                }} />
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#64748b',
-                  borderRadius: '50%',
-                  animation: 'typingBounce 1.4s infinite 0.4s'
-                }} />
-              </div>
-            </div>
-          )}
+            );
+          })}
 
           {/* 自动滚动锚点 */}
           <div ref={messagesEndRef} />
@@ -392,28 +384,8 @@ export default function ChatDetail() {
       </div>
 
       {/* 输入区域 */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'linear-gradient(to top, rgba(255, 255, 255, 0.95) 80%, transparent)',
-        padding: '1.5rem',
-        display: 'flex',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          maxWidth: '768px',
-          width: '100%',
-          display: 'flex',
-          gap: '0.75rem',
-          alignItems: 'flex-end',
-          backgroundColor: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '12px',
-          padding: '0.75rem',
-          boxShadow: '0 4px 12px rgba(15, 23, 42, 0.12)'
-        }}>
+      <div className="chat-composer">
+        <div className="chat-composer-box">
           <textarea
             ref={textareaRef}
             value={input}
@@ -454,6 +426,7 @@ export default function ChatDetail() {
           </button>
         </div>
       </div>
+      </section>
 
       {/* 错误提示 */}
       {error && (
@@ -482,6 +455,13 @@ export default function ChatDetail() {
             30% {
               transform: translateY(-8px);
             }
+          }
+          .typing-dot {
+            width: 7px;
+            height: 7px;
+            background-color: #64748b;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
           }
         `}
       </style>
