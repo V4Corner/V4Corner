@@ -124,9 +124,10 @@ nav {
 }
 
 .chat-history-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 0.35rem;
   width: 100%;
   border: none;
   border-radius: 8px;
@@ -142,6 +143,13 @@ nav {
   background: #e2e8f0;
 }
 
+.chat-history-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
 .chat-history-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -155,6 +163,27 @@ nav {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chat-history-delete {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  opacity: 0;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.chat-history-item:hover .chat-history-delete,
+.chat-history-delete:focus-visible {
+  opacity: 1;
+}
+
+.chat-history-delete:hover {
+  background: #fee2e2;
 }
 
 .chat-history-empty {

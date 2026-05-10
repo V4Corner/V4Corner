@@ -1560,6 +1560,13 @@
             background: var(--bg-end);
         }
 
+        .chat-history-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 32px;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
         .chat-history-name {
             display: block;
             overflow: hidden;
@@ -1576,6 +1583,27 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             margin-top: 0.2rem;
+        }
+
+        .chat-history-delete {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #dc2626;
+            cursor: pointer;
+            opacity: 0;
+            transition: background-color 0.2s, opacity 0.2s;
+        }
+
+        .chat-history-item:hover .chat-history-delete,
+        .chat-history-delete:focus-visible {
+            opacity: 1;
+        }
+
+        .chat-history-delete:hover {
+            background: #fee2e2;
         }
 
         .chat-panel {
@@ -3232,21 +3260,33 @@ print(model.predict([[6]]))  # 输出: [12.]</code></pre>
                     </div>
                     <div class="chat-sidebar-title">历史聊天</div>
                     <div class="chat-history-list">
-                        <button class="chat-history-item active" onclick="navigate('chat-detail')">
-                            <span class="chat-history-name">机器学习入门指南</span>
-                            <span class="chat-history-meta">8 条消息 · 刚刚</span>
+                        <button class="chat-history-item active chat-history-row" onclick="navigate('chat-detail')">
+                            <span>
+                                <span class="chat-history-name">机器学习入门指南</span>
+                                <span class="chat-history-meta">8 条消息 · 刚刚</span>
+                            </span>
+                            <span class="chat-history-delete" onclick="deletePrototypeChat(event, this)">🗑</span>
                         </button>
-                        <button class="chat-history-item" onclick="navigate('chat-detail')">
-                            <span class="chat-history-name">Python代码调试帮助</span>
-                            <span class="chat-history-meta">5 条消息 · 昨天</span>
+                        <button class="chat-history-item chat-history-row" onclick="navigate('chat-detail')">
+                            <span>
+                                <span class="chat-history-name">Python代码调试帮助</span>
+                                <span class="chat-history-meta">5 条消息 · 昨天</span>
+                            </span>
+                            <span class="chat-history-delete" onclick="deletePrototypeChat(event, this)">🗑</span>
                         </button>
-                        <button class="chat-history-item" onclick="navigate('chat-detail')">
-                            <span class="chat-history-name">项目架构设计讨论</span>
-                            <span class="chat-history-meta">12 条消息 · 3天前</span>
+                        <button class="chat-history-item chat-history-row" onclick="navigate('chat-detail')">
+                            <span>
+                                <span class="chat-history-name">项目架构设计讨论</span>
+                                <span class="chat-history-meta">12 条消息 · 3天前</span>
+                            </span>
+                            <span class="chat-history-delete" onclick="deletePrototypeChat(event, this)">🗑</span>
                         </button>
-                        <button class="chat-history-item" onclick="navigate('chat-detail')">
-                            <span class="chat-history-name">数据结构学习计划</span>
-                            <span class="chat-history-meta">4 条消息 · 1周前</span>
+                        <button class="chat-history-item chat-history-row" onclick="navigate('chat-detail')">
+                            <span>
+                                <span class="chat-history-name">数据结构学习计划</span>
+                                <span class="chat-history-meta">4 条消息 · 1周前</span>
+                            </span>
+                            <span class="chat-history-delete" onclick="deletePrototypeChat(event, this)">🗑</span>
                         </button>
                     </div>
                 </aside>
@@ -3836,6 +3876,18 @@ print(f"最小值点: {result}")</code></pre>
                     card.style.display = 'none';
                 }
             });
+        }
+
+        function deletePrototypeChat(event, element) {
+            event.stopPropagation();
+            const item = element.closest('.chat-history-item');
+            const title = item.querySelector('.chat-history-name').textContent;
+            if (!confirm(`确定要删除「${title}」吗？此操作无法撤销。`)) {
+                return;
+            }
+
+            item.remove();
+            showToast('对话已删除', 'success');
         }
 
         // Chat input auto-resize

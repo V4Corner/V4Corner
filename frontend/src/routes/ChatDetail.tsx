@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { createConversation, getConversation, getConversations, getMessages, sendMessageStream, submitFeedback } from '../api/chat';
+import { createConversation, deleteConversation, getConversation, getConversations, getMessages, sendMessageStream, submitFeedback } from '../api/chat';
 import type { ConversationListItem, Message, StreamChunk } from '../types/chat';
 
 export default function ChatDetail() {
@@ -23,6 +23,33 @@ export default function ChatDetail() {
       navigate(`/chat/${newConversation.id}`);
     } catch (err: any) {
       setError(err.message || '创建对话失败');
+    }
+  };
+
+  const handleDeleteConversation = async (
+    conversation: ConversationListItem,
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event.stopPropagation();
+
+    const confirmed = window.confirm(`确定要删除「${conversation.title}」吗？此操作无法撤销。`);
+    if (!confirmed) return;
+
+    try {
+      await deleteConversation(conversation.id);
+
+      const remainingConversations = conversations.filter((item) => item.id !== conversation.id);
+      setConversations(remainingConversations);
+
+      if (conversation.id === Number(conversationId)) {
+        if (remainingConversations.length > 0) {
+          navigate(`/chat/${remainingConversations[0].id}`);
+        } else {
+          navigate('/chat');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || '删除对话失败');
     }
   };
 
@@ -199,16 +226,26 @@ export default function ChatDetail() {
         <div className="chat-sidebar-title">历史聊天</div>
         <div className="chat-history-list">
           {conversations.map((conversation) => (
-            <button
+            <div
               key={conversation.id}
               className={`chat-history-item ${conversation.id === Number(conversationId) ? 'active' : ''}`}
               onClick={() => navigate(`/chat/${conversation.id}`)}
             >
-              <span className="chat-history-name">{conversation.title}</span>
-              <span className="chat-history-meta">
-                {conversation.message_count} 条消息 · {formatTime(conversation.updated_at)}
-              </span>
-            </button>
+              <div className="chat-history-content">
+                <span className="chat-history-name">{conversation.title}</span>
+                <span className="chat-history-meta">
+                  {conversation.message_count} 条消息 · {formatTime(conversation.updated_at)}
+                </span>
+              </div>
+              <button
+                className="chat-history-delete"
+                onClick={(event) => handleDeleteConversation(conversation, event)}
+                title={`删除 ${conversation.title}`}
+                aria-label={`删除 ${conversation.title}`}
+              >
+                🗑
+              </button>
+            </div>
           ))}
           {conversations.length === 0 && (
             <div className="chat-history-empty">还没有历史对话</div>
