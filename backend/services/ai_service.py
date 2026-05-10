@@ -173,24 +173,32 @@ class AIService:
                 yield text
             return
 
+        emitted_content = False
+
         try:
             if self.provider in ["openai", "deepseek", "ollama"]:
                 async for text in self._openai_generate(messages, stream):
+                    emitted_content = True
                     yield text
             elif self.provider == "anthropic":
                 async for text in self._anthropic_generate(messages, stream):
+                    emitted_content = True
                     yield text
             elif self.provider == "gemini":
                 async for text in self._gemini_generate(messages, stream):
+                    emitted_content = True
                     yield text
             elif self.provider == "zhipuai":
                 async for text in self._zhipuai_generate(messages, stream):
+                    emitted_content = True
                     yield text
             elif self.provider == "qianfan":
                 async for text in self._qianfan_generate(messages, stream):
+                    emitted_content = True
                     yield text
             elif self.provider == "dashscope":
                 async for text in self._dashscope_generate(messages, stream):
+                    emitted_content = True
                     yield text
             else:
                 logger.warning(f"服务商 {self.provider} 暂不支持，使用模拟模式")
@@ -198,7 +206,12 @@ class AIService:
                     yield text
         except Exception as e:
             logger.error(f"AI 调用失败 ({self.provider}): {e}")
-            # 失败时降级到模拟模式
+            # 如果兼容接口在流式收尾阶段报错，但已经返回了真实内容，
+            # 不再追加模拟回复，避免同一条回答混入 mock 文案。
+            if emitted_content:
+                return
+
+            # 完全没有返回内容时才降级到模拟模式
             async for text in self._mock_generate(messages):
                 yield text
 
@@ -220,8 +233,14 @@ class AIService:
             )
 
             for chunk in response:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                choices = getattr(chunk, "choices", None)
+                if not choices:
+                    continue
+
+                delta = getattr(choices[0], "delta", None)
+                content = getattr(delta, "content", None)
+                if content:
+                    yield content
                     # 模拟打字机效果的小延迟
                     await asyncio.sleep(0.01)
         else:
