@@ -1,6 +1,5 @@
 # AI对话相关路由
 
-import asyncio
 import json
 import logging
 from datetime import datetime
@@ -15,6 +14,17 @@ from services import ai_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["AI对话"])
+
+
+def generate_conversation_title(content: str) -> str:
+    """Generate a compact local title from the user's first message."""
+    title = " ".join(content.strip().split())
+    title = title.strip(" \t\r\n，。！？!?；;：:")
+
+    if len(title) > 24:
+        title = title[:24].rstrip(" \t\r\n，。！？!?；;：:") + "..."
+
+    return title or "新对话"
 
 
 # ============= Conversation 接口 =============
@@ -365,6 +375,10 @@ async def send_message(
             detail="无权限访问此对话"
         )
 
+    existing_message_count = db.query(func.count(models.Message.id)).filter(
+        models.Message.conversation_id == conversation_id
+    ).scalar() or 0
+
     # 保存用户消息
     user_message = models.Message(
         conversation_id=conversation_id,
@@ -372,6 +386,10 @@ async def send_message(
         content=message_data.content
     )
     db.add(user_message)
+
+    if conversation.title == "新对话" and existing_message_count == 0:
+        conversation.title = generate_conversation_title(message_data.content)
+
     db.commit()
     db.refresh(user_message)
 

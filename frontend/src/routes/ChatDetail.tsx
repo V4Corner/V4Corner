@@ -90,6 +90,22 @@ export default function ChatDetail() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  const refreshConversationMeta = async () => {
+    if (!conversationId) return;
+
+    try {
+      const [convData, conversationsData] = await Promise.all([
+        getConversation(parseInt(conversationId)),
+        getConversations({ page: 1, size: 30 })
+      ]);
+
+      setTitle(convData.title);
+      setConversations(conversationsData.items);
+    } catch (err) {
+      console.error('刷新对话信息失败:', err);
+    }
+  };
+
   // 发送消息
   const handleSend = async () => {
     const content = input.trim();
@@ -140,6 +156,7 @@ export default function ChatDetail() {
         // onComplete
         () => {
           setSending(false);
+          refreshConversationMeta();
           scrollToBottom();
         },
         // onError

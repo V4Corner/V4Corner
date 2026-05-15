@@ -5,6 +5,12 @@
 - **开发流程**：按步骤指导如何从想法到完成功能的完整过程
 - **开发规范**：说明流程中需要遵守的规则和注意事项
 
+username: admin_demo
+email: admin_demo@example.com
+role: admin
+账号：admin_demo
+密码：123456
+
 ---
 
 ## 开发流程

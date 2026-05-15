@@ -3920,6 +3920,13 @@ print(f"最小值点: {result}")</code></pre>
 
             if (!message) return;
 
+            const activeHistoryTitle = document.querySelector('.chat-history-item.active .chat-history-name');
+            if (activeHistoryTitle && activeHistoryTitle.textContent === '机器学习入门指南') {
+                const generatedTitle = message.replace(/\s+/g, ' ').replace(/[？?。！!，,；;：:]/g, '').trim().slice(0, 24) || '新对话';
+                activeHistoryTitle.textContent = generatedTitle;
+                document.querySelector('.chat-title-text').textContent = generatedTitle;
+            }
+
             // Add user message
             addMessage('user', message);
 
