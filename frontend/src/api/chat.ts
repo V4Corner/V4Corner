@@ -1,6 +1,6 @@
 // AI对话相关 API 接口
 
-import { apiRequest, getAccessToken } from './client';
+import { apiRequest, apiUrl, getAccessToken } from './client';
 import type {
   Conversation,
   ConversationCreate,
@@ -15,8 +15,6 @@ import type {
   MessageListResponse,
   StreamChunk
 } from '../types/chat';
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 // ============= Conversation API =============
 
@@ -128,7 +126,7 @@ export async function sendMessageStream(
 
   try {
     const response = await fetch(
-      `${API_BASE}/api/chat/conversations/${conversationId}/messages?stream=true`,
+      apiUrl(`/api/chat/conversations/${conversationId}/messages?stream=true`),
       {
         method: 'POST',
         headers: {

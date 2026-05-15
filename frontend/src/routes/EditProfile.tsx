@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { apiUrl } from '../api/client';
 import { getCurrentUser, updateUser, uploadAvatar } from '../api/users';
 import type { UpdateUserRequest } from '../types/user';
 
@@ -29,7 +30,7 @@ function EditProfile() {
       setBio(user.bio || '');
       // Set avatar preview from existing avatar
       if (user.avatar_url) {
-        setAvatarPreview(`http://localhost:8000${user.avatar_url}`);
+        setAvatarPreview(apiUrl(user.avatar_url));
       }
     }
   }, [user]);
@@ -44,7 +45,7 @@ function EditProfile() {
     if (!allowedTypes.includes(file.type)) {
       setAvatarError('请上传 jpg, png 或 webp 格式的图片');
       setAvatarFile(null);
-      setAvatarPreview(user?.avatar_url ? `http://localhost:8000${user.avatar_url}` : null);
+      setAvatarPreview(user?.avatar_url ? apiUrl(user.avatar_url) : null);
       return;
     }
 
@@ -52,7 +53,7 @@ function EditProfile() {
     if (file.size > 2 * 1024 * 1024) {
       setAvatarError('文件过大，请上传不超过 2MB 的图片');
       setAvatarFile(null);
-      setAvatarPreview(user?.avatar_url ? `http://localhost:8000${user.avatar_url}` : null);
+      setAvatarPreview(user?.avatar_url ? apiUrl(user.avatar_url) : null);
       return;
     }
 

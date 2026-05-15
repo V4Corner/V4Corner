@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getBlog, deleteBlog } from '../api/blogs';
+import { apiUrl } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import type { Blog } from '../types/blog';
 import Comments from '../components/Comments';
@@ -139,7 +140,7 @@ function BlogDetail() {
               >
                 {blog.author_avatar_url ? (
                   <img
-                    src={`http://localhost:8000${blog.author_avatar_url}`}
+                    src={apiUrl(blog.author_avatar_url)}
                     alt={`${blog.author}'s avatar`}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />

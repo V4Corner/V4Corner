@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import React from 'react';
 import { createBlog } from '../api/blogs';
+import { stripApiBase } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import RichTextEditor from '../components/RichTextEditor';
 
@@ -77,18 +78,18 @@ function CreateBlog() {
     let match;
     while ((match = imgRegex.exec(content)) !== null) {
       let url = match[1];
-      // 移除 http://localhost:8000 前缀以匹配存储的 URL
-      url = url.replace('http://localhost:8000', '');
+      // 移除 API origin 前缀以匹配存储的 URL
+      url = stripApiBase(url);
       urls.push(url);
     }
     while ((match = videoSrcRegex.exec(content)) !== null) {
       let url = match[1];
-      url = url.replace('http://localhost:8000', '');
+      url = stripApiBase(url);
       urls.push(url);
     }
     while ((match = videoSourceRegex.exec(content)) !== null) {
       let url = match[1];
-      url = url.replace('http://localhost:8000', '');
+      url = stripApiBase(url);
       urls.push(url);
     }
 

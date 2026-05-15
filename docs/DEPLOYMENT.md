@@ -24,43 +24,145 @@ openssl rand -hex 32
 -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | % {[char]$_})
 ```
 
-### 生产环境 `.env` 配置示例
+### Docker 生产环境 `.env` 配置示例
+
+仓库根目录提供了 `.env.production.example`。服务器部署时复制为 `.env`，再填入真实值：
 
 ```bash
-# ============================================
-# 安全配置（必须修改）
-# ============================================
+cp .env.production.example .env
+vim .env
+```
 
-# 关闭开发模式（必须为 False）
+关键配置：
+
+```bash
+DOMAIN=your-domain.com
+
+POSTGRES_DB=v4corner
+POSTGRES_USER=v4corner
+POSTGRES_PASSWORD=your-strong-db-password
+DATABASE_URL=postgresql+psycopg2://v4corner:your-strong-db-password@postgres:5432/v4corner
+
+ENVIRONMENT=production
+DEBUG=False
+SECRET_KEY=your-super-secret-random-64-char-string-here
+ALLOWED_ORIGINS=https://your-domain.com
 SKIP_EMAIL_VERIFICATION=False
 
-# 使用强随机密钥（至少 32 位）
-SECRET_KEY=your-super-secret-random-64-char-string-here
-
-# ============================================
-# 邮箱配置
-# ============================================
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@your-domain.com
+ADMIN_PASSWORD=ChangeMe123!
+ADMIN_NICKNAME=管理员
 
 ALIYUN_ACCOUNT_NAME=your-email@163.com
 ALIYUN_FROM_ALIAS=V4Corner
 NETEASE_MAIL_PASSWORD=your-real-authorization-code
 
-# ============================================
-# 数据库配置（推荐使用 PostgreSQL）
-# ============================================
-
-DATABASE_URL=postgresql://user:password@localhost:5432/v4corner
-
-# ============================================
-# CORS 配置（仅允许你的域名）
-# ============================================
-
-ALLOWED_ORIGINS=https://your-domain.com,https://www.your-domain.com
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key
 ```
 
 ---
 
-## 📋 部署步骤
+## 📋 推荐部署步骤（Docker + Caddy）
+
+### 1. 域名解析
+
+在域名 DNS 控制台添加 `A` 记录：
+
+```text
+your-domain.com -> 服务器公网 IP
+```
+
+如使用 `www.your-domain.com`，也添加对应 `A` 记录，并把 `ALLOWED_ORIGINS` 和 Caddy 域名配置扩展到该域名。
+
+### 2. 准备服务器
+
+服务器只需要 Docker、Docker Compose 和开放端口：
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y ca-certificates curl git ufw
+
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+```
+
+重新登录 SSH，让 Docker 用户组生效。
+
+### 3. 拉取代码并写入生产配置
+
+```bash
+git clone https://github.com/V4Corner/V4Corner.git
+cd V4Corner
+
+cp .env.production.example .env
+vim .env
+```
+
+必须修改：
+
+- `DOMAIN`：你的域名
+- `POSTGRES_PASSWORD` 和 `DATABASE_URL` 中的数据库密码
+- `SECRET_KEY`：使用 `openssl rand -hex 32` 生成
+- `ALLOWED_ORIGINS=https://你的域名`
+- `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`
+- 邮箱验证码配置
+- 至少一个 AI 服务 API key
+
+### 4. 首次启动
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+启动后会自动完成：
+
+- 创建 PostgreSQL 数据卷
+- 后端建表
+- 根据 `ADMIN_*` 环境变量创建或提升首个管理员
+- Caddy 为 `DOMAIN` 自动申请 HTTPS 证书
+
+### 5. 验证服务
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml logs -f caddy
+```
+
+浏览器访问：
+
+- `https://your-domain.com`
+- 使用 `.env` 中的管理员账号登录
+- 进入 `/admin/roles` 管理用户角色
+- 测试注册、邮箱验证码、AI 对话、头像/博客媒体上传
+
+### 6. 后续更新
+
+```bash
+cd V4Corner
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+PostgreSQL、上传文件和 Caddy 证书都使用 Docker volume 持久化，重建容器不会丢失。
+
+### 7. 账号和角色
+
+- `student`：普通学生，注册后的默认角色。
+- `committee`：班委，可发布和管理班级通知、日历等内容。
+- `admin`：管理员，拥有班委权限，并可进入 `/admin/roles` 调整用户角色。
+
+---
+
+## 📋 传统部署步骤（systemd + Nginx，可选）
 
 ### 1. 准备服务器
 

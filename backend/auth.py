@@ -9,14 +9,15 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 import models
+from config import settings
 
 # 密码哈希上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT 配置
-SECRET_KEY = "your-secret-key-here"  # 生产环境应从环境变量读取
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 天
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_SECONDS // 60
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:

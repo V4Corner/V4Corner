@@ -1,9 +1,30 @@
 // 通用 API 请求客户端
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const configuredApiBase = import.meta.env.VITE_BACKEND_URL;
+const API_BASE = configuredApiBase !== undefined
+  ? configuredApiBase
+  : (import.meta.env.PROD ? '' : 'http://localhost:8000');
 
 // 导出 API_BASE 供其他模块使用
 export { API_BASE };
+
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
+export function stripApiBase(url: string): string {
+  let normalized = url.replace('http://localhost:8000', '');
+
+  if (API_BASE && normalized.startsWith(API_BASE)) {
+    normalized = normalized.slice(API_BASE.length);
+  }
+
+  if (typeof window !== 'undefined' && normalized.startsWith(window.location.origin)) {
+    normalized = normalized.slice(window.location.origin.length);
+  }
+
+  return normalized;
+}
 
 // 从 localStorage 获取 Token
 export function getAccessToken(): string | null {
@@ -35,7 +56,7 @@ export async function apiRequest<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${url}`, {
+  const response = await fetch(apiUrl(url), {
     ...options,
     headers,
     signal: options.signal,  // 支持 AbortSignal
@@ -119,7 +140,7 @@ export async function uploadFile<T>(url: string, file: File): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${url}`, {
+  const response = await fetch(apiUrl(url), {
     method: 'POST',
     headers,
     body: formData,

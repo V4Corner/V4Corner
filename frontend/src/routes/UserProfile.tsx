@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { apiUrl } from '../api/client';
 import { getUserById, getUserBlogs } from '../api/users';
 import type { UserPublic } from '../types/user';
 import type { BlogListResponse } from '../types/blog';
@@ -119,7 +120,7 @@ function UserProfile() {
           >
             {user.avatar_url ? (
               <img
-                src={`http://localhost:8000${user.avatar_url}`}
+                src={apiUrl(user.avatar_url)}
                 alt={`${user.username}'s avatar`}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -288,7 +289,7 @@ function UserProfile() {
                         >
                           {blog.author_avatar_url ? (
                             <img
-                              src={`http://localhost:8000${blog.author_avatar_url}`}
+                              src={apiUrl(blog.author_avatar_url)}
                               alt={`${blog.author}'s avatar`}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />

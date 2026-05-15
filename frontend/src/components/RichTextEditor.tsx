@@ -7,6 +7,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { Node, mergeAttributes } from '@tiptap/core';
 import imageCompression from 'browser-image-compression';
 import { useEffect } from 'react';
+import { apiUrl } from '../api/client';
 
 interface Props {
   content: string;
@@ -163,7 +164,7 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
         const formData = new FormData();
         formData.append('file', fileToUpload, file.name);
 
-        const response = await fetch('http://localhost:8000/api/uploads/image', {
+        const response = await fetch(apiUrl('/api/uploads/image'), {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -179,7 +180,7 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
         }
 
         const data = await response.json();
-        const imageUrl = `http://localhost:8000${data.url}`;
+        const imageUrl = apiUrl(data.url);
 
         // 通知父组件媒体文件信息（使用实际保存的文件大小）
         if (onMediaUpload && data.size !== undefined) {
@@ -252,7 +253,7 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
 
-        const response = await fetch('http://localhost:8000/api/uploads/video', {
+        const response = await fetch(apiUrl('/api/uploads/video'), {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -269,7 +270,7 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
         }
 
         const data = await response.json();
-        const videoUrl = `http://localhost:8000${data.url}`;
+        const videoUrl = apiUrl(data.url);
 
         // 通知父组件媒体文件信息（使用实际保存的文件大小）
         if (onMediaUpload && data.size !== undefined) {
@@ -320,10 +321,11 @@ function RichTextEditor({ content, onChange, placeholder = '开始写作...', ed
         <select
           value={editor.isActive('heading') ? editor.getAttributes('heading').level : 'p'}
           onChange={(e) => {
-            const level = parseInt(e.target.value);
-            if (level === 0) {
+            const levelValue = parseInt(e.target.value);
+            if (levelValue === 0) {
               editor.chain().focus().setParagraph().run();
             } else {
+              const level = levelValue as 1 | 2 | 3 | 4 | 5 | 6;
               editor.chain().focus().toggleHeading({ level }).run();
             }
           }}

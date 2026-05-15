@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { apiUrl } from '../api/client';
 import { createCalendarEvent, deleteCalendarEvent, getCalendarEvents, updateCalendarEvent } from '../api/calendar';
 import { getBlogs } from '../api/blogs';
 import { createNotice, deleteNotice, getNotice, getNotices, updateNotice } from '../api/notice';
@@ -532,7 +533,7 @@ function Home() {
                       >
                         {blog.author_avatar_url ? (
                           <img
-                            src={`http://localhost:8000${blog.author_avatar_url}`}
+                            src={apiUrl(blog.author_avatar_url)}
                             alt={`${blog.author}'s avatar`}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />

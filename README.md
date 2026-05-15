@@ -167,11 +167,20 @@ docker-compose up --build
 
 生产环境部署查看 **[完整部署指南](docs/DEPLOYMENT.md)**
 
+推荐使用生产 Docker Compose：
+
+```bash
+cp .env.production.example .env
+# 编辑 .env：域名、数据库密码、SECRET_KEY、邮箱授权码、AI API Key、管理员账号
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
 **安全检查清单**：
 - 🔒 关闭开发模式：`SKIP_EMAIL_VERIFICATION=False`
 - 🔑 使用强随机密钥：至少 32 位
 - 📧 配置真实邮箱：SMTP 授权码
-- 🔐 启用 HTTPS：SSL 证书
+- 🔐 启用 HTTPS：Caddy 自动申请证书
+- 👤 配置首个管理员：`ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`
 
 **📖 完整部署文档**：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 

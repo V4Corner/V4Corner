@@ -1,10 +1,20 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-DATABASE_URL = "sqlite:///./v4corner.db"
+from config import settings
 
-# SQLite needs check_same_thread disabled for FastAPI's threaded server.
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+DATABASE_URL = settings.DATABASE_URL
+
+
+def _engine_options(database_url: str) -> dict:
+    if database_url.startswith("sqlite"):
+        # SQLite needs check_same_thread disabled for FastAPI's threaded server.
+        return {"connect_args": {"check_same_thread": False}}
+
+    return {"pool_pre_ping": True}
+
+
+engine = create_engine(DATABASE_URL, **_engine_options(DATABASE_URL))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

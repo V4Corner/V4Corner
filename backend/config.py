@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # CORS 配置
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # 首个管理员初始化（生产环境可通过环境变量配置）
+    ADMIN_USERNAME: Optional[str] = None
+    ADMIN_EMAIL: Optional[str] = None
+    ADMIN_PASSWORD: Optional[str] = None
+    ADMIN_NICKNAME: Optional[str] = None
+
     # 文件上传配置
     MAX_UPLOAD_SIZE: int = 2097152  # 2MB
     ALLOWED_FILE_TYPES: str = "jpg,jpeg,png,webp,gif,pdf,doc,docx"

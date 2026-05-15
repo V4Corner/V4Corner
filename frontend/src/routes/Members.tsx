@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiUrl } from '../api/client';
 import { getMembers } from '../api/members';
 import type { UserPublic } from '../types/user';
 
@@ -99,7 +100,7 @@ function Members() {
               >
                 {member.avatar_url ? (
                   <img
-                    src={`http://localhost:8000${member.avatar_url}`}
+                    src={apiUrl(member.avatar_url)}
                     alt={`${member.username}'s avatar`}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />

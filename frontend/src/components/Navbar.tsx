@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { apiUrl } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationCenter from './NotificationCenter';
 
@@ -90,7 +91,7 @@ function Navbar() {
                 >
                   {user.avatar_url ? (
                     <img
-                      src={`http://localhost:8000${user.avatar_url}`}
+                      src={apiUrl(user.avatar_url)}
                       alt={`${user.username}'s avatar`}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />

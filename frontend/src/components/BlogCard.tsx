@@ -3,6 +3,7 @@ import type { Blog, BlogListItem } from '../types/blog';
 import LikeButton from './LikeButton';
 import FavoriteButton from './FavoriteButton';
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../api/client';
 import { formatNumber } from '../utils/formatNumber';
 
 interface Props {
@@ -55,7 +56,7 @@ function BlogCard({ blog }: Props) {
           >
             {blog.author_avatar_url ? (
               <img
-                src={`http://localhost:8000${blog.author_avatar_url}`}
+                src={apiUrl(blog.author_avatar_url)}
                 alt={`${blog.author}'s avatar`}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />

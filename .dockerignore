@@ -1,0 +1,49 @@
+.git
+.gitignore
+.DS_Store
+
+# Secrets and local environment
+.env
+.env.*
+backend/.env
+backend/.env.*
+!*.example
+!backend/*.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+env/
+ENV/
+
+# Node
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Build outputs and caches
+dist/
+build/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+.cache/
+
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+backend/v4corner.db*
+backend/uploads/
+
+# Editor and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db

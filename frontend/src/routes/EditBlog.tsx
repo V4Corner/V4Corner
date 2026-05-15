@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import React from 'react';
 import { getBlog, updateBlog } from '../api/blogs';
+import { apiUrl, stripApiBase } from '../api/client';
 import { getMediaSizes } from '../api/uploads';
 import { useAuth } from '../contexts/AuthContext';
 import RichTextEditor from '../components/RichTextEditor';
@@ -39,7 +40,7 @@ function extractMediaUrls(html: string): string[] {
   while ((match = imgRegex.exec(html)) !== null) {
     const url = match[1];
     if (url.includes('/static/blog/')) {
-      urls.push(url.replace('http://localhost:8000', ''));
+      urls.push(stripApiBase(url));
     }
   }
 
@@ -48,7 +49,7 @@ function extractMediaUrls(html: string): string[] {
   while ((match = videoSrcRegex.exec(html)) !== null) {
     const url = match[1];
     if (url.includes('/static/blog/')) {
-      urls.push(url.replace('http://localhost:8000', ''));
+      urls.push(stripApiBase(url));
     }
   }
 
@@ -56,7 +57,7 @@ function extractMediaUrls(html: string): string[] {
   while ((match = videoSourceRegex.exec(html)) !== null) {
     const url = match[1];
     if (url.includes('/static/blog/')) {
-      urls.push(url.replace('http://localhost:8000', ''));
+      urls.push(stripApiBase(url));
     }
   }
 
@@ -167,18 +168,18 @@ function EditBlog() {
     let match;
     while ((match = imgRegex.exec(content)) !== null) {
       let url = match[1];
-      // 移除 http://localhost:8000 前缀以匹配存储的 URL
-      url = url.replace('http://localhost:8000', '');
+      // 移除 API origin 前缀以匹配存储的 URL
+      url = stripApiBase(url);
       urls.push(url);
     }
     while ((match = videoSrcRegex.exec(content)) !== null) {
       let url = match[1];
-      url = url.replace('http://localhost:8000', '');
+      url = stripApiBase(url);
       urls.push(url);
     }
     while ((match = videoSourceRegex.exec(content)) !== null) {
       let url = match[1];
-      url = url.replace('http://localhost:8000', '');
+      url = stripApiBase(url);
       urls.push(url);
     }
 
@@ -315,7 +316,7 @@ function EditBlog() {
         const token = localStorage.getItem('access_token');
         console.log('准备删除的媒体文件:', deletedUrls);
 
-        const response = await fetch('http://localhost:8000/api/uploads/media', {
+        const response = await fetch(apiUrl('/api/uploads/media'), {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',

@@ -2,20 +2,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { getBlogs, getDrafts } from '../api/blogs';
+import { apiUrl } from '../api/client';
 import BlogCard from '../components/BlogCard';
 import SearchBar from '../components/SearchBar';
 import BlogFilters, { BlogFiltersState } from '../components/BlogFilters';
 import LikeButton from '../components/LikeButton';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../contexts/AuthContext';
-import type { Blog } from '../types/blog';
+import type { BlogListItem } from '../types/blog';
 import { formatNumber } from '../utils/formatNumber';
 
 function Blogs() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [blogs, setBlogs] = useState<BlogListItem[]>([]);
   const [draftCount, setDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -236,7 +237,7 @@ function Blogs() {
                       >
                         {blog.author_avatar_url ? (
                           <img
-                            src={`http://localhost:8000${blog.author_avatar_url}`}
+                            src={apiUrl(blog.author_avatar_url)}
                             alt={`${blog.author}'s avatar`}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />

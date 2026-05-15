@@ -2,13 +2,18 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getDrafts, deleteBlog, updateBlog } from '../api/blogs';
 import { useAuth } from '../contexts/AuthContext';
-import type { Blog } from '../types/blog';
+import type { BlogListItem } from '../types/blog';
+
+type DraftListItem = BlogListItem & {
+  content?: string;
+  updated_at?: string;
+};
 
 function Drafts() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [drafts, setDrafts] = useState<Blog[]>([]);
+  const [drafts, setDrafts] = useState<DraftListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
