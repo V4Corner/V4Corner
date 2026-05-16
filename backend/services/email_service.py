@@ -13,16 +13,14 @@ logger = logging.getLogger(__name__)
 
 class EmailConfig:
     """邮件配置"""
-    # SMTP 服务器配置（网易邮箱）
-    SMTP_HOST: str = "smtp.163.com"  # 网易 163 邮箱 SMTP
-    # 如需使用 126 邮箱，改为: smtp.126.com
-    SMTP_PORT: int = 465  # SSL 端口
-    SMTP_USE_SSL: bool = True  # 使用 SSL
+    SMTP_HOST: str = settings.SMTP_HOST
+    SMTP_PORT: int = settings.SMTP_PORT
+    SMTP_USE_SSL: bool = settings.SMTP_USE_SSL
 
     # 发件人配置
-    SENDER_EMAIL: str = settings.ALIYUN_ACCOUNT_NAME  # 使用 .env 中的配置
-    SENDER_NAME: str = settings.ALIYUN_FROM_ALIAS  # 使用 .env 中的配置
-    SENDER_PASSWORD: Optional[str] = None  # 需要在 .env 中配置网易邮箱授权码
+    SENDER_EMAIL: Optional[str] = settings.SMTP_USERNAME or settings.ALIYUN_ACCOUNT_NAME
+    SENDER_NAME: str = settings.SMTP_FROM_ALIAS or settings.ALIYUN_FROM_ALIAS or "V4Corner"
+    SENDER_PASSWORD: Optional[str] = settings.SMTP_PASSWORD or settings.NETEASE_MAIL_PASSWORD
 
 
 def send_email(
@@ -43,10 +41,11 @@ def send_email(
     Returns:
         bool: 是否发送成功
     """
-    sender_password = getattr(settings, 'NETEASE_MAIL_PASSWORD', None)
+    sender_email = EmailConfig.SENDER_EMAIL
+    sender_password = EmailConfig.SENDER_PASSWORD
 
-    if not sender_password:
-        logger.warning("未配置网易邮箱授权码，无法发送真实邮件")
+    if not sender_email or not sender_password:
+        logger.warning("未配置 SMTP 用户名或密码，无法发送真实邮件")
         logger.info(f"模拟发送邮件到 {to_email}")
         logger.info(f"主题: {subject}")
         return False
@@ -55,7 +54,7 @@ def send_email(
         # 创建邮件对象
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = formataddr((EmailConfig.SENDER_NAME, EmailConfig.SENDER_EMAIL))
+        msg['From'] = formataddr((EmailConfig.SENDER_NAME, sender_email))
         msg['To'] = to_email
 
         # 添加纯文本内容
@@ -72,7 +71,7 @@ def send_email(
             # 使用 SSL 连接（端口 465）
             with smtplib.SMTP_SSL(EmailConfig.SMTP_HOST, EmailConfig.SMTP_PORT) as server:
                 # 登录
-                server.login(EmailConfig.SENDER_EMAIL, sender_password)
+                server.login(sender_email, sender_password)
                 # 发送邮件
                 server.send_message(msg)
         else:
@@ -80,7 +79,7 @@ def send_email(
             with smtplib.SMTP(EmailConfig.SMTP_HOST, EmailConfig.SMTP_PORT) as server:
                 server.starttls()
                 # 登录
-                server.login(EmailConfig.SENDER_EMAIL, sender_password)
+                server.login(sender_email, sender_password)
                 # 发送邮件
                 server.send_message(msg)
 

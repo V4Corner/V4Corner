@@ -42,10 +42,18 @@ class Settings(BaseSettings):
     SKIP_EMAIL_VERIFICATION: bool = False  # 开发模式：跳过邮箱验证（生产环境必须为 False）
     DEV_VERIFICATION_CODE: str = "123456"  # 开发模式：通用验证码
 
-    # 网易邮箱 SMTP 配置（推荐）
-    NETEASE_MAIL_PASSWORD: Optional[str] = None  # 网易邮箱授权码（非登录密码）
-    ALIYUN_ACCOUNT_NAME: str = "your-email@163.com"  # 发件人邮箱地址（网易邮箱）
-    ALIYUN_FROM_ALIAS: str = "V4Corner"  # 发件人昵称
+    # SMTP 邮件配置（支持任意邮箱服务商）
+    SMTP_HOST: str = "smtp.163.com"
+    SMTP_PORT: int = 465
+    SMTP_USE_SSL: bool = True
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_ALIAS: str = "V4Corner"
+
+    # 旧变量兼容：仍可使用原来的网易/阿里云命名配置
+    NETEASE_MAIL_PASSWORD: Optional[str] = None
+    ALIYUN_ACCOUNT_NAME: Optional[str] = None
+    ALIYUN_FROM_ALIAS: Optional[str] = None
 
     # ========== 短信配置 ==========
 

@@ -54,9 +54,12 @@ ADMIN_EMAIL=admin@your-domain.com
 ADMIN_PASSWORD=ChangeMe123!
 ADMIN_NICKNAME=管理员
 
-ALIYUN_ACCOUNT_NAME=your-email@163.com
-ALIYUN_FROM_ALIAS=V4Corner
-NETEASE_MAIL_PASSWORD=your-real-authorization-code
+SMTP_HOST=smtp.example.com
+SMTP_PORT=465
+SMTP_USE_SSL=True
+SMTP_USERNAME=your-email@example.com
+SMTP_PASSWORD=your-smtp-authorization-code
+SMTP_FROM_ALIAS=V4Corner
 
 AI_PROVIDER=deepseek
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
@@ -113,7 +116,7 @@ vim .env
 - `SECRET_KEY`：使用 `openssl rand -hex 32` 生成
 - `ALLOWED_ORIGINS=https://你的域名`
 - `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD`
-- 邮箱验证码配置
+- 邮箱验证码配置：填写你的邮箱服务商提供的 SMTP 地址、端口、账号和授权码
 - 至少一个 AI 服务 API key
 
 ### 4. 首次启动
@@ -231,8 +234,8 @@ vim .env  # 编辑配置文件
 # 重要：确保以下配置正确
 # - SKIP_EMAIL_VERIFICATION=False
 # - SECRET_KEY=<强随机密钥>
-# - DATABASE_URL=postgresql://v4corner_user:password@localhost:5432/v4corner
-# - NETEASE_MAIL_PASSWORD=<真实授权码>
+# - DATABASE_URL=postgresql+psycopg2://v4corner_user:password@localhost:5432/v4corner
+# - SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD
 ```
 
 #### 创建数据库表
