@@ -18,6 +18,9 @@ services:
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-mirrors.aliyun.com}
     restart: unless-stopped
     env_file:
       - .env
@@ -35,6 +38,7 @@ services:
       dockerfile: docker/caddy.Dockerfile
       args:
         VITE_BACKEND_URL: ""
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     restart: unless-stopped
     environment:
       DOMAIN: ${DOMAIN:?DOMAIN is required}
