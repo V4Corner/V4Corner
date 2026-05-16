@@ -1,15 +1,15 @@
 {$DOMAIN} {
 	encode gzip zstd
 
-	handle /api/* {
-		reverse_proxy backend:8000
-	}
+	@api path /api/*
+	reverse_proxy @api backend:8000
 
-	handle /static/* {
-		reverse_proxy backend:8000
-	}
+	@static path /static/*
+	reverse_proxy @static backend:8000
 
-	root * /srv
-	try_files {path} /index.html
-	file_server
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
 }
