@@ -223,14 +223,7 @@ class AIService:
         """OpenAI / DeepSeek / Ollama 生成（使用 OpenAI 兼容接口）"""
         if stream:
             # 流式输出
-            response = await asyncio.to_thread(
-                self.client.chat.completions.create,
-                model=self.model,
-                messages=messages,
-                stream=True,
-                max_tokens=settings.AI_MAX_TOKENS,
-                temperature=settings.AI_TEMPERATURE
-            )
+            response = await self._create_openai_chat_completion(messages, stream=True)
 
             for chunk in response:
                 choices = getattr(chunk, "choices", None)
@@ -245,15 +238,58 @@ class AIService:
                     await asyncio.sleep(0.01)
         else:
             # 非流式输出
-            response = await asyncio.to_thread(
-                self.client.chat.completions.create,
-                model=self.model,
-                messages=messages,
-                stream=False,
-                max_tokens=settings.AI_MAX_TOKENS,
-                temperature=settings.AI_TEMPERATURE
-            )
+            response = await self._create_openai_chat_completion(messages, stream=False)
             yield response.choices[0].message.content
+
+    def _uses_max_completion_tokens(self) -> bool:
+        """Newer OpenAI reasoning/chat models reject the legacy max_tokens param."""
+        model = (self.model or "").lower()
+        return model.startswith(("gpt-5", "o1", "o3", "o4"))
+
+    def _openai_chat_kwargs(self, messages: list[dict], stream: bool) -> dict:
+        kwargs = {
+            "model": self.model,
+            "messages": messages,
+            "stream": stream,
+            "temperature": settings.AI_TEMPERATURE,
+        }
+
+        token_param = (
+            "max_completion_tokens"
+            if self._uses_max_completion_tokens()
+            else "max_tokens"
+        )
+        kwargs[token_param] = settings.AI_MAX_TOKENS
+        return kwargs
+
+    async def _create_openai_chat_completion(self, messages: list[dict], stream: bool):
+        kwargs = self._openai_chat_kwargs(messages, stream)
+
+        for _ in range(3):
+            try:
+                return await asyncio.to_thread(
+                    self.client.chat.completions.create,
+                    **kwargs,
+                )
+            except Exception as exc:
+                message = str(exc)
+                if "Unsupported parameter" in message and "max_tokens" in message:
+                    value = kwargs.pop("max_tokens", settings.AI_MAX_TOKENS)
+                    kwargs["max_completion_tokens"] = value
+                    continue
+                if "Unsupported parameter" in message and "max_completion_tokens" in message:
+                    value = kwargs.pop("max_completion_tokens", settings.AI_MAX_TOKENS)
+                    kwargs["max_tokens"] = value
+                    continue
+                if "Unsupported parameter" in message and "temperature" in message:
+                    kwargs.pop("temperature", None)
+                    continue
+                raise
+
+        return await asyncio.to_thread(
+            self.client.chat.completions.create,
+            **kwargs,
+        )
 
     async def _anthropic_generate(
         self,
