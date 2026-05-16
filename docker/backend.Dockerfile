@@ -1,7 +1,7 @@
 FROM python:3.10-slim
 WORKDIR /app
 
-ARG INSTALL_FFMPEG=false
+ARG INSTALL_FFMPEG=true
 RUN if [ "$INSTALL_FFMPEG" = "true" ]; then \
       sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources \
       && apt-get update \

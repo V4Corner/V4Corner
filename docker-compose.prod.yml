@@ -19,6 +19,7 @@ services:
       context: .
       dockerfile: docker/backend.Dockerfile
       args:
+        INSTALL_FFMPEG: ${INSTALL_FFMPEG:-true}
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
         PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-mirrors.aliyun.com}
     restart: unless-stopped
