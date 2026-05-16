@@ -6,7 +6,7 @@ ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 
 COPY frontend/package.json frontend/package-lock.json* ./
 ARG NPM_REGISTRY=https://registry.npmmirror.com
-RUN npm install --registry="$NPM_REGISTRY" --no-audit --no-fund
+RUN npm install --registry="$NPM_REGISTRY" --no-audit --no-fund --package-lock=false
 
 COPY frontend .
 RUN npm run build
